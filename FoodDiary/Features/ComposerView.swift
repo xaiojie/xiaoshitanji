@@ -21,7 +21,12 @@ struct ComposerView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    MealMetadataView(kind: $draft.record.kind, date: $draft.record.date)
+                    MealMetadataView(kind: Binding(
+                        get: { draft.record.kind },
+                        set: { kind in
+                            if kind != draft.record.kind { draft.record.usePresetTime(for: kind) }
+                        }
+                    ), date: $draft.record.date)
                         .disabled(draft.busy)
                     if draft.reviewing {
                         MealResultView(record: draft.record) { sheet = .food($0) }

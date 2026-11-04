@@ -6,6 +6,10 @@ struct MealMetadataView: View {
     @Binding var kind: MealKind
     @Binding var date: Date
 
+    private var latestRecordDate: Date {
+        Calendar.current.dateInterval(of: .day, for: .now)?.end.addingTimeInterval(-1) ?? .now
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             HStack {
@@ -16,8 +20,10 @@ struct MealMetadataView: View {
                 .labelsHidden().tint(.primary)
                 Spacer()
             }
-            DatePicker("用餐时间", selection: $date, in: ...Date.now)
+            DatePicker("用餐时间", selection: $date, in: ...latestRecordDate)
                 .font(.subheadline)
+            Text(kind == .snack ? "加餐按记录时刻预填，可点选调整。" : "已按常用用餐时间预填，可点选调整。")
+                .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
         }
         .contentCard()
     }

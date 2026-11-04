@@ -182,11 +182,25 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
     public var nutrition: Nutrition { foods.reduce(.zero) { $0 + $1.nutrition } }
     public var foodNames: String { foods.map(\.name).joined(separator: " · ") }
 
-    public static func draft(on day: Date, now: Date = .now, calendar: Calendar = .current) -> MealRecord {
-        let time = calendar.dateComponents([.hour, .minute, .second], from: now)
-        let date = calendar.date(bySettingHour: time.hour ?? 0, minute: time.minute ?? 0,
-                                 second: time.second ?? 0, of: day) ?? day
-        return MealRecord(date: date, kind: .suggested(for: date, calendar: calendar))
+    public static func draft(on day: Date, kind: MealKind? = nil, now: Date = .now,
+                              calendar: Calendar = .current) -> MealRecord {
+        var record = MealRecord(date: day, kind: kind ?? .suggested(for: now, calendar: calendar))
+        record.usePresetTime(for: record.kind, now: now, calendar: calendar)
+        return record
+    }
+
+    public mutating func usePresetTime(for kind: MealKind, now: Date = .now, calendar: Calendar = .current) {
+        let time: (hour: Int, minute: Int, second: Int)
+        switch kind {
+        case .breakfast: time = (8, 45, 0)
+        case .lunch: time = (12, 0, 0)
+        case .dinner: time = (20, 0, 0)
+        case .snack:
+            time = (calendar.component(.hour, from: now), calendar.component(.minute, from: now),
+                    calendar.component(.second, from: now))
+        }
+        self.kind = kind
+        date = calendar.date(bySettingHour: time.hour, minute: time.minute, second: time.second, of: date) ?? date
     }
 
     public mutating func updateInput(text: String, photoJPEG: Data?) {

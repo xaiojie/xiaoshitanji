@@ -168,9 +168,7 @@ struct TodayView: View {
     }
 
     private func openMeal(_ kind: MealKind) {
-        var record = MealRecord.draft(on: selectedDate)
-        record.kind = kind
-        sheet = .record(record)
+        sheet = .record(MealRecord.draft(on: selectedDate, kind: kind))
     }
 
     private func moveDate(by days: Int) {

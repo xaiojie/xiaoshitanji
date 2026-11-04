@@ -99,18 +99,18 @@ struct DiaryTests {
         #expect(document.total(on: afterMidnight, calendar: calendar).calories == 174)
     }
 
-    @Test func newDraftUsesCurrentTimeOnSelectedDay() throws {
+    @Test func automaticMealDraftUsesPresetTimeOnSelectedDay() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 8 * 3600)!
         let formatter = ISO8601DateFormatter()
         let staleSelection = formatter.date(from: "2026-11-04T00:00:00Z")!
         let currentLunchTime = formatter.date(from: "2026-11-04T05:20:00Z")!
         let draft = MealRecord.draft(on: staleSelection, now: currentLunchTime, calendar: calendar)
-        #expect(draft.date == currentLunchTime)
+        #expect(draft.date == formatter.date(from: "2026-11-04T04:00:00Z"))
         #expect(draft.kind == .lunch)
         let previousDay = calendar.date(byAdding: .day, value: -1, to: staleSelection)!
         let pastDraft = MealRecord.draft(on: previousDay, now: currentLunchTime, calendar: calendar)
-        #expect(pastDraft.date == formatter.date(from: "2026-11-03T05:20:00Z"))
+        #expect(pastDraft.date == formatter.date(from: "2026-11-03T04:00:00Z"))
     }
 
     @Test func changingAnalyzedInputInvalidatesPriorNutrition() {
