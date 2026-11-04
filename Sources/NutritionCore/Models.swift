@@ -314,10 +314,13 @@ public struct DiaryDocument: Codable, Sendable {
     public var smoking: SmokingDiary
     public var wellnessReviews: [WellnessReview]
     public var templates: [MealTemplate]
+    /// 为 nil 时还没有配置能量目标，App 退回旧的「参考热量」。
+    public var energy: EnergySettings?
 
     public init(records: [MealRecord] = [], reviews: [DietReview] = [],
                 profile: HealthProfile = HealthProfile(), weights: [WeightRecord] = [], smoking: SmokingDiary = SmokingDiary(),
-                wellnessReviews: [WellnessReview] = [], templates: [MealTemplate] = []) {
+                wellnessReviews: [WellnessReview] = [], templates: [MealTemplate] = [],
+                energy: EnergySettings? = nil) {
         self.records = records
         self.reviews = reviews
         self.profile = profile
@@ -325,9 +328,10 @@ public struct DiaryDocument: Codable, Sendable {
         self.smoking = smoking
         self.wellnessReviews = wellnessReviews
         self.templates = templates
+        self.energy = energy
     }
 
-    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights, smoking, wellnessReviews, templates }
+    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights, smoking, wellnessReviews, templates, energy }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -339,6 +343,7 @@ public struct DiaryDocument: Codable, Sendable {
         smoking = try container.decodeIfPresent(SmokingDiary.self, forKey: .smoking) ?? SmokingDiary()
         wellnessReviews = try container.decodeIfPresent([WellnessReview].self, forKey: .wellnessReviews) ?? []
         templates = try container.decodeIfPresent([MealTemplate].self, forKey: .templates) ?? []
+        energy = try container.decodeIfPresent(EnergySettings.self, forKey: .energy)
     }
 
     public func validate() throws {
@@ -357,6 +362,7 @@ public struct DiaryDocument: Codable, Sendable {
         for report in wellnessReviews { try report.validate() }
         guard Set(templates.map(\.id)).count == templates.count else { throw DiaryError.unreadableDiary }
         for template in templates { try template.validate() }
+        try energy?.validate()
     }
 
     public mutating func saveTemplate(_ template: MealTemplate) throws {
@@ -446,6 +452,14 @@ public struct DiaryDocument: Codable, Sendable {
 
     public func total(on date: Date, calendar: Calendar = .current) -> Nutrition {
         records(on: date, calendar: calendar).reduce(.zero) { $0 + $1.nutrition }
+    }
+
+    /// 有记录的那些天各自的摄入热量，用于校准维持热量。
+    public func dailyCalories(withinDays days: Int = 28, now: Date = .now, calendar: Calendar = .current) -> [Double] {
+        let start = calendar.date(byAdding: .day, value: -days, to: now) ?? now
+        let grouped = Dictionary(grouping: records.filter { $0.date >= start && $0.date <= now },
+                                 by: { calendar.startOfDay(for: $0.date) })
+        return grouped.values.map { $0.reduce(.zero) { $0 + $1.nutrition }.calories }
     }
 
     /// 最近吃过的餐食，新到旧；用于「复制上一餐 / 昨天」。

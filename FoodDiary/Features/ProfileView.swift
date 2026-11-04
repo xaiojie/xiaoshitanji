@@ -146,6 +146,11 @@ struct ProfileView: View {
                     dataRow("饮食摄入", symbol: "fork.knife", color: Theme.gold,
                         value: diary.loadError == nil ? "\(Theme.number(diary.document.total(on: .now).calories)) 千卡" : "暂无数据")
                 }
+                Divider().padding(.leading, 45)
+                NavigationLink { EnergyGoalView(settings: diary.document.energy) } label: {
+                    dataRow("能量目标", symbol: "flame.fill", color: Theme.gold,
+                        value: diary.energyBudget(on: .now).map { "目标 \(Theme.number($0.targetCalories)) 千卡" } ?? "待设置")
+                }
             }
             .buttonStyle(.plain).padding(.horizontal, 15).padding(.vertical, 5)
             .background(Theme.surface, in: .rect(cornerRadius: 24))

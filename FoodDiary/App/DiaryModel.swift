@@ -88,6 +88,35 @@ final class DiaryModel {
         document = next
     }
 
+    func saveEnergySettings(_ settings: EnergySettings) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        try settings.validate()
+        next.energy = settings
+        try store.save(next)
+        document = next
+    }
+
+    /// 某天的体重：优先取该天及以前最近的一次，没有历史就用最新一次。
+    func weightKG(on date: Date) -> Double? {
+        let dayEnd = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: date)) ?? date
+        let past = document.weights.filter { $0.date < dayEnd }
+        return WeightRecord.latest(in: past.isEmpty ? document.weights : past)?.kilograms
+    }
+
+    /// 有连续体重记录与足够饮食记录时，给出校准建议。
+    func calibrationSuggestion() -> MaintenanceCalibration? {
+        EnergyCalculator.calibrate(weights: document.weights,
+                                   dailyIntakes: document.dailyCalories())
+    }
+
+    /// 已配置能量目标时给出当天预算；缺身高/体重时返回 nil。
+    func energyBudget(on date: Date) -> EnergyBudget? {
+        guard let settings = document.energy, let height = document.profile.heightCM,
+              let weight = weightKG(on: date) else { return nil }
+        return try? EnergyCalculator.budget(settings: settings, weightKG: weight, heightCM: height)
+    }
+
     func saveWeight(_ weight: WeightRecord) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document

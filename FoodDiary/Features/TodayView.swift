@@ -14,7 +14,9 @@ struct TodayView: View {
 
     private var records: [MealRecord] { diary.document.records(on: selectedDate) }
     private var nutrition: Nutrition { diary.document.total(on: selectedDate) }
-    private var referenceGoal: Double? { goal > 0 && goal.isFinite ? goal : nil }
+    private var budget: EnergyBudget? { diary.energyBudget(on: selectedDate) }
+    /// 配置了能量目标就按 TDEE 推导，否则退回旧的「参考热量」。
+    private var referenceGoal: Double? { budget?.targetCalories ?? (goal > 0 && goal.isFinite ? goal : nil) }
     private var review: DietReview? {
         guard let review = diary.document.review(on: selectedDate), review.calorieGoal == referenceGoal else { return nil }
         return review
@@ -30,10 +32,11 @@ struct TodayView: View {
                         ErrorNotice(message: error).contentCard()
                         Button("重新读取", action: diary.reload).buttonStyle(.bordered)
                     } else {
-                        DailyIntakeCard(nutrition: nutrition, goal: goal, mealCount: records.count,
+                        DailyIntakeCard(nutrition: nutrition, goal: referenceGoal ?? 0, mealCount: records.count,
                             foodCount: foodCount, date: selectedDate, isToday: isToday,
+                            goalNote: budget.map { "\(Theme.number($0.maintenance)) 千卡维持 · \(Theme.number($0.proteinGrams)) 克蛋白" },
                             onDate: { sheet = .calendar }, onPrevious: { moveDate(by: -1) }, onNext: { moveDate(by: 1) },
-                            onGoal: { sheet = .settings })
+                            onGoal: { sheet = budget == nil ? .settings : .energy })
                         VStack(spacing: 0) {
                             ForEach([MealKind.breakfast, .lunch, .snack, .dinner]) { kind in
                                 MealSectionCard(kind: kind, records: records.filter { $0.kind == kind },
@@ -92,6 +95,9 @@ struct TodayView: View {
             RecordEntrySheet(onSelect: openMeal)
         case .settings:
             GeneralSettingsView(isPresented: true)
+        case .energy:
+            NavigationStack { EnergyGoalView(settings: diary.document.energy) }
+                .presentationDetents([.large])
         case .review(let value):
             DietReviewView(review: value, onRefresh: analyzeDay)
         case .calendar:
@@ -159,7 +165,7 @@ struct TodayView: View {
 private enum TodaySheet: Identifiable {
     case record(MealRecord)
     case review(DietReview)
-    case calendar, entry, settings
+    case calendar, entry, settings, energy
 
     var id: String {
         switch self {
@@ -168,6 +174,7 @@ private enum TodaySheet: Identifiable {
         case .calendar: "calendar"
         case .entry: "entry"
         case .settings: "settings"
+        case .energy: "energy"
         }
     }
 }

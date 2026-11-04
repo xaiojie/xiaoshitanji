@@ -9,6 +9,7 @@ struct DailyIntakeCard: View {
     let foodCount: Int
     let date: Date
     let isToday: Bool
+    var goalNote: String?
     let onDate: () -> Void
     let onPrevious: () -> Void
     let onNext: () -> Void
@@ -45,10 +46,13 @@ struct DailyIntakeCard: View {
                         Text("千卡").font(.caption.weight(.semibold))
                     }
                     if goal > 0 {
-                        Button("参考 \(Theme.number(goal)) 千卡", action: onGoal).font(.system(size: 11)).buttonStyle(.plain)
+                        Button("目标 \(Theme.number(goal)) 千卡", action: onGoal).font(.system(size: 11)).buttonStyle(.plain)
                         ProgressView(value: progress).tint(Theme.gold).frame(maxWidth: 155)
-                        Text(nutrition.calories <= goal ? "还可摄入 \(Theme.number(goal - nutrition.calories)) 千卡" : "超过参考 \(Theme.number(nutrition.calories - goal)) 千卡")
+                        Text(nutrition.calories <= goal ? "还可摄入 \(Theme.number(goal - nutrition.calories)) 千卡" : "超过目标 \(Theme.number(nutrition.calories - goal)) 千卡")
                             .font(.system(size: 12, weight: .semibold))
+                        if let goalNote {
+                            Text(goalNote).font(.system(size: 10)).foregroundStyle(Theme.mutedInk)
+                        }
                     } else {
                         Text("已记录 \(mealCount) 餐 · \(foodCount) 种食物").font(.system(size: 11))
                         Button("设置每日参考", action: onGoal).font(.caption.weight(.semibold)).buttonStyle(.plain)

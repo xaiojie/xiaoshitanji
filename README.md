@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.7.0-yellow" alt="version" />
-  <img src="https://img.shields.io/badge/tests-87%20passed-brightgreen" alt="tests" />
+  <img src="https://img.shields.io/badge/version-0.8.0-yellow" alt="version" />
+  <img src="https://img.shields.io/badge/tests-103%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -84,6 +84,7 @@
 - 不依赖 AI 的记录方式：**手动填写**（名称、份量、克数、热量与蛋白质/碳水/脂肪，离线可用）与**一键复用**（把整餐存为「常吃组合」、搜索历史食物、复制最近吃过的一餐）。
 - 保存到四餐次卡片（早/午/晚/加餐）。早餐默认 08:45、午餐 12:00、晚餐 20:00（取自个人常用时间范围的中间值），加餐取当前时刻；时间也可手动调整。
 - 首页按本地日期汇总，可翻页、可开日历跳转；跨天或回到前台自动刷新到今天。
+- 首页把「目标 − 已摄入」显示成**今日剩余**；目标优先由能量目标推导，没设置时退回通用设置里的参考热量。
 
 ### 营养标签
 
@@ -107,7 +108,7 @@
 - 顶部资料卡：头像、昵称、身高、当前体重、目标体重，自动算 BMI（身高需在 50–250 cm 之间才计算）。
 - 体重历史：手动记录 + Apple 健康测量合并展示，取时间最新的一条，同一时间优先手动记录。
 - Apple 健康**只读**：步数、活动能量、锻炼时长、步行跑步距离、体重、身高。授权后读取近 7 天活动趋势，保留无数据日期的空缺；读取失败时保留已有快照并给出提示。
-- 可选每日参考热量目标（不设也行，界面显示为「参考」而非硬性目标）。
+- 能量目标：BMR（Mifflin-St Jeor）× 活动系数估算维持热量，再按减脂/维持/增肌推导每日目标与蛋白质/碳水/脂肪；记录 2–4 周后可用体重趋势校准维持热量。没设置时仍可只填一个参考热量（界面显示为「参考」而非硬性目标）。
 
 ### 戒烟记录
 
@@ -205,7 +206,7 @@ FoodDiary/                      SwiftUI 界面、Keychain、相机与图片处�
 
 FoodDiary.xcodeproj/            iPhone 原生工程（自动签名、HealthKit entitlement）
 Sources/NutritionCore/          纯逻辑 Swift Package，无 UIKit 依赖
-Tests/NutritionCoreTests/       87 个 Swift Testing 用例
+Tests/NutritionCoreTests/       103 个 Swift Testing 用例
 docs/superpowers/               设计规格（specs）与实施计划（plans）
 work/                           本地构建与验证记录（Git 忽略）
 ```
@@ -274,6 +275,7 @@ flowchart LR
 | `smoking` | 烟包、抽烟/分烟/校准事件 |
 | `wellnessReviews` | 每个范围最新的汇总报告、生成时间与数据快照 |
 | `templates` | 常吃组合（整餐食物、使用次数、最近使用时间） |
+| `energy` | 能量目标设置（性别、出生年、活动水平、减脂/维持/增肌、每周速度、校准值） |
 
 写入策略：
 
@@ -294,10 +296,10 @@ flowchart LR
 
 ```sh
 swift test
-# Test run with 87 tests in 10 suites passed
+# Test run with 103 tests in 11 suites passed
 ```
 
-覆盖 10 个 suite，跑在 macOS 上（不需要模拟器）：
+覆盖 11 个 suite，跑在 macOS 上（不需要模拟器）：
 
 | Suite | 覆盖内容 |
 | --- | --- |
@@ -310,6 +312,7 @@ swift test
 | `RedesignTests` | 输入变更使旧估算失效、续改保留标签基准、模式指令透传 |
 | `SmokingTests` | 烟包快照、库存重放校验、多币种分离、未知尼古丁与价格、AI 识别字段合并 |
 | `RecordLoopTests` | 手动录入解析与校验、手改营养值、餐内增改、常吃组合增删与上限、最近食物搜索、v1→v2 兼容与版本写盘 |
+| `EnergyTests` | BMR 公式、活动系数、减脂/增肌缺口、安全下限、宏量分配、体重趋势校准、缺失体重与非法参数、旧文档兼容 |
 | `WellnessTests` | 范围与预设餐次、缺失与零、分烟排除、各币种费用、测量来源、请求字段、报告格式与旧文件兼容 |
 
 界面布局、相机、键盘、健康授权和真实联网调用依赖真机，不在自动化测试范围内。
@@ -325,7 +328,7 @@ swift test
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 0.7.0，构建号 11 |
+| 版本 | 0.8.0，构建号 12 |
 
 Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完成授权弹窗。
 
@@ -333,11 +336,12 @@ Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完
 
 ## 项目状态与路线图
 
-**当前版本 0.7.0「记录闭环版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合。
+**当前版本 0.8.0「能量闭环版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余。
 
 | 状态 | 事项 |
 | --- | --- |
 | ✅ 已实现 | 手动录入营养（离线可用）、AI 结果手改营养值、常吃组合、历史食物搜索、复制最近吃过的一餐 |
+| ✅ 已实现 | 能量目标：BMR × 活动系数 → 维持热量 → 每日目标与三大宏量，支持减脂/维持/增肌与体重趋势校准；首页显示今日剩余 |
 | ✅ 已实现 | 「我的」跨饮食、抽烟、运动与身体的 AI 汇总分析。默认近7天，可切换30天和全部记录，预览并确认后发送，按范围保留最新报告 |
 | ⏳ 用户自测 | 0.7.0 待安装；子页面、相机、键盘和实际 AI 效果按用户选择由其真机测试，视觉验收记录待补 |
 | 🚧 进行中 | 七条主线（见 [`docs/backlog.md`](docs/backlog.md)）：能量闭环、AI 分析层、云同步、运动模块等 |
