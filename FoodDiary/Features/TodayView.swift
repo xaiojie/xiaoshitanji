@@ -82,8 +82,12 @@ struct TodayView: View {
             }
             .sheet(item: $sheet, content: sheetContent)
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { refreshSelectedDay() }
+                if phase == .active {
+                    refreshSelectedDay()
+                    consumePendingMeal()
+                }
             }
+            .onAppear(perform: consumePendingMeal)
             .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in refreshSelectedDay() }
             .onChange(of: selectedDate) { _, _ in cancelReview(); reviewError = nil }
             .onChange(of: goal) { _, _ in cancelReview(); reviewError = nil }
@@ -152,6 +156,12 @@ struct TodayView: View {
     private func cancelReview() {
         reviewRequestID = nil
         reviewTask?.cancel()
+    }
+
+    /// 快捷指令留下的那句话：取一次就清掉，直接开记录页。
+    private func consumePendingMeal() {
+        guard let text = PendingMeal.take() else { return }
+        sheet = .record(PendingMeal.draft(from: text, now: selectedDate))
     }
 
     private func openMeal(_ kind: MealKind) {

@@ -4,6 +4,17 @@
 <dict>
     <key>CFBundleDisplayName</key>
     <string>小食痰记</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.jay.fooddiary</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>xiaoshitanji</string>
+            </array>
+        </dict>
+    </array>
     <key>CFBundleDevelopmentRegion</key>
     <string>zh_CN</string>
     <key>NSCameraUsageDescription</key>
