@@ -48,4 +48,28 @@ final class DiaryModel {
         try store.save(next)
         document = next
     }
+
+    func saveProfile(_ profile: HealthProfile, weightKG: Double?) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        try next.updateProfile(profile, weightKG: weightKG)
+        try store.save(next)
+        document = next
+    }
+
+    func saveWeight(_ weight: WeightRecord) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        try next.saveWeight(weight)
+        try store.save(next)
+        document = next
+    }
+
+    func deleteWeight(_ weight: WeightRecord) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        next.removeWeight(id: weight.id)
+        try store.save(next)
+        document = next
+    }
 }

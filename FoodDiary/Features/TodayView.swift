@@ -116,7 +116,7 @@ struct TodayView: View {
         case .entry:
             RecordEntrySheet(onSelect: openMeal)
         case .settings:
-            SettingsView(isPresented: true)
+            GeneralSettingsView(isPresented: true)
         case .review(let value):
             DietReviewView(review: value, onRefresh: analyzeDay)
         case .calendar:

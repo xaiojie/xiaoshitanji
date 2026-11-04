@@ -141,7 +141,7 @@ struct ComposerView: View {
                 onCorrection: { instruction in sheet = nil; draft.refine(instruction) },
                 onRemove: { draft.removeFood(food) })
         case .settings:
-            SettingsView(isPresented: true)
+            GeneralSettingsView(isPresented: true)
         }
     }
 

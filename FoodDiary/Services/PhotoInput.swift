@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 import NutritionCore
 
 enum PhotoInput {
-    nonisolated static func prepareJPEG(_ data: Data) throws -> Data {
+    nonisolated static func prepareJPEG(_ data: Data, maxPixelSize: Int = 1280) throws -> Data {
         guard data.count <= 50_000_000,
               let source = CGImageSourceCreateWithData(data as CFData, nil) else {
             throw DiaryError.invalidInput("照片无法读取，请选择一张有效的图片。")
@@ -13,7 +13,7 @@ enum PhotoInput {
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: 1280,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
             kCGImageSourceShouldCacheImmediately: true
         ]
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {

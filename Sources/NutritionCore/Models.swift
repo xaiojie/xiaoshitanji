@@ -236,19 +236,26 @@ public struct DiaryDocument: Codable, Sendable {
     public var schemaVersion: Int = 1
     public var records: [MealRecord]
     public var reviews: [DietReview]
+    public var profile: HealthProfile
+    public var weights: [WeightRecord]
 
-    public init(records: [MealRecord] = [], reviews: [DietReview] = []) {
+    public init(records: [MealRecord] = [], reviews: [DietReview] = [],
+                profile: HealthProfile = HealthProfile(), weights: [WeightRecord] = []) {
         self.records = records
         self.reviews = reviews
+        self.profile = profile
+        self.weights = weights
     }
 
-    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews }
+    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
         records = try container.decode([MealRecord].self, forKey: .records)
         reviews = try container.decodeIfPresent([DietReview].self, forKey: .reviews) ?? []
+        profile = try container.decodeIfPresent(HealthProfile.self, forKey: .profile) ?? HealthProfile()
+        weights = try container.decodeIfPresent([WeightRecord].self, forKey: .weights) ?? []
     }
 
     public func validate() throws {
@@ -258,7 +265,29 @@ public struct DiaryDocument: Codable, Sendable {
         }
         for record in records { try record.validate() }
         for review in reviews { try review.validate() }
+        try profile.validate()
+        guard Set(weights.map(\.id)).count == weights.count else { throw DiaryError.unreadableDiary }
+        for weight in weights { try weight.validate() }
     }
+
+    public mutating func updateProfile(_ profile: HealthProfile, weightKG: Double? = nil, date: Date = .now) throws {
+        try profile.validate()
+        let weight = try weightKG.map { value in
+            let entry = WeightRecord(date: date, kilograms: value)
+            try entry.validate()
+            return entry
+        }
+        self.profile = profile
+        if let weight { weights.append(weight) }
+    }
+
+    public mutating func saveWeight(_ weight: WeightRecord) throws {
+        try weight.validate()
+        if let index = weights.firstIndex(where: { $0.id == weight.id }) { weights[index] = weight }
+        else { weights.append(weight) }
+    }
+
+    public mutating func removeWeight(id: UUID) { weights.removeAll { $0.id == id } }
 
     public mutating func upsert(_ record: MealRecord) throws {
         try record.validate()

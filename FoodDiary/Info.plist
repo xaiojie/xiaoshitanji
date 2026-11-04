@@ -8,6 +8,8 @@
     <string>zh_CN</string>
     <key>NSCameraUsageDescription</key>
     <string>拍摄食物照片，在你确认分析后发送给 DeepSeek 估算热量。</string>
+    <key>NSHealthShareUsageDescription</key>
+    <string>读取步数、活动能量、锻炼时长、步行跑步距离及身高体重，在你的个人健康主页汇总展示。</string>
     <key>UIFileSharingEnabled</key>
     <true/>
     <key>LSSupportsOpeningDocumentsInPlace</key>

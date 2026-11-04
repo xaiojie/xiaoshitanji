@@ -1,8 +1,9 @@
 import SwiftUI
 import NutritionCore
 
-struct SettingsView: View {
+struct GeneralSettingsView: View {
     @Environment(DiaryModel.self) private var diary
+    @Environment(HealthDataModel.self) private var health
     @Environment(\.dismiss) private var dismiss
     let isPresented: Bool
     @AppStorage("dailyCalorieGoal") private var goal = 0.0
@@ -81,8 +82,32 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    LabeledContent("访问状态", value: health.accessRequested ? "已请求访问" : "尚未连接")
+                    if let date = health.lastRefresh {
+                        LabeledContent("最近刷新", value: date.formatted(.dateTime.month().day().hour().minute()))
+                    }
+                    if health.accessRequested && !health.hasData {
+                        Text("暂无可读取数据。可在健康 App 的个人资料 → App → 食记中检查各项访问权限。")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Button(health.isLoading ? "正在读取…" : "连接 Apple 健康 / 管理访问") {
+                        Task { await health.connect() }
+                    }
+                    .disabled(health.isLoading || !health.isAvailable)
+                    if health.accessRequested {
+                        Button("刷新健康数据") { Task { await health.refresh() } }
+                            .disabled(health.isLoading)
+                    }
+                    if let error = health.errorMessage { ErrorNotice(message: error) }
+                } header: {
+                    Text("Apple 健康")
+                } footer: {
+                    Text("按你选择的权限读取步数、活动能量、锻炼时长、步行跑步距离、体重和身高。活动能量包含运动与日常活动。读取的数据仅用于本机展示。可在健康 App 中随时调整权限。")
+                }
+
+                Section {
                     LabeledContent("已保存", value: "\(diary.document.records.count) 餐")
-                    ShareLink(item: diary.fileURL) { Label("导出饮食记录 JSON", systemImage: "square.and.arrow.up") }
+                    ShareLink(item: diary.fileURL) { Label("导出本机记录 JSON", systemImage: "square.and.arrow.up") }
                         .disabled(!FileManager.default.fileExists(atPath: diary.fileURL.path))
                         .accessibilityIdentifier("exportDiary")
                     if let error = diary.loadError {
@@ -92,7 +117,7 @@ struct SettingsView: View {
                 } header: {
                     Text("本机数据")
                 } footer: {
-                    Text("饮食记录与照片保存在本机。导出的 JSON 包含完整记录和照片，不包含 API Key。也可在「文件」App 的食记目录中找到 FoodDiary/diary.json。")
+                    Text("导出的 JSON 包含饮食、照片、个人资料和手动体重记录，API Key 单独保存在钥匙串中。Apple 健康读取数据按需刷新。也可在「文件」App 的食记目录中找到 FoodDiary/diary.json。")
                 }
 
                 if let errorMessage { Section { ErrorNotice(message: errorMessage) } }
@@ -105,12 +130,12 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    LabeledContent("版本", value: "0.2.1 AI 记餐版")
+                    LabeledContent("版本", value: "0.3.0 个人健康版")
                     Text("描述日常份量或拍张照片，AI 会估算热量和营养。识别结果可通过自然语言或份量选项继续修正。")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("我的")
+            .navigationTitle("通用设置")
             .toolbar {
                 if isPresented {
                     ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } }
