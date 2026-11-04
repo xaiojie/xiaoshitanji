@@ -45,11 +45,46 @@ final class MealDraft {
         performAnalysis(instruction: instruction)
     }
 
+    func addFood(_ food: FoodItem) {
+        do {
+            try record.addFood(food)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func replaceFood(_ food: FoodItem) {
-        guard let index = record.foods.firstIndex(where: { $0.id == food.id }) else { return }
-        record.foods[index] = food
-        record.adjustments = (record.adjustments ?? []) + ["\(food.name)调整为\(food.portionLabel)"]
+        do {
+            try record.replaceFood(food)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 套用常吃组合或复制最近的一餐：保留食物与营养，标记为手动来源。
+    func copyContent(from other: MealRecord, note: String) {
+        record.foods = other.foods
+        record.source = .manual
+        record.model = nil
+        record.summary = other.summary
+        record.assumptions = []
+        record.originalText = ""
+        record.photoJPEG = nil
+        record.adjustments = (record.adjustments ?? []) + [note]
+        reviewing = true
         errorMessage = nil
+    }
+
+    func apply(template: MealTemplate) {
+        copyContent(from: template.makeRecord(on: record.date, kind: record.kind),
+                    note: "套用常吃组合「\(template.name)」")
+    }
+
+    func copy(record other: MealRecord) {
+        copyContent(from: other,
+                    note: "复制自 \(other.date.formatted(.dateTime.month().day().hour().minute())) 的\(other.kind.title)")
     }
 
     func removeFood(_ food: FoodItem) {

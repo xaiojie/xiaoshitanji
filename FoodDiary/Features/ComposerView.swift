@@ -10,6 +10,7 @@ struct ComposerView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var sheet: ComposerSheet?
     @State private var dialog: ComposerDialog?
+    @State private var savedTemplateName: String?
 
     init(record: MealRecord, isEditing: Bool) {
         _draft = State(initialValue: MealDraft(record: record, isEditing: isEditing))
@@ -31,6 +32,17 @@ struct ComposerView: View {
                     if draft.reviewing {
                         MealResultView(record: draft.record) { sheet = .food($0) }
                             .disabled(draft.busy)
+                        HStack(spacing: 10) {
+                            Button("添加食物", systemImage: "plus") { sheet = .quickAdd }
+                            Button("存为常吃", systemImage: "star") { saveTemplate() }
+                        }
+                        .font(.subheadline)
+                        .buttonStyle(.glass)
+                        .disabled(draft.busy)
+                        if let savedTemplateName {
+                            Label(savedTemplateName, systemImage: "checkmark.circle.fill")
+                                .font(.caption).foregroundStyle(Theme.olive)
+                        }
                         MealCorrectionView(text: $draft.correction, busy: draft.busy) {
                             draft.refine(draft.correction)
                         }
@@ -51,6 +63,9 @@ struct ComposerView: View {
                             onSettings: { sheet = .settings }
                         )
                         .disabled(draft.busy)
+                        Button("手动填写 / 常吃 / 最近吃过", systemImage: "square.and.pencil") { sheet = .quickAdd }
+                            .font(.subheadline).buttonStyle(.glass)
+                            .disabled(draft.busy)
                         if !draft.record.foods.isEmpty {
                             Button("返回已识别的食物", systemImage: "list.bullet") { draft.reviewing = true }
                                 .disabled(draft.busy)
@@ -144,6 +159,11 @@ struct ComposerView: View {
             FoodPortionView(food: food, onUpdate: draft.replaceFood,
                 onCorrection: { instruction in sheet = nil; draft.refine(instruction) },
                 onRemove: { draft.removeFood(food) })
+        case .quickAdd:
+            QuickAddView(
+                onFood: { draft.addFood($0) },
+                onTemplate: { draft.apply(template: $0) },
+                onRecord: { draft.copy(record: $0) })
         case .settings:
             GeneralSettingsView(isPresented: true)
         }
@@ -165,6 +185,19 @@ struct ComposerView: View {
         catch { draft.errorMessage = error.localizedDescription }
     }
 
+    private func saveTemplate() {
+        guard !draft.record.foods.isEmpty else {
+            draft.errorMessage = "先有至少一种食物，才能存成常吃组合。"
+            return
+        }
+        do {
+            try diary.saveTemplate(MealTemplate(record: draft.record))
+            savedTemplateName = "已存为常吃「\(draft.record.foodNames)」"
+        } catch {
+            draft.errorMessage = error.localizedDescription
+        }
+    }
+
     private func deleteRecord() {
         do { try diary.delete(draft.record); dismiss() }
         catch { draft.errorMessage = error.localizedDescription }
@@ -183,12 +216,13 @@ struct ComposerView: View {
 }
 
 private enum ComposerSheet: Identifiable {
-    case camera, settings
+    case camera, settings, quickAdd
     case food(FoodItem)
     var id: String {
         switch self {
         case .camera: "camera"
         case .settings: "settings"
+        case .quickAdd: "quickAdd"
         case .food(let food): food.id.uuidString
         }
     }

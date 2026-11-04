@@ -20,6 +20,9 @@ public struct DiaryStore: Sendable {
     }
 
     public func save(_ document: DiaryDocument) throws {
+        var document = document
+        // 总是按当前版本写盘：文件里已经可能出现新字段，旧版本号会让老版本误读后丢数据。
+        document.schemaVersion = DiaryDocument.currentSchemaVersion
         try document.validate()
         // Read first so an unreadable or newer existing file can never be replaced by an empty diary.
         _ = try load()

@@ -57,6 +57,29 @@ final class DiaryModel {
         document = next
     }
 
+    func saveTemplate(_ template: MealTemplate) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        try next.saveTemplate(template)
+        try store.save(next)
+        document = next
+    }
+
+    func deleteTemplate(id: UUID) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        next.removeTemplate(id: id)
+        try store.save(next)
+        document = next
+    }
+
+    /// 使用次数只影响排序，记录失败时不影响用户继续套用。
+    func markTemplateUsed(id: UUID) {
+        guard var template = document.templates.first(where: { $0.id == id }) else { return }
+        template.markUsed()
+        try? saveTemplate(template)
+    }
+
     func saveProfile(_ profile: HealthProfile, weightKG: Double?) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document

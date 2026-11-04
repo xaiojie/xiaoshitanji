@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.6.0-yellow" alt="version" />
-  <img src="https://img.shields.io/badge/tests-75%20passed-brightgreen" alt="tests" />
+  <img src="https://img.shields.io/badge/version-0.7.0-yellow" alt="version" />
+  <img src="https://img.shields.io/badge/tests-87%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -76,10 +76,12 @@
 - 支持**文字**、**相册照片**、**拍照**三种输入，文字可以补充图片（例如「这碗只吃了一半」）。
 - 三种识别模式：**自动**（默认）、**碗装餐食**（结合碗型、装满程度、汤水与剩余量）、**营养标签**（见下一节）。
 - 估算结果是可解释的：结果页会给出食物列表、自然份量、估算依据（summary）、假设（assumptions）与所用模型。
-- 修正方式有三种，全部记录进 `adjustments` 以便回看：
+- 修正方式有四种，全部记录进 `adjustments` 以便回看：
   - 份量倍率：0.5× / 0.75× / 1.5× / 2×；
   - 自然语言续改：「米饭只吃了一半」「还有一碗汤」——AI 在现有餐食上增量修正，未提到的食物保持原样、原 id 回传；
+  - 手改营养值：点进任一食物直接改写热量与三大营养素，标记为「手动填写」，不再依赖 AI；
   - 单项移除。
+- 不依赖 AI 的记录方式：**手动填写**（名称、份量、克数、热量与蛋白质/碳水/脂肪，离线可用）与**一键复用**（把整餐存为「常吃组合」、搜索历史食物、复制最近吃过的一餐）。
 - 保存到四餐次卡片（早/午/晚/加餐）。早餐默认 08:45、午餐 12:00、晚餐 20:00（取自个人常用时间范围的中间值），加餐取当前时刻；时间也可手动调整。
 - 首页按本地日期汇总，可翻页、可开日历跳转；跨天或回到前台自动刷新到今天。
 
@@ -203,7 +205,7 @@ FoodDiary/                      SwiftUI 界面、Keychain、相机与图片处�
 
 FoodDiary.xcodeproj/            iPhone 原生工程（自动签名、HealthKit entitlement）
 Sources/NutritionCore/          纯逻辑 Swift Package，无 UIKit 依赖
-Tests/NutritionCoreTests/       75 个 Swift Testing 用例
+Tests/NutritionCoreTests/       87 个 Swift Testing 用例
 docs/superpowers/               设计规格（specs）与实施计划（plans）
 work/                           本地构建与验证记录（Git 忽略）
 ```
@@ -264,13 +266,14 @@ flowchart LR
 
 | 字段 | 内容 |
 | --- | --- |
-| `schemaVersion` | 当前为 1，新版本文档不会被旧版本覆盖 |
+| `schemaVersion` | 当前为 2（v1 文件可直接读取并自动升级；v2 文件不会被旧版本覆盖） |
 | `records` | 餐次、日期、食物、原始输入、处理后照片、修正历史 |
 | `reviews` | 每日 AI 回顾与生成时的热量目标 |
 | `profile` | 昵称、头像、身高、目标体重 |
 | `weights` | 手动体重历史 |
 | `smoking` | 烟包、抽烟/分烟/校准事件 |
 | `wellnessReviews` | 每个范围最新的汇总报告、生成时间与数据快照 |
+| `templates` | 常吃组合（整餐食物、使用次数、最近使用时间） |
 
 写入策略：
 
@@ -291,10 +294,10 @@ flowchart LR
 
 ```sh
 swift test
-# Test run with 75 tests in 9 suites passed
+# Test run with 87 tests in 10 suites passed
 ```
 
-覆盖 9 个 suite，跑在 macOS 上（不需要模拟器）：
+覆盖 10 个 suite，跑在 macOS 上（不需要模拟器）：
 
 | Suite | 覆盖内容 |
 | --- | --- |
@@ -306,6 +309,7 @@ swift test
 | `HealthProfileTests` | BMI 边界、资料校验、体重来源与同日选择、旧格式兼容 |
 | `RedesignTests` | 输入变更使旧估算失效、续改保留标签基准、模式指令透传 |
 | `SmokingTests` | 烟包快照、库存重放校验、多币种分离、未知尼古丁与价格、AI 识别字段合并 |
+| `RecordLoopTests` | 手动录入解析与校验、手改营养值、餐内增改、常吃组合增删与上限、最近食物搜索、v1→v2 兼容与版本写盘 |
 | `WellnessTests` | 范围与预设餐次、缺失与零、分烟排除、各币种费用、测量来源、请求字段、报告格式与旧文件兼容 |
 
 界面布局、相机、键盘、健康授权和真实联网调用依赖真机，不在自动化测试范围内。
@@ -321,7 +325,7 @@ swift test
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 0.6.0，构建号 10 |
+| 版本 | 0.7.0，构建号 11 |
 
 Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完成授权弹窗。
 
@@ -329,13 +333,14 @@ Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完
 
 ## 项目状态与路线图
 
-**当前版本 0.6.0「黄油奶蛙版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析。
+**当前版本 0.7.0「记录闭环版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合。
 
 | 状态 | 事项 |
 | --- | --- |
+| ✅ 已实现 | 手动录入营养（离线可用）、AI 结果手改营养值、常吃组合、历史食物搜索、复制最近吃过的一餐 |
 | ✅ 已实现 | 「我的」跨饮食、抽烟、运动与身体的 AI 汇总分析。默认近7天，可切换30天和全部记录，预览并确认后发送，按范围保留最新报告 |
-| ⏳ 用户自测 | 0.6.0已安装，子页面、相机、键盘和实际AI效果按用户选择由其真机测试，视觉验收记录待补 |
-| 💡 以后 | 独立营养数据库、训练计划、云同步（当前都是刻意不做） |
+| ⏳ 用户自测 | 0.7.0 待安装；子页面、相机、键盘和实际 AI 效果按用户选择由其真机测试，视觉验收记录待补 |
+| 🚧 进行中 | 七条主线（见 [`docs/backlog.md`](docs/backlog.md)）：能量闭环、AI 分析层、云同步、运动模块等 |
 
 > 设计验收记录见 [`design-qa.md`](design-qa.md)，后续开发清单见 [`docs/backlog.md`](docs/backlog.md)。
 

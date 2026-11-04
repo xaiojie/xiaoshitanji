@@ -9,6 +9,7 @@ struct FoodPortionView: View {
     let onRemove: () -> Void
     @State private var description = ""
     @State private var errorMessage: String?
+    @State private var editingManually = false
 
     var body: some View {
         NavigationStack {
@@ -39,6 +40,15 @@ struct FoodPortionView: View {
                             portionButton("多一点", multiplier: 1.5, label: "\(food.portionLabel)的1.5倍")
                             portionButton("两倍份量", multiplier: 2, label: "\(food.portionLabel)的两倍")
                         }
+                    }
+                    .contentCard()
+
+                    VStack(alignment: .leading, spacing: 14) {
+                        Label("知道准确数值？", systemImage: "square.and.pencil").font(.headline)
+                        Text("直接改写这一项的热量与营养，会标记为手动填写，不再使用 AI 估算。")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        Button("直接修改营养值", systemImage: "square.and.pencil") { editingManually = true }
+                            .yellowAction()
                     }
                     .contentCard()
 
@@ -77,6 +87,12 @@ struct FoodPortionView: View {
             .toolbar(.visible, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("关闭") { dismiss() } } }
+            .sheet(isPresented: $editingManually) {
+                ManualFoodView(editing: food) { updated in
+                    onUpdate(updated)
+                    dismiss()
+                }
+            }
         }
     }
 

@@ -66,10 +66,12 @@ public struct FoodItem: Identifiable, Codable, Equatable, Sendable {
     public var notes: String
     public var portionDescription: String?
     public var nutritionLabel: NutritionLabel?
+    /// 由用户手工填写或改写的食物，界面会标注「手动」而不是 AI 估算。
+    public var isManual: Bool
 
     public init(id: UUID = UUID(), name: String = "", grams: Double = 100,
                 per100g: Nutrition = .zero, notes: String = "", portionDescription: String? = nil,
-                nutritionLabel: NutritionLabel? = nil) {
+                nutritionLabel: NutritionLabel? = nil, isManual: Bool = false) {
         self.id = id
         self.name = name
         self.grams = grams
@@ -77,6 +79,46 @@ public struct FoodItem: Identifiable, Codable, Equatable, Sendable {
         self.notes = notes
         self.portionDescription = portionDescription
         self.nutritionLabel = nutritionLabel
+        self.isManual = isManual
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, grams, per100g, notes, portionDescription, nutritionLabel, isManual
+    }
+
+    /// 旧版本文件没有 `isManual`，用显式解码保证兼容性，避免升级后读不出历史记录。
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        grams = try container.decode(Double.self, forKey: .grams)
+        per100g = try container.decode(Nutrition.self, forKey: .per100g)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        portionDescription = try container.decodeIfPresent(String.self, forKey: .portionDescription)
+        nutritionLabel = try container.decodeIfPresent(NutritionLabel.self, forKey: .nutritionLabel)
+        isManual = try container.decodeIfPresent(Bool.self, forKey: .isManual) ?? false
+    }
+
+    /// 手填营养值：用户给的是这一份的总量，内部再折算成每 100 克，便于之后按份量缩放。
+    public static func manual(name: String, nutrition: Nutrition, grams: Double? = nil,
+                              portionDescription: String? = nil, notes: String = "") -> FoodItem {
+        let weight = grams ?? 100
+        let per100g = weight > 0 ? nutrition.scaled(by: 100 / weight) : .zero
+        return FoodItem(name: name, grams: weight, per100g: per100g, notes: notes,
+                        portionDescription: portionDescription, nutritionLabel: nil, isManual: true)
+    }
+
+    /// 直接改写营养值：保留食物身份，去掉旧标签依据，并标记为手动修改。
+    public func withManualNutrition(_ nutrition: Nutrition, grams: Double? = nil,
+                                    portionDescription: String? = nil) throws -> FoodItem {
+        var food = self
+        if let grams { food.grams = grams }
+        food.per100g = food.grams > 0 ? nutrition.scaled(by: 100 / food.grams) : .zero
+        food.nutritionLabel = nil
+        food.isManual = true
+        if let portionDescription { food.portionDescription = portionDescription }
+        try food.validate()
+        return food
     }
 
     public var nutrition: Nutrition { nutritionLabel?.nutrition ?? per100g.scaled(by: grams / 100) }
@@ -227,6 +269,24 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
         }
     }
 
+    public mutating func addFood(_ food: FoodItem) throws {
+        guard foods.count < 50 else { throw DiaryError.invalidInput("每餐最多记录 50 种食物。") }
+        guard !foods.contains(where: { $0.id == food.id }) else {
+            throw DiaryError.invalidInput("这种食物已经在这一餐里了。")
+        }
+        try food.validate()
+        foods.append(food)
+    }
+
+    public mutating func replaceFood(_ food: FoodItem) throws {
+        guard let index = foods.firstIndex(where: { $0.id == food.id }) else {
+            throw DiaryError.invalidInput("这种食物已不在这一餐里，请重新打开记录。")
+        }
+        try food.validate()
+        foods[index] = food
+        adjustments = (adjustments ?? []) + ["「\(food.name)」的营养值改为手动填写"]
+    }
+
     public func validate() throws {
         guard date.timeIntervalSinceReferenceDate.isFinite else {
             throw DiaryError.invalidInput("请选择有效的记录时间。")
@@ -243,26 +303,31 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
 }
 
 public struct DiaryDocument: Codable, Sendable {
-    public var schemaVersion: Int = 1
+    /// 2：新增「常吃组合」（templates）与手填食物标记（FoodItem.isManual）。
+    public static let currentSchemaVersion = 2
+
+    public var schemaVersion: Int = DiaryDocument.currentSchemaVersion
     public var records: [MealRecord]
     public var reviews: [DietReview]
     public var profile: HealthProfile
     public var weights: [WeightRecord]
     public var smoking: SmokingDiary
     public var wellnessReviews: [WellnessReview]
+    public var templates: [MealTemplate]
 
     public init(records: [MealRecord] = [], reviews: [DietReview] = [],
                 profile: HealthProfile = HealthProfile(), weights: [WeightRecord] = [], smoking: SmokingDiary = SmokingDiary(),
-                wellnessReviews: [WellnessReview] = []) {
+                wellnessReviews: [WellnessReview] = [], templates: [MealTemplate] = []) {
         self.records = records
         self.reviews = reviews
         self.profile = profile
         self.weights = weights
         self.smoking = smoking
         self.wellnessReviews = wellnessReviews
+        self.templates = templates
     }
 
-    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights, smoking, wellnessReviews }
+    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights, smoking, wellnessReviews, templates }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -273,10 +338,13 @@ public struct DiaryDocument: Codable, Sendable {
         weights = try container.decodeIfPresent([WeightRecord].self, forKey: .weights) ?? []
         smoking = try container.decodeIfPresent(SmokingDiary.self, forKey: .smoking) ?? SmokingDiary()
         wellnessReviews = try container.decodeIfPresent([WellnessReview].self, forKey: .wellnessReviews) ?? []
+        templates = try container.decodeIfPresent([MealTemplate].self, forKey: .templates) ?? []
     }
 
     public func validate() throws {
-        guard schemaVersion == 1 else { throw DiaryError.unsupportedVersion }
+        guard (1...DiaryDocument.currentSchemaVersion).contains(schemaVersion) else {
+            throw DiaryError.unsupportedVersion
+        }
         guard Set(records.map(\.id)).count == records.count else {
             throw DiaryError.unreadableDiary
         }
@@ -287,6 +355,29 @@ public struct DiaryDocument: Codable, Sendable {
         for weight in weights { try weight.validate() }
         try smoking.validate()
         for report in wellnessReviews { try report.validate() }
+        guard Set(templates.map(\.id)).count == templates.count else { throw DiaryError.unreadableDiary }
+        for template in templates { try template.validate() }
+    }
+
+    public mutating func saveTemplate(_ template: MealTemplate) throws {
+        try template.validate()
+        if let index = templates.firstIndex(where: { $0.id == template.id }) {
+            templates[index] = template
+        } else {
+            templates.append(template)
+        }
+        if templates.count > 50 {
+            templates.sort { $0.lastUsedAt > $1.lastUsedAt }
+            templates.removeLast(templates.count - 50)
+        }
+    }
+
+    public mutating func removeTemplate(id: UUID) {
+        templates.removeAll { $0.id == id }
+    }
+
+    public func recentTemplates(limit: Int = 10) -> [MealTemplate] {
+        Array(templates.sorted { $0.lastUsedAt > $1.lastUsedAt }.prefix(limit))
     }
 
     public mutating func saveWellnessReview(_ report: WellnessReview) throws {
@@ -355,5 +446,28 @@ public struct DiaryDocument: Codable, Sendable {
 
     public func total(on date: Date, calendar: Calendar = .current) -> Nutrition {
         records(on: date, calendar: calendar).reduce(.zero) { $0 + $1.nutrition }
+    }
+
+    /// 最近吃过的餐食，新到旧；用于「复制上一餐 / 昨天」。
+    public func recentRecords(limit: Int = 10, before date: Date = .distantFuture) -> [MealRecord] {
+        Array(records.filter { $0.date < date }.sorted { $0.date > $1.date }.prefix(limit))
+    }
+
+    /// 历史里吃过的食物，按名称去重、新到旧，可按关键词过滤。
+    public func matchingFoods(query: String = "", limit: Int = 8) -> [FoodItem] {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        var seen = Set<String>()
+        var result: [FoodItem] = []
+        for record in records.sorted(by: { $0.date > $1.date }) {
+            for food in record.foods {
+                let key = food.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                guard !key.isEmpty, !seen.contains(key) else { continue }
+                if !needle.isEmpty && !key.contains(needle) { continue }
+                seen.insert(key)
+                result.append(food)
+                if result.count >= limit { return result }
+            }
+        }
+        return result
     }
 }
