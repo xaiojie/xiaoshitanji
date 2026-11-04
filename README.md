@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.5.0-yellow" alt="version" />
-  <img src="https://img.shields.io/badge/tests-61%20passed-brightgreen" alt="tests" />
+  <img src="https://img.shields.io/badge/version-0.6.0-yellow" alt="version" />
+  <img src="https://img.shields.io/badge/tests-75%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -196,7 +196,7 @@ FoodDiary/                      SwiftUI 界面、Keychain、相机与图片处�
 
 FoodDiary.xcodeproj/            iPhone 原生工程（自动签名、HealthKit entitlement）
 Sources/NutritionCore/          纯逻辑 Swift Package，无 UIKit 依赖
-Tests/NutritionCoreTests/       61 个 Swift Testing 用例
+Tests/NutritionCoreTests/       75 个 Swift Testing 用例
 docs/superpowers/               设计规格（specs）与实施计划（plans）
 work/                           本地构建与验证记录（Git 忽略）
 ```
@@ -263,6 +263,7 @@ flowchart LR
 | `profile` | 昵称、头像、身高、目标体重 |
 | `weights` | 手动体重历史 |
 | `smoking` | 烟包、抽烟/分烟/校准事件 |
+| `wellnessReviews` | 每个范围最新的汇总报告、生成时间与数据快照 |
 
 写入策略：
 
@@ -275,7 +276,7 @@ flowchart LR
 - **没有自建服务器**，也没有账号；AI 请求只在点击分析时直连 DeepSeek；
 - API Key 只在本机 Keychain；
 - 导出功能会生成完整记录 JSON（**不含 Key**），也可以从 iPhone「文件」App 直接访问应用目录；
-- Apple 健康数据只读、仅用于本机展示，不写回、不上传。
+- Apple 健康数据只读。汇总分析可选择纳入所选期间的活动与身体测量，生成前确认后才将汇总数值发送到 DeepSeek。历史照片、头像、昵称和原始描述不进入该请求。报告及这次汇总值保存在本机，并随 JSON 导出。
 
 ---
 
@@ -283,10 +284,10 @@ flowchart LR
 
 ```sh
 swift test
-# Test run with 61 tests in 8 suites passed
+# Test run with 75 tests in 9 suites passed
 ```
 
-覆盖 8 个 suite，跑在 macOS 上（不需要模拟器）：
+覆盖 9 个 suite，跑在 macOS 上（不需要模拟器）：
 
 | Suite | 覆盖内容 |
 | --- | --- |
@@ -298,6 +299,7 @@ swift test
 | `HealthProfileTests` | BMI 边界、资料校验、体重来源与同日选择、旧格式兼容 |
 | `RedesignTests` | 输入变更使旧估算失效、续改保留标签基准、模式指令透传 |
 | `SmokingTests` | 烟包快照、库存重放校验、多币种分离、未知尼古丁与价格、AI 识别字段合并 |
+| `WellnessTests` | 范围与预设餐次、缺失与零、分烟排除、各币种费用、测量来源、请求字段、报告格式与旧文件兼容 |
 
 界面布局、相机、键盘、健康授权和真实联网调用依赖真机，不在自动化测试范围内。
 
@@ -312,7 +314,7 @@ swift test
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 0.5.0，构建号 9 |
+| 版本 | 0.6.0，构建号 10 |
 
 Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完成授权弹窗。
 
@@ -320,12 +322,12 @@ Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完
 
 ## 项目状态与路线图
 
-**当前版本 0.5.0「黄油奶蛙版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉。
+**当前版本 0.6.0「黄油奶蛙版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析。
 
 | 状态 | 事项 |
 | --- | --- |
-| 🚧 进行中 | 「我的」跨饮食/抽烟/运动/身体的 AI 汇总回顾（7 天 / 30 天 / 全部，发送前确认），测试先行 |
-| ⏳ 待补 | 五个页面的真机截图与交互验收（当前验收结论为 blocked：设备连接与镜像点击不可用） |
+| ✅ 已实现 | 「我的」跨饮食、抽烟、运动与身体的 AI 汇总分析。默认近7天，可切换30天和全部记录，预览并确认后发送，按范围保留最新报告 |
+| ⏳ 用户自测 | 0.6.0已安装，子页面、相机、键盘和实际AI效果按用户选择由其真机测试，视觉验收记录待补 |
 | 💡 以后 | 独立营养数据库、训练计划、云同步（当前都是刻意不做） |
 
 > 设计验收记录见 [`design-qa.md`](design-qa.md)。

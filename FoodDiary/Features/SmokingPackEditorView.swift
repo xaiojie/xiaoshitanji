@@ -54,6 +54,7 @@ struct SmokingPackEditorView: View {
             .background(Theme.background).scrollDismissesKeyboard(.interactively)
             .navigationTitle("AI 识别烟盒")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } } }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 10) {
@@ -69,7 +70,7 @@ struct SmokingPackEditorView: View {
                         .font(.headline).frame(maxWidth: .infinity, minHeight: 44).yellowAction()
                         .disabled(busy || fields.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || diary.loadError != nil)
                         .accessibilityIdentifier("saveSmokingPack")
-                }.padding(.horizontal, 20).padding(.vertical, 12).background(.bar)
+                }.padding(.horizontal, 20).padding(.vertical, 12).background(Theme.background)
             }
             .sheet(item: $sheet) { destination in
                 switch destination {

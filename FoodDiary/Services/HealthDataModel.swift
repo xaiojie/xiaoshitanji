@@ -3,6 +3,14 @@ import HealthKit
 import Observation
 import NutritionCore
 
+struct WellnessHealthData: Sendable {
+    var days: [HealthActivityDay] = []
+    var weights: [WeightRecord] = []
+    var heightCM: Double?
+    var heightDate: Date?
+    var earliestDate: Date?
+}
+
 @MainActor
 @Observable
 final class HealthDataModel {
@@ -46,6 +54,38 @@ final class HealthDataModel {
         defer { isLoading = false }
         do { try await loadSnapshot() }
         catch { errorMessage = "本次健康数据刷新失败，已有记录仍可查看。请解锁手机后重试。" }
+    }
+
+    func loadWellnessData(period: WellnessPeriod, document: DiaryDocument, endDate: Date) async throws -> WellnessHealthData {
+        guard accessRequested, isAvailable else { return WellnessHealthData() }
+        let calendar = Calendar.current
+        var earliest: Date?
+        if period == .all {
+            let identifiers: [HKQuantityTypeIdentifier] = [.stepCount, .activeEnergyBurned, .appleExerciseTime,
+                .distanceWalkingRunning, .bodyMass, .height]
+            for identifier in identifiers {
+                try Task.checkCancellation()
+                if let date = try await Self.readEarliest(store, type: identifier, end: endDate) {
+                    earliest = earliest.map { min($0, date) } ?? date
+                }
+            }
+        }
+        let start = period.startDate(document: document, endDate: endDate, earliestHealthDate: earliest, calendar: calendar)
+        async let steps = Self.readDaily(store, type: .stepCount, unit: .count(), start: start, end: endDate, calendar: calendar)
+        async let calories = Self.readDaily(store, type: .activeEnergyBurned, unit: .kilocalorie(), start: start, end: endDate, calendar: calendar)
+        async let minutes = Self.readDaily(store, type: .appleExerciseTime, unit: .minute(), start: start, end: endDate, calendar: calendar)
+        async let distance = Self.readDaily(store, type: .distanceWalkingRunning, unit: .meter(), start: start, end: endDate, calendar: calendar)
+        async let measurements = Self.readWeights(store, through: endDate, limit: HKObjectQueryNoLimit)
+        async let height = Self.readHeight(store, through: endDate)
+        let values = try await (steps, calories, minutes, distance, measurements, height)
+        try Task.checkCancellation()
+        let dates = Set(values.0.keys).union(values.1.keys).union(values.2.keys).union(values.3.keys).sorted()
+        let days = dates.map { date in
+            HealthActivityDay(date: date, steps: values.0[date], activeCalories: values.1[date],
+                exerciseMinutes: values.2[date], distanceMeters: values.3[date])
+        }
+        return WellnessHealthData(days: days, weights: values.4, heightCM: values.5?.value,
+            heightDate: values.5?.date, earliestDate: earliest)
     }
 
     private func loadSnapshot() async throws {
@@ -94,10 +134,12 @@ final class HealthDataModel {
         }
     }
 
-    nonisolated private static func readWeights(_ store: HKHealthStore) async throws -> [WeightRecord] {
+    nonisolated private static func readWeights(_ store: HKHealthStore, through end: Date? = nil,
+                                                limit: Int = 500) async throws -> [WeightRecord] {
         guard let type = HKObjectType.quantityType(forIdentifier: .bodyMass) else { return [] }
         return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 500,
+            let predicate = end.map { HKQuery.predicateForSamples(withStart: nil, end: $0, options: .strictEndDate) }
+            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: limit,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]) { _, samples, error in
                 if let error { continuation.resume(throwing: error); return }
                 let records = (samples as? [HKQuantitySample] ?? []).compactMap { sample -> WeightRecord? in
@@ -112,10 +154,25 @@ final class HealthDataModel {
         }
     }
 
-    nonisolated private static func readHeight(_ store: HKHealthStore) async throws -> (value: Double, date: Date)? {
+    nonisolated private static func readEarliest(_ store: HKHealthStore, type identifier: HKQuantityTypeIdentifier,
+                                                 end: Date) async throws -> Date? {
+        guard let type = HKObjectType.quantityType(forIdentifier: identifier) else { return nil }
+        return try await withCheckedThrowingContinuation { continuation in
+            let predicate = HKQuery.predicateForSamples(withStart: nil, end: end, options: .strictEndDate)
+            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: 1,
+                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]) { _, samples, error in
+                if let error { continuation.resume(throwing: error) }
+                else { continuation.resume(returning: samples?.first?.startDate) }
+            }
+            store.execute(query)
+        }
+    }
+
+    nonisolated private static func readHeight(_ store: HKHealthStore, through end: Date? = nil) async throws -> (value: Double, date: Date)? {
         guard let type = HKObjectType.quantityType(forIdentifier: .height) else { return nil }
         return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 1,
+            let predicate = end.map { HKQuery.predicateForSamples(withStart: nil, end: $0, options: .strictEndDate) }
+            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: 1,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]) { _, samples, error in
                 if let error { continuation.resume(throwing: error); return }
                 guard let sample = samples?.first as? HKQuantitySample else {

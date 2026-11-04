@@ -24,7 +24,8 @@ struct FoodPortionView: View {
                         }
                         NutritionRow(nutrition: food.nutrition)
                     }
-                    .contentCard()
+                    .padding(20).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.softYellow, in: .rect(cornerRadius: 26))
 
                     if let label = food.nutritionLabel { NutritionLabelCard(label: label) }
 
@@ -73,20 +74,20 @@ struct FoodPortionView: View {
             }
             .background(Theme.background)
             .navigationTitle("调整份量")
+            .toolbar(.visible, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("关闭") { dismiss() } } }
         }
     }
 
     private func portionButton(_ title: String, multiplier: Double, label: String) -> some View {
-        Button(title) {
+        Button {
             do {
                 onUpdate(try food.scaledPortion(by: multiplier, description: label))
                 dismiss()
             } catch { errorMessage = error.localizedDescription }
-        }
+        } label: { Text(title).frame(maxWidth: .infinity, minHeight: 40) }
         .font(.subheadline.weight(.medium))
-        .frame(maxWidth: .infinity, minHeight: 44)
-        .buttonStyle(.bordered)
+        .buttonStyle(.glass)
     }
 }

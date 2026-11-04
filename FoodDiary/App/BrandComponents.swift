@@ -39,15 +39,36 @@ struct ScanPhotoPreview: View {
 
     var body: some View {
         if let image = UIImage(data: data) {
-            Image(uiImage: image).resizable().scaledToFit()
-                .frame(maxWidth: .infinity).frame(height: height)
-                .background(Theme.darkSurface, in: .rect(cornerRadius: 26))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20).stroke(Theme.accent, style: StrokeStyle(lineWidth: 3, dash: [28, 70]))
-                        .padding(13)
+            VStack(alignment: .leading, spacing: 12) {
+                Label("照片预览", systemImage: "photo")
+                    .font(.caption.weight(.medium)).foregroundStyle(Theme.softYellow)
+                GeometryReader { geometry in
+                    Image(uiImage: image).resizable().scaledToFit()
+                        .frame(width: geometry.size.width, height: geometry.size.height)
                 }
-                .clipShape(.rect(cornerRadius: 26))
+                .frame(height: height).clipped()
+            }
+            .padding(14).background(Theme.darkSurface, in: .rect(cornerRadius: 26))
         }
+    }
+}
+
+struct BrandSection<Content: View>: View {
+    let title: String
+    let symbol: String
+    let content: Content
+
+    init(_ title: String, symbol: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.symbol = symbol
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 17) {
+            Label(title, systemImage: symbol).font(.headline).foregroundStyle(Theme.ink)
+            content.font(.subheadline)
+        }.contentCard()
     }
 }
 

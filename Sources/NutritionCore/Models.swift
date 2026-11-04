@@ -249,17 +249,20 @@ public struct DiaryDocument: Codable, Sendable {
     public var profile: HealthProfile
     public var weights: [WeightRecord]
     public var smoking: SmokingDiary
+    public var wellnessReviews: [WellnessReview]
 
     public init(records: [MealRecord] = [], reviews: [DietReview] = [],
-                profile: HealthProfile = HealthProfile(), weights: [WeightRecord] = [], smoking: SmokingDiary = SmokingDiary()) {
+                profile: HealthProfile = HealthProfile(), weights: [WeightRecord] = [], smoking: SmokingDiary = SmokingDiary(),
+                wellnessReviews: [WellnessReview] = []) {
         self.records = records
         self.reviews = reviews
         self.profile = profile
         self.weights = weights
         self.smoking = smoking
+        self.wellnessReviews = wellnessReviews
     }
 
-    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights, smoking }
+    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights, smoking, wellnessReviews }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -269,6 +272,7 @@ public struct DiaryDocument: Codable, Sendable {
         profile = try container.decodeIfPresent(HealthProfile.self, forKey: .profile) ?? HealthProfile()
         weights = try container.decodeIfPresent([WeightRecord].self, forKey: .weights) ?? []
         smoking = try container.decodeIfPresent(SmokingDiary.self, forKey: .smoking) ?? SmokingDiary()
+        wellnessReviews = try container.decodeIfPresent([WellnessReview].self, forKey: .wellnessReviews) ?? []
     }
 
     public func validate() throws {
@@ -282,6 +286,13 @@ public struct DiaryDocument: Codable, Sendable {
         guard Set(weights.map(\.id)).count == weights.count else { throw DiaryError.unreadableDiary }
         for weight in weights { try weight.validate() }
         try smoking.validate()
+        for report in wellnessReviews { try report.validate() }
+    }
+
+    public mutating func saveWellnessReview(_ report: WellnessReview) throws {
+        try report.validate()
+        wellnessReviews.removeAll { $0.snapshot.period == report.snapshot.period }
+        wellnessReviews.append(report)
     }
 
     public mutating func updateProfile(_ profile: HealthProfile, weightKG: Double? = nil, date: Date = .now) throws {

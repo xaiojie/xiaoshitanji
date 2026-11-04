@@ -46,7 +46,8 @@ struct WeightHistoryView: View {
                     }
                     Button("记录体重", systemImage: "plus") { editing = WeightEditRequest() }
                         .yellowAction().accessibilityIdentifier("addWeight")
-                }.contentCard()
+                }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.softYellow, in: .rect(cornerRadius: 26))
 
                 if !records.isEmpty {
                     VStack(alignment: .leading, spacing: 18) {
@@ -104,11 +105,10 @@ struct WeightHistoryView: View {
         .background(Theme.background).navigationTitle("体重记录").navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
         .sheet(item: $editing) { WeightEditorView(record: $0.record) }
-        .alert("删除这条体重记录？", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
+        .alert("删除这条体重记录？", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting) { record in
             Button("取消", role: .cancel) { deleting = nil }
             Button("删除", role: .destructive) {
-                guard let deleting else { return }
-                do { try diary.deleteWeight(deleting); errorMessage = nil }
+                do { try diary.deleteWeight(record); errorMessage = nil }
                 catch { errorMessage = error.localizedDescription }
                 self.deleting = nil
             }
@@ -133,27 +133,32 @@ struct WeightEditorView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    HStack {
-                        Text("体重")
-                        Spacer()
-                        TextField("填写测量值", text: $weightText).keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing).accessibilityIdentifier("weightMeasurement")
-                        Text("公斤").foregroundStyle(.secondary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    FrogCallout(text: "记下今天的自己", detail: "每次测量，都是变化的一个坐标。")
+                    BrandSection("体重测量", symbol: "scalemass.fill") {
+                        HStack {
+                            Text("体重")
+                            Spacer()
+                            TextField("填写测量值", text: $weightText).keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing).accessibilityIdentifier("weightMeasurement")
+                            Text("公斤").foregroundStyle(Theme.mutedInk)
+                        }
+                        Divider()
+                        DatePicker("测量时间", selection: $date, in: ...Date.now, displayedComponents: [.date, .hourAndMinute])
+                        Text("即使数值相同，也会保留这次新的测量时间。")
+                            .font(.caption).foregroundStyle(Theme.mutedInk)
                     }
-                    DatePicker("测量时间", selection: $date, in: ...Date.now, displayedComponents: [.date, .hourAndMinute])
-                } footer: { Text("记录一次真实测量。即使数值相同，也会保留这次新的测量时间。") }
-                if let errorMessage { Section { ErrorNotice(message: errorMessage) } }
+                    if let errorMessage { ErrorNotice(message: errorMessage).contentCard() }
+                }.padding(20)
             }
-            .scrollContentBackground(.hidden).background(Theme.background)
-            .navigationTitle(record == nil ? "记录体重" : "编辑体重")
-            .navigationBarTitleDisplayMode(.inline)
+            .background(Theme.background).scrollDismissesKeyboard(.interactively)
+            .navigationTitle(record == nil ? "记录体重" : "编辑体重").navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存", action: save).disabled(diary.loadError != nil)
-                        .accessibilityIdentifier("saveWeight")
+                    Button("保存", action: save).disabled(diary.loadError != nil).accessibilityIdentifier("saveWeight")
                 }
             }
         }

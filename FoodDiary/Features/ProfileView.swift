@@ -7,7 +7,7 @@ private enum ProfileSection: String, CaseIterable, Identifiable {
 }
 
 private enum ProfileSheet: String, Identifiable {
-    case editor, settings, weight
+    case editor, settings, weight, wellness
     var id: Self { self }
 }
 
@@ -29,6 +29,7 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     profileHeader
+                    wellnessEntry
                     BrandSegments(options: ProfileSection.allCases.map { ($0, $0.rawValue) }, selection: $section)
                     if let error = diary.loadError { ErrorNotice(message: error).contentCard() }
                     switch section {
@@ -58,10 +59,29 @@ struct ProfileView: View {
                 case .editor: ProfileEditorView(profile: profile, effectiveHeight: height, weight: latestWeight, healthHeightDate: health.heightDate)
                 case .settings: GeneralSettingsView(isPresented: true)
                 case .weight: WeightEditorView()
+                case .wellness: WellnessReviewView()
                 }
             }
             .refreshable { await health.refresh() }
         }
+    }
+
+    private var wellnessEntry: some View {
+        Button { sheet = .wellness } label: {
+            HStack(spacing: 13) {
+                Image("MilkFrogPeek").resizable().scaledToFit().frame(width: 55, height: 62).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 7) {
+                    Label("汇总分析", systemImage: "sparkles").font(.headline)
+                    Text("饮食、吸烟、身体与运动，一起看看。")
+                        .font(.caption).foregroundStyle(Theme.surface.opacity(0.8))
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(Theme.accent)
+            }
+            .foregroundStyle(Theme.surface).padding(.horizontal, 17).padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.darkGradient, in: .rect(cornerRadius: 24))
+        }.buttonStyle(.plain).accessibilityIdentifier("wellnessReview")
     }
 
     private var profileHeader: some View {

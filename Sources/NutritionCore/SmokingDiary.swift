@@ -170,9 +170,17 @@ public struct SmokingDiary: Codable, Equatable, Sendable {
     }
 
     public func summary(on date: Date, calendar: Calendar = .current) -> SmokingDaySummary {
+        summarize(events.filter { calendar.isDate($0.date, inSameDayAs: date) })
+    }
+
+    public func summary(from start: Date, until end: Date) -> SmokingDaySummary {
+        summarize(events.filter { $0.date >= start && $0.date < end })
+    }
+
+    private func summarize(_ selected: [SmokingEvent]) -> SmokingDaySummary {
         let products = Dictionary(uniqueKeysWithValues: packs.map { ($0.id, $0.product) })
         var result = SmokingDaySummary()
-        for event in events where calendar.isDate(event.date, inSameDayAs: date) {
+        for event in selected {
             if event.kind == .shared { result.shared += event.count }
             guard event.kind == .smoked, let product = products[event.packID] else { continue }
             result.smoked += event.count

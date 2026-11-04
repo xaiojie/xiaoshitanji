@@ -73,7 +73,7 @@ struct ActivityChartCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
-                Label(metric.title, systemImage: metric.symbol).font(.headline).foregroundStyle(metric.color)
+                Label(metric.title, systemImage: metric.symbol).font(.headline).foregroundStyle(Theme.ink)
                 Spacer()
                 Text("近 7 天 · \(metric.unit)").font(.caption).foregroundStyle(.secondary)
             }

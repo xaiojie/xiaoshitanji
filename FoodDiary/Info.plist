@@ -9,7 +9,7 @@
     <key>NSCameraUsageDescription</key>
     <string>扫描食物、营养成分表或烟盒，并按你的操作发送给 AI 识别。</string>
     <key>NSHealthShareUsageDescription</key>
-    <string>读取步数、活动能量、锻炼时长、步行跑步距离及身高体重，在你的个人健康主页汇总展示。</string>
+    <string>读取步数、活动能量、锻炼时长、步行跑步距离及身高体重，用于健康主页和汇总分析。你可以在确认后将所选汇总数值发送给 DeepSeek 生成建议。</string>
     <key>UIFileSharingEnabled</key>
     <true/>
     <key>LSSupportsOpeningDocumentsInPlace</key>

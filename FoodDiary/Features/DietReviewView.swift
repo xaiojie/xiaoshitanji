@@ -47,6 +47,7 @@ struct DietReviewView: View {
             }
             .background(Theme.background)
             .navigationTitle("饮食回顾").navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }
         }
     }

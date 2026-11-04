@@ -44,53 +44,54 @@ struct ProfileEditorView: View {
         let avatar = avatarJPEG
         let isProcessingPhoto = processingPhoto
         NavigationStack {
-            Form {
-                Section {
-                    HStack {
-                        Spacer()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    BrandSection("个人信息", symbol: "person.crop.circle") {
                         PhotosPicker(selection: $photo, matching: .images) {
-                            VStack(spacing: 12) {
-                                ProfileAvatar(data: avatar, size: 90)
-                                Text(isProcessingPhoto ? "正在处理…" : "更换头像").font(.subheadline)
+                            HStack(spacing: 18) {
+                                ProfileAvatar(data: avatar, size: 78)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(isProcessingPhoto ? "正在处理…" : "更换头像").font(.headline)
+                                    Text("给蛙的搭子换个新形象").font(.caption).foregroundStyle(Theme.mutedInk)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.caption)
                             }
+                        }.buttonStyle(.plain).disabled(processingPhoto).accessibilityIdentifier("chooseAvatar")
+                        if avatarJPEG != nil {
+                            Button("移除头像", role: .destructive) { avatarJPEG = nil; photo = nil }
                         }
-                        .buttonStyle(.plain)
-                        .disabled(processingPhoto)
-                        .accessibilityIdentifier("chooseAvatar")
-                        Spacer()
+                        Divider()
+                        TextField("昵称", text: $nickname).textContentType(.nickname).accessibilityIdentifier("profileNickname")
                     }
-                    .padding(.vertical, 12)
-                    if avatarJPEG != nil {
-                        Button("移除头像", role: .destructive) { avatarJPEG = nil; photo = nil }
-                    }
-                    TextField("昵称", text: $nickname)
-                        .textContentType(.nickname)
-                        .accessibilityIdentifier("profileNickname")
-                } header: { Text("个人信息") }
-
-                Section {
-                    numberField("身高", value: $heightText, unit: "厘米", identifier: "profileHeight")
-                    numberField("当前体重", value: $weightText, unit: "公斤", identifier: "profileWeight")
-                    LabeledContent("BMI", value: bmi.map { Theme.number($0, decimals: 1) } ?? "待完善")
-                } header: { Text("身体数据") } footer: {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("BMI = 体重（公斤）÷ 身高（米）的平方。更改当前体重后，保存时会新增一条测量记录。留空保留已有体重历史。")
+                    BrandSection("身体数据", symbol: "figure.stand") {
+                        numberField("身高", value: $heightText, unit: "厘米", identifier: "profileHeight")
+                        Divider()
+                        numberField("当前体重", value: $weightText, unit: "公斤", identifier: "profileWeight")
+                        HStack {
+                            Text("自动计算 BMI").font(.caption)
+                            Spacer()
+                            Text(bmi.map { Theme.number($0, decimals: 1) } ?? "待完善")
+                                .font(.title2.bold()).monospacedDigit()
+                        }.padding(14).background(Theme.softYellow, in: .rect(cornerRadius: 16))
+                        Text("BMI = 体重（公斤）÷ 身高（米）的平方。更改当前体重后，保存时会新增测量记录。留空保留已有体重历史。")
+                            .font(.caption).foregroundStyle(Theme.mutedInk)
                         if !initialHeightText.isEmpty {
                             Text("原身高来自\(heightFromHealth ? " Apple 健康" : "个人资料")\(heightDate.map { " · " + $0.formatted(.dateTime.year().month().day()) } ?? " · 未记录日期")")
+                                .font(.caption2).foregroundStyle(Theme.mutedInk)
                         }
                     }
-                }
-
-                Section {
-                    numberField("目标体重", value: $targetText, unit: "公斤", identifier: "profileTarget")
-                } header: { Text("我的目标") } footer: {
-                    Text("目标体重可选填，按自己的计划设置。个人资料保存在这台 iPhone 中。")
-                }
-                if let errorMessage { Section { ErrorNotice(message: errorMessage) } }
+                    BrandSection("我的目标", symbol: "flag.fill") {
+                        numberField("目标体重", value: $targetText, unit: "公斤", identifier: "profileTarget")
+                        Text("目标体重可选填，按自己的计划设置。")
+                            .font(.caption).foregroundStyle(Theme.mutedInk)
+                    }
+                    if let errorMessage { ErrorNotice(message: errorMessage).contentCard() }
+                }.padding(20)
             }
-            .scrollContentBackground(.hidden).background(Theme.background)
-            .navigationTitle("编辑个人资料")
-            .navigationBarTitleDisplayMode(.inline)
+            .background(Theme.background).scrollDismissesKeyboard(.interactively)
+            .navigationTitle("编辑个人资料").navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

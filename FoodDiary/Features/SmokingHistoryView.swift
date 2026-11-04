@@ -31,10 +31,9 @@ struct SmokingHistoryView: View {
             .background(Theme.background).navigationTitle("全部戒烟数据").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }
             .sheet(item: $editing) { SmokingPackEditorView(pack: $0.pack) }
-            .confirmationDialog("撤销这条记录？", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
+            .alert("撤销这条记录？", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting) { event in
                 Button("撤销记录", role: .destructive) {
-                    guard let deleting else { return }
-                    do { try diary.removeSmokingEvent(deleting.id); errorMessage = nil }
+                    do { try diary.removeSmokingEvent(event.id); errorMessage = nil }
                     catch { errorMessage = error.localizedDescription }
                     self.deleting = nil
                 }
@@ -114,21 +113,26 @@ struct SmokingCountView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    LabeledContent("当前烟包", value: pack?.product.name ?? "尚未添加")
-                    LabeledContent("记录余量", value: "\(remaining) 根")
-                    Stepper(value: $count, in: kind == .stockCheck ? 0...20 : 1...max(1, remaining)) {
-                        LabeledContent(kind == .stockCheck ? "实际还剩" : "分给别人", value: "\(count) 根")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    FrogCallout(text: kind == .stockCheck ? "数一数，心里有数。" : "分出去的，单独记。",
+                        detail: kind == .stockCheck ? "按手中实际余量校准库存。" : "数量会从当前烟包扣除，分烟单独统计。")
+                    BrandSection("当前烟包", symbol: "rectangle.stack.fill") {
+                        Text(pack?.product.name ?? "尚未添加").font(.title3.bold())
+                        LabeledContent("记录余量", value: "\(remaining) 根")
+                        Divider()
+                        Stepper(value: $count, in: kind == .stockCheck ? 0...20 : 1...max(1, remaining)) {
+                            LabeledContent(kind == .stockCheck ? "实际还剩" : "分给别人", value: "\(count) 根")
+                        }.tint(Theme.gold)
+                        Text(kind == .stockCheck ? "校准会保留已有抽烟和分烟历史。" : "本次分烟单独统计，个人摄入按自己抽的记录计算。")
+                            .font(.caption).foregroundStyle(Theme.mutedInk)
                     }
-                } footer: {
-                    Text(kind == .stockCheck ? "按手中实际剩余数量校准，保留已有抽烟和分烟历史。" : "这次分烟会扣除烟包余量，并单独计入分烟统计。")
-                }
-                if let errorMessage { Section { ErrorNotice(message: errorMessage) } }
+                    if let errorMessage { ErrorNotice(message: errorMessage).contentCard() }
+                }.padding(20)
             }
-            .scrollContentBackground(.hidden).background(Theme.background)
-            .navigationTitle(kind == .stockCheck ? "校准烟包余量" : "分给别人")
-            .navigationBarTitleDisplayMode(.inline)
+            .background(Theme.background)
+            .navigationTitle(kind == .stockCheck ? "校准烟包余量" : "分给别人").navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

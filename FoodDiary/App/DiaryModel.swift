@@ -49,6 +49,14 @@ final class DiaryModel {
         document = next
     }
 
+    func saveWellnessReview(_ report: WellnessReview) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        try next.saveWellnessReview(report)
+        try store.save(next)
+        document = next
+    }
+
     func saveProfile(_ profile: HealthProfile, weightKG: Double?) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document

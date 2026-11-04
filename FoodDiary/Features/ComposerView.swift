@@ -73,6 +73,7 @@ struct ComposerView: View {
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle(draft.reviewing ? "这一餐的分析" : "AI 记饮食")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("关闭", action: close).accessibilityIdentifier("closeComposer")
@@ -86,12 +87,14 @@ struct ComposerView: View {
             }
             .safeAreaInset(edge: .bottom) { primaryAction }
             .sheet(item: $sheet, content: sheetContent)
-            .confirmationDialog(dialog == .delete ? "删除这餐记录？" : "放弃尚未保存的修改？",
+            .alert(dialog == .delete ? "删除这餐记录？" : "放弃尚未保存的修改？",
                 isPresented: Binding(get: { dialog != nil }, set: { if !$0 { dialog = nil } }),
-                titleVisibility: .visible) {
-                if dialog == .delete { Button("删除记录", role: .destructive, action: deleteRecord) }
+                presenting: dialog) { action in
+                if action == .delete { Button("删除记录", role: .destructive, action: deleteRecord) }
                 else { Button("放弃修改", role: .destructive) { draft.cancelAll(); dismiss() } }
                 Button("继续编辑", role: .cancel) { dialog = nil }
+            } message: { action in
+                Text(action == .delete ? "这条饮食记录会从本机删除。" : "当前修改尚未保存，离开后需要重新输入。")
             }
             .interactiveDismissDisabled(draft.dirty || draft.busy)
             .onChange(of: photoItem) { _, selection in
@@ -123,7 +126,7 @@ struct ComposerView: View {
             .accessibilityIdentifier(draft.reviewing && !hasCorrection ? "saveMeal" : "analyzeMeal")
         }
         .padding(.horizontal, 20).padding(.vertical, 12)
-        .background(.bar)
+        .background(Theme.background)
     }
 
     private var primaryTitle: String {
