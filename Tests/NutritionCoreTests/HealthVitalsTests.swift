@@ -113,4 +113,27 @@ struct HealthVitalsTests {
         let strength = HealthWorkout(kind: .strength, durationMinutes: 45)
         #expect(strength.summaryLine == "45 分钟")
     }
+
+    @Test func healthWorkoutTotalsOnlyCountTheRequestedDay() {
+        let workouts = [
+            HealthWorkout(date: date(3, hour: 8), durationMinutes: 30, activeCalories: 280),
+            HealthWorkout(date: date(3, hour: 19), kind: .strength, durationMinutes: 45, activeCalories: 200),
+            HealthWorkout(date: date(2, hour: 19), durationMinutes: 60, activeCalories: 400)
+        ]
+        let today = HealthWorkoutSummary.totals(workouts, on: date(3), calendar: calendar)
+        #expect(today.sessions == 2)
+        #expect(today.minutes == 75)
+        #expect(today.calories == 480)
+        #expect(today.hasWorkout)
+        let empty = HealthWorkoutSummary.totals(workouts, on: date(4), calendar: calendar)
+        #expect(!empty.hasWorkout)
+        #expect(empty.calories == 0)
+    }
+
+    @Test func activityBurnPrefersHealthAndFallsBackToManual() {
+        #expect(ActivityBurn.resolve(manual: 500, health: 320) == 320)
+        #expect(ActivityBurn.resolve(manual: 500, health: 0) == 500)
+        #expect(ActivityBurn.resolve(manual: -10, health: 0) == 0)
+        #expect(ActivityBurn.resolve(manual: 0, health: 0) == 0)
+    }
 }

@@ -232,6 +232,14 @@ public enum EnergyCalculator {
     }
 }
 
+/// 训练消耗取哪一边：Apple 健康里有当天训练就用健康的，否则用手填的，
+/// 避免同一场训练被手填和健康各算一次。
+public enum ActivityBurn {
+    public static func resolve(manual: Double, health: Double) -> Double {
+        health > 0 ? health : max(0, manual)
+    }
+}
+
 /// 当天的收支：训练消耗加到目标上，剩下的才是还能吃多少。
 public struct DailyBalance: Sendable, Equatable {
     public var targetCalories: Double

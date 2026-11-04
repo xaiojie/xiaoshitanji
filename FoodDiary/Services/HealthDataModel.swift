@@ -54,6 +54,11 @@ final class HealthDataModel {
         return types
     }
 
+    /// 某个自然日的训练总量（健康 App 的训练记录）。
+    func workoutTotals(on date: Date, calendar: Calendar = .current) -> HealthWorkoutTotals {
+        HealthWorkoutSummary.totals(workouts, on: date, calendar: calendar)
+    }
+
     func connect() async {
         guard isAvailable else { errorMessage = "当前设备无法使用 Apple 健康。"; return }
         guard !isLoading else { return }

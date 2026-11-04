@@ -3,6 +3,7 @@ import NutritionCore
 
 struct TodayView: View {
     @Environment(DiaryModel.self) private var diary
+    @Environment(HealthDataModel.self) private var health
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("dailyCalorieGoal") private var goal = 0.0
     @State private var selectedDate = Date.now
@@ -17,7 +18,11 @@ struct TodayView: View {
     private var records: [MealRecord] { diary.document.records(on: selectedDate) }
     private var nutrition: Nutrition { diary.document.total(on: selectedDate) }
     private var budget: EnergyBudget? { diary.energyBudget(on: selectedDate) }
-    private var burned: Double { diary.burnedCalories(on: selectedDate) }
+    private var workoutTotals: HealthWorkoutTotals { health.workoutTotals(on: selectedDate) }
+    /// 健康里录了训练就用健康的消耗，否则用手填的，避免同一场训练算两次。
+    private var burned: Double {
+        ActivityBurn.resolve(manual: diary.burnedCalories(on: selectedDate), health: workoutTotals.calories)
+    }
     /// 目标 + 当天训练消耗；没有能量设置时退回旧的「参考热量」。
     private var balance: DailyBalance? { DailyBalance.make(budget: budget, burned: burned, intake: nutrition) }
     private var referenceGoal: Double? { balance?.target ?? (goal > 0 && goal.isFinite ? goal : nil) }
@@ -42,6 +47,7 @@ struct TodayView: View {
                             goalNote: budget.map { note in
                                 "\(Theme.number(note.maintenance)) 千卡维持 · \(Theme.number(note.proteinGrams)) 克蛋白"
                                     + (burned > 0 ? " · 训练 +\(Theme.number(burned))" : "")
+                                    + (workoutTotals.hasWorkout ? " · 锻炼 \(workoutTotals.minutes) 分钟" : "")
                             },
                             onDate: { sheet = .calendar }, onPrevious: { moveDate(by: -1) }, onNext: { moveDate(by: 1) },
                             onGoal: { sheet = budget == nil ? .settings : .energy })

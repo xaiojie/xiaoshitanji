@@ -1,5 +1,20 @@
 import Foundation
 
+/// 一天的训练总量（来自 Apple 健康）。
+public struct HealthWorkoutTotals: Sendable, Equatable {
+    public var sessions: Int
+    public var minutes: Int
+    public var calories: Double
+
+    public init(sessions: Int = 0, minutes: Int = 0, calories: Double = 0) {
+        self.sessions = sessions
+        self.minutes = minutes
+        self.calories = calories
+    }
+
+    public var hasWorkout: Bool { sessions > 0 }
+}
+
 /// 从 Apple 健康读取到的体能训练。只做展示与分析，不回写日记。
 public struct HealthWorkout: Identifiable, Equatable, Sendable {
     public var id: UUID
@@ -71,6 +86,19 @@ public enum HealthWorkoutSummary {
                 entry.calories = (entry.calories ?? 0) + calories
             }
             totals[day] = entry
+        }
+        return totals
+    }
+
+    /// 某一天的训练总量；今天有没有练、练了多久、消耗多少，都从这里取。
+    public static func totals(_ workouts: [HealthWorkout], on date: Date,
+                              calendar: Calendar = .current) -> HealthWorkoutTotals {
+        let day = calendar.startOfDay(for: date)
+        var totals = HealthWorkoutTotals()
+        for workout in workouts where calendar.startOfDay(for: workout.date) == day {
+            totals.sessions += 1
+            totals.minutes += workout.durationMinutes
+            totals.calories += workout.activeCalories ?? 0
         }
         return totals
     }
