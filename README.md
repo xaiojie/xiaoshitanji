@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.11.0-yellow" alt="version" />
-  <img src="https://img.shields.io/badge/tests-154%20passed-brightgreen" alt="tests" />
+  <img src="https://img.shields.io/badge/version-0.12.0-yellow" alt="version" />
+  <img src="https://img.shields.io/badge/tests-159%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -141,6 +141,13 @@
 - **冲突自动合并**：上传带基线版本；云端有更新版本时先下载，按 id 取并集（本地重复项优先），合并后再上传，不会用旧数据覆盖新数据；
 - **大小护栏**：单次快照上限 8 MB，超过会提示先清理内嵌照片；
 - **密码与账号**：用户名 3–32 位小写字母/数字/`_`/`.`/`-`，密码 8–128 位；同一账号可登录多台设备，改密码会吊销其他设备的令牌。
+
+### 训练记录
+
+- **两类都记**：力量按动作记组数、次数、重量，自动算容量；有氧记项目、时长、距离和平均心率；
+- **体感可选**：1–10 的体感强度与消耗热量都能留空，不强迫填；
+- **不替代 Apple 健康**：这里只记训练本身，步数和活动热量仍从健康读；同一天可以记多次；
+- **一处看全**：累计次数、总时长、力量容量和有氧公里数在「我的 → 训练记录」顶部。
 
 ### 每日提醒
 
@@ -302,7 +309,7 @@ flowchart LR
 
 | 字段 | 内容 |
 | --- | --- |
-| `schemaVersion` | 当前为 2（v1 文件可直接读取并自动升级；v2 文件不会被旧版本覆盖） |
+| `schemaVersion` | 当前为 3（v1/v2 文件可直接读取并自动升级；高版本文件不会被旧版本覆盖） |
 | `records` | 餐次、日期、食物、原始输入、处理后照片、修正历史 |
 | `reviews` | 每日 AI 回顾与生成时的热量目标 |
 | `profile` | 昵称、头像、身高、目标体重 |
@@ -310,6 +317,7 @@ flowchart LR
 | `smoking` | 烟包、抽烟/分烟/校准事件 |
 | `wellnessReviews` | 每个范围最新的汇总报告、生成时间与数据快照 |
 | `observations` | 最近 30 条追问回答：问题、回答、依据、范围与生成时的聚合指纹 |
+| `workouts` | 训练记录：力量（动作/组数/次数/重量）与有氧（项目/距离/心率/时长/体感） |
 | `templates` | 常吃组合（整餐食物、使用次数、最近使用时间） |
 | `energy` | 能量目标设置（性别、出生年、活动水平、减脂/维持/增肌、每周速度、校准值） |
 
@@ -356,6 +364,7 @@ swift test
 | `EnergyTests` | BMR 公式、活动系数、减脂/增肌缺口、安全下限、宏量分配、体重趋势校准、缺失体重与非法参数、旧文档兼容 |
 | `WellnessTests` | 范围与预设餐次、缺失与零、分烟排除、各币种费用、测量来源、请求字段、报告格式与旧文件兼容 |
 | `DiaryCSVTests` | 逐食物行与表头、逗号/引号/换行转义、体重与抽烟表、文件名与写盘、空文档 |
+| `WorkoutTests` | 力量容量与组数、动作/时长/次数校验、有氧距离心率、训练增删与当天筛选、v2→v3 兼容 |
 | `ReminderTests` | 默认开关与时间、非法时间不排期、下一次提醒跨天、全部关闭、时间回填 |
 | `MilestoneTests` | 连续/最长天数、断档归零、昨天宽限、里程碑阈值解锁、戒烟天数与空文档 |
 | `BackupTests` | 同一天只写一份、按保留数量裁剪、还原往返、坏文件拒绝 |
@@ -374,7 +383,7 @@ swift test
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 0.11.0，构建号 17 |
+| 版本 | 0.12.0，构建号 18 |
 
 Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完成授权弹窗。
 
@@ -382,7 +391,7 @@ Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完
 
 ## 项目状态与路线图
 
-**当前版本 0.11.0「成果可见版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余 → 本地模式识别与带依据的自由追问 → 自建服务器云端同步与版本恢复 → 本机备份、CSV 导出与成果里程碑。
+**当前版本 0.12.0「训练记录版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余 → 本地模式识别与带依据的自由追问 → 自建服务器云端同步与版本恢复 → 本机备份、CSV 导出与成果里程碑 → 每日提醒与训练记录。
 
 | 状态 | 事项 |
 | --- | --- |

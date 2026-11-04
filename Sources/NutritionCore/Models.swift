@@ -304,7 +304,8 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
 
 public struct DiaryDocument: Codable, Sendable {
     /// 2：新增「常吃组合」（templates）与手填食物标记（FoodItem.isManual）。
-    public static let currentSchemaVersion = 2
+    /// 3：新增训练记录（workouts）。
+    public static let currentSchemaVersion = 3
 
     public var schemaVersion: Int = DiaryDocument.currentSchemaVersion
     public var records: [MealRecord]
@@ -313,6 +314,7 @@ public struct DiaryDocument: Codable, Sendable {
     public var weights: [WeightRecord]
     public var smoking: SmokingDiary
     public var wellnessReviews: [WellnessReview]
+    public var workouts: [WorkoutRecord]
     public var templates: [MealTemplate]
     public var observations: [AnalysisAnswer]
     /// 为 nil 时还没有配置能量目标，App 退回旧的「参考热量」。
@@ -320,7 +322,8 @@ public struct DiaryDocument: Codable, Sendable {
 
     public init(records: [MealRecord] = [], reviews: [DietReview] = [],
                 profile: HealthProfile = HealthProfile(), weights: [WeightRecord] = [], smoking: SmokingDiary = SmokingDiary(),
-                wellnessReviews: [WellnessReview] = [], templates: [MealTemplate] = [],
+                wellnessReviews: [WellnessReview] = [], workouts: [WorkoutRecord] = [],
+                templates: [MealTemplate] = [],
                 observations: [AnalysisAnswer] = [], energy: EnergySettings? = nil) {
         self.records = records
         self.reviews = reviews
@@ -328,12 +331,13 @@ public struct DiaryDocument: Codable, Sendable {
         self.weights = weights
         self.smoking = smoking
         self.wellnessReviews = wellnessReviews
+        self.workouts = workouts
         self.templates = templates
         self.observations = observations
         self.energy = energy
     }
 
-    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights, smoking, wellnessReviews, templates, observations, energy }
+    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights, smoking, wellnessReviews, workouts, templates, observations, energy }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -344,6 +348,7 @@ public struct DiaryDocument: Codable, Sendable {
         weights = try container.decodeIfPresent([WeightRecord].self, forKey: .weights) ?? []
         smoking = try container.decodeIfPresent(SmokingDiary.self, forKey: .smoking) ?? SmokingDiary()
         wellnessReviews = try container.decodeIfPresent([WellnessReview].self, forKey: .wellnessReviews) ?? []
+        workouts = try container.decodeIfPresent([WorkoutRecord].self, forKey: .workouts) ?? []
         templates = try container.decodeIfPresent([MealTemplate].self, forKey: .templates) ?? []
         observations = try container.decodeIfPresent([AnalysisAnswer].self, forKey: .observations) ?? []
         energy = try container.decodeIfPresent(EnergySettings.self, forKey: .energy)
@@ -363,11 +368,30 @@ public struct DiaryDocument: Codable, Sendable {
         for weight in weights { try weight.validate() }
         try smoking.validate()
         for report in wellnessReviews { try report.validate() }
+        guard Set(workouts.map(\.id)).count == workouts.count else { throw DiaryError.unreadableDiary }
+        for workout in workouts { try workout.validate() }
         guard Set(templates.map(\.id)).count == templates.count else { throw DiaryError.unreadableDiary }
         for template in templates { try template.validate() }
         guard Set(observations.map(\.id)).count == observations.count else { throw DiaryError.unreadableDiary }
         for answer in observations { try answer.validate() }
         try energy?.validate()
+    }
+
+    public mutating func saveWorkout(_ workout: WorkoutRecord) throws {
+        try workout.validate()
+        if let index = workouts.firstIndex(where: { $0.id == workout.id }) {
+            workouts[index] = workout
+        } else {
+            workouts.append(workout)
+        }
+    }
+
+    public mutating func removeWorkout(id: UUID) {
+        workouts.removeAll { $0.id == id }
+    }
+
+    public func workouts(on day: Date, calendar: Calendar = .current) -> [WorkoutRecord] {
+        workouts.filter { calendar.isDate($0.date, inSameDayAs: day) }.sorted { $0.date < $1.date }
     }
 
     public mutating func saveTemplate(_ template: MealTemplate) throws {

@@ -7,7 +7,7 @@ private enum ProfileSection: String, CaseIterable, Identifiable {
 }
 
 private enum ProfileSheet: String, Identifiable {
-    case editor, settings, weight, wellness, observation, sync, keepGoing
+    case editor, settings, weight, wellness, observation, sync, keepGoing, workouts
     var id: Self { self }
 }
 
@@ -30,6 +30,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     profileHeader
                     wellnessEntry
+                    workoutsEntry
                     observationEntry
                     keepGoingEntry
                     syncEntry
@@ -65,6 +66,7 @@ struct ProfileView: View {
                 case .wellness: WellnessReviewView()
                 case .observation: ObservationView()
                 case .keepGoing: KeepGoingView()
+                case .workouts: WorkoutLogView()
                 case .sync: CloudSyncView()
                 }
             }
@@ -105,6 +107,21 @@ struct ProfileView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("cloudSyncEntry")
+    }
+
+    private var workoutsEntry: some View {
+        Button { sheet = .workouts } label: {
+            HStack(spacing: 13) {
+                Image(systemName: "figure.strengthtraining.traditional")
+                    .font(.system(size: 30)).foregroundStyle(Theme.accent).frame(width: 38)
+                VStack(alignment: .leading, spacing: 5) {
+                    Label("训练记录", systemImage: "dumbbell").font(.headline)
+                    Text("力量记组数重量，有氧记距离心率。").font(.caption).foregroundStyle(Theme.mutedInk)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(Theme.mutedInk)
+            }.foregroundStyle(Theme.ink).contentCard()
+        }.buttonStyle(.plain).accessibilityIdentifier("workoutsEntry")
     }
 
     private var keepGoingEntry: some View {

@@ -177,7 +177,7 @@ struct RecordLoopTests {
 
     // MARK: 文档版本
 
-    @Test func versionTwoLoadsOlderFilesAndRejectsNewerOnes() throws {
+    @Test func currentVersionLoadsOlderFilesAndRejectsNewerOnes() throws {
         let old = try JSONDecoder().decode(DiaryDocument.self,
                                            from: Data(#"{"schemaVersion":1,"records":[]}"#.utf8))
         #expect(old.schemaVersion == 1)
@@ -185,11 +185,11 @@ struct RecordLoopTests {
         try old.validate()
 
         let current = DiaryDocument()
-        #expect(current.schemaVersion == 2)
+        #expect(current.schemaVersion == 3)
         try current.validate()
 
         let newer = try JSONDecoder().decode(DiaryDocument.self,
-                                             from: Data(#"{"schemaVersion":3,"records":[]}"#.utf8))
+                                             from: Data(#"{"schemaVersion":4,"records":[]}"#.utf8))
         #expect(throws: DiaryError.self) { try newer.validate() }
     }
 
@@ -206,9 +206,9 @@ struct RecordLoopTests {
 
         let data = try Data(contentsOf: store.fileURL)
         let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        #expect(object?["schemaVersion"] as? Int == 2)
+        #expect(object?["schemaVersion"] as? Int == 3)
         let reloaded = try store.load()
-        #expect(reloaded.schemaVersion == 2)
+        #expect(reloaded.schemaVersion == 3)
         #expect(reloaded.templates.count == 1)
         #expect(reloaded.templates[0].foods[0].isManual == false)
     }

@@ -57,6 +57,22 @@ final class DiaryModel {
         document = next
     }
 
+    func saveWorkout(_ workout: WorkoutRecord) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        try next.saveWorkout(workout)
+        try store.save(next)
+        document = next
+    }
+
+    func deleteWorkout(_ workout: WorkoutRecord) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        next.removeWorkout(id: workout.id)
+        try store.save(next)
+        document = next
+    }
+
     func saveTemplate(_ template: MealTemplate) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
