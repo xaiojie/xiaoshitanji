@@ -50,7 +50,7 @@
   - 4.2 本机备份：每天首启写 `FoodDiary/Backups/diary-YYYY-MM-DD.json`，保留 14 份，设置里可关。
   - 4.4 CSV 导出：餐次/体重/抽烟三张表，逗号引号换行转义，`fileExporter` 交给系统。
   - 4.1 照片外置（schema v4）：`MealRecord.photoFileName` / `CigarettePack.photoFileName`，文件写 `FoodDiary/Photos/record-<id>.jpg`、`pack-<id>.jpg`；`DiaryDocument.externalizePhotos(in:)` 在启动与整体替换时把旧 base64 迁出并清空；保存单条记录/烟包时也先落盘再写文档。
-- [~] **主线 5 · 系统集成**（5.1 提醒已落地；5.2 小组件、5.3 灵动岛、5.4 快捷指令、5.5 语音待做）
+- [~] **主线 5 · 系统集成**（5.1 提醒、5.5 语音已落地；5.2 小组件、5.3 灵动岛、5.4 快捷指令待做）
 - [x] **主线 6 · 运动健身**（6.1/6.2/6.3/6.4 全部落地）
 - [x] **主线 7 · 成果感与统一视图**（7.1/7.2/7.3 全部落地）
   - 7.3 连续天数与成就：`Milestones.stats` 今天/昨天有记录才算连，最长记录保留；11 个里程碑（第一餐、连记 3/7/30 天、30/100/365 餐、体重十次、第一个常吃、七天/三十天没点烟）；「青蛙的坚持」页面从「我的」进入。
@@ -118,7 +118,7 @@ AnalysisStore（快照、失效、缓存）
 
 ## 主线 5 · 系统集成
 
-> 进度：5.1 已完成——`ReminderKind` 四个提醒点（早/午/晚餐 + 称重），时间与开关存在 UserDefaults，`ReminderScheduler` 用 `UNCalendarNotificationTrigger` 每日重复；设置页可调，全部关闭即清空排期。
+> 进度：5.1 已完成——`ReminderKind` 四个提醒点（早/午/晚餐 + 称重），时间与开关存在 UserDefaults，`ReminderScheduler` 用 `UNCalendarNotificationTrigger` 每日重复；设置页可调，全部关闭即清空排期。5.5 语音输入已完成——`SpeechTranscriber` 优先端上识别（`supportsOnDeviceRecognition`），转写结果回填输入框，停止即释放麦克风与音频会话。
 
 | ID | 任务 | 为什么 | 依赖 | 规模 | 验收 |
 |---|---|---|---|---|---|
