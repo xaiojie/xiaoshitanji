@@ -20,7 +20,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.11.0-yellow" alt="version" />
-  <img src="https://img.shields.io/badge/tests-149%20passed-brightgreen" alt="tests" />
+  <img src="https://img.shields.io/badge/tests-154%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -141,6 +141,12 @@
 - **冲突自动合并**：上传带基线版本；云端有更新版本时先下载，按 id 取并集（本地重复项优先），合并后再上传，不会用旧数据覆盖新数据；
 - **大小护栏**：单次快照上限 8 MB，超过会提示先清理内嵌照片；
 - **密码与账号**：用户名 3–32 位小写字母/数字/`_`/`.`/`-`，密码 8–128 位；同一账号可登录多台设备，改密码会吊销其他设备的令牌。
+
+### 每日提醒
+
+- **四个提醒点**：早餐、午餐、晚餐、称重，时间自己调，逐个开关；
+- **只在本机**：用系统的本地通知，不上传、不需要登录，关掉就真的不响；
+- **首次开启才要权限**：没同意时静默跳过，不反复弹窗。
 
 ### 青蛙的坚持
 
@@ -350,6 +356,7 @@ swift test
 | `EnergyTests` | BMR 公式、活动系数、减脂/增肌缺口、安全下限、宏量分配、体重趋势校准、缺失体重与非法参数、旧文档兼容 |
 | `WellnessTests` | 范围与预设餐次、缺失与零、分烟排除、各币种费用、测量来源、请求字段、报告格式与旧文件兼容 |
 | `DiaryCSVTests` | 逐食物行与表头、逗号/引号/换行转义、体重与抽烟表、文件名与写盘、空文档 |
+| `ReminderTests` | 默认开关与时间、非法时间不排期、下一次提醒跨天、全部关闭、时间回填 |
 | `MilestoneTests` | 连续/最长天数、断档归零、昨天宽限、里程碑阈值解锁、戒烟天数与空文档 |
 | `BackupTests` | 同一天只写一份、按保留数量裁剪、还原往返、坏文件拒绝 |
 | `CloudSyncTests` | 服务器地址规范化、账号密码本地校验、请求构造与 Bearer 头、登录/状态/快照/上传/版本解析、409 与 413 分支、8 MB 上限、冲突合并的并集与本机优先、吸烟合并 |
@@ -367,7 +374,7 @@ swift test
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 0.11.0，构建号 16 |
+| 版本 | 0.11.0，构建号 17 |
 
 Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完成授权弹窗。
 

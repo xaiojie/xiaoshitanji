@@ -17,6 +17,7 @@ struct GeneralSettingsView: View {
     @State private var csvText = ""
     @State private var exportingCSV = false
     @AppStorage("autoBackupEnabled") private var autoBackup = true
+    @State private var reminders = ReminderStore.load()
 
     init(isPresented: Bool = false) { self.isPresented = isPresented }
 
@@ -28,6 +29,7 @@ struct GeneralSettingsView: View {
                     apiSettings
                     goalSettings
                     healthSettings
+                    reminderSettings
                     dataSettings
                     if let errorMessage { ErrorNotice(message: errorMessage).contentCard() }
                     if let feedback {
@@ -61,6 +63,7 @@ struct GeneralSettingsView: View {
                     errorMessage = error.localizedDescription
                 }
             }
+            .task { await ReminderScheduler.reschedule(reminders) }
             .onAppear {
                 loadKey()
                 goalEnabled = goal > 0
@@ -134,6 +137,49 @@ struct GeneralSettingsView: View {
             Text("按所选权限读取步数、活动能量、锻炼时长、步行跑步距离、体重和身高。汇总分析可以选择包含这些数值，发送前会再次确认。可在健康 App 中调整访问权限。")
                 .font(.caption).foregroundStyle(Theme.mutedInk).lineSpacing(3)
         }
+    }
+
+    private var reminderSettings: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("提醒").font(.headline)
+            ForEach($reminders) { $reminder in
+                HStack(spacing: 12) {
+                    Image(systemName: reminder.kind.symbol)
+                        .frame(width: 26).foregroundStyle(reminder.isEnabled ? Theme.accent : Theme.mutedInk)
+                    Text(reminder.kind.title).font(.subheadline)
+                    Spacer()
+                    DatePicker("", selection: Binding(
+                        get: { reminder.date },
+                        set: { newValue in
+                            reminder.setTime(from: newValue)
+                            saveReminders()
+                        }
+                    ), displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .disabled(!reminder.isEnabled)
+                        .accessibilityIdentifier("reminderTime-\(reminder.kind.rawValue)")
+                    Toggle("", isOn: Binding(
+                        get: { reminder.isEnabled },
+                        set: { newValue in
+                            reminder.isEnabled = newValue
+                            saveReminders()
+                        }
+                    ))
+                        .labelsHidden()
+                        .accessibilityIdentifier("reminderToggle-\(reminder.kind.rawValue)")
+                }
+                if reminder.kind != reminders.last?.kind { Divider().opacity(0.4) }
+            }
+            Text("关闭后不再提醒；系统里关掉通知开关也会一并静音。")
+                .font(.caption).foregroundStyle(Theme.mutedInk)
+        }
+        .contentCard()
+    }
+
+    private func saveReminders() {
+        ReminderStore.save(reminders)
+        let snapshot = reminders
+        Task { await ReminderScheduler.reschedule(snapshot) }
     }
 
     private var dataSettings: some View {
