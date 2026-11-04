@@ -164,7 +164,7 @@ struct DietHealthDetailView: View {
                         Text("今日已记录摄入").font(.headline)
                         Text("\(Theme.number(diary.document.total(on: .now).calories)) 千卡")
                             .font(.system(size: 34, weight: .bold, design: .rounded)).foregroundStyle(.orange)
-                        Text("已记录 \(diary.document.records(on: .now).count) 餐 · 来自食记")
+                        Text("已记录 \(diary.document.records(on: .now).count) 餐 · 来自小食痰记")
                             .font(.caption).foregroundStyle(.secondary)
                     }.contentCard()
                     NutritionDistributionCard(nutrition: diary.document.total(on: .now))

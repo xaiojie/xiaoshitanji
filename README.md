@@ -1,6 +1,6 @@
-# 食记
+# 小食痰记
 
-个人 iPhone 饮食记录应用，当前版本为 0.4.1 饮食与戒烟版。中文界面，SwiftUI 与原生 Liquid Glass，最低支持 iOS 26。
+个人 iPhone 饮食记录应用，当前版本为 0.4.2 奶蛙版。中文界面，SwiftUI 与原生 Liquid Glass，最低支持 iOS 26。图标采用用户参考的黄色奶蛙，搭配抱碗嗦面的3D造型。
 
 ## 首版功能
 
@@ -65,7 +65,7 @@ xcodebuild -project FoodDiary.xcodeproj -scheme FoodDiary \
 
 记录文件为 App Documents 目录下的 `FoodDiary/diary.json`，包含 schemaVersion、餐次、日期、食物、原始输入、处理后的照片、修正历史、每日回顾、个人档案、手动体重历史、烟包及抽烟/分烟事件。已有0.1.0至0.3.x的记录兼容读取。
 
-可以通过「我的 → 通用设置 → 导出本机记录 JSON」保存备份，也可以在 iPhone「文件」App 中找到食记的目录。API Key 单独保存在 Keychain，不进入记录文件。首版备份提供导出能力。
+可以通过「我的 → 通用设置 → 导出本机记录 JSON」保存备份，也可以在 iPhone「文件」App 中找到小食痰记的目录。API Key 单独保存在 Keychain，不进入记录文件。首版备份提供导出能力。
 
 ## 核心测试
 

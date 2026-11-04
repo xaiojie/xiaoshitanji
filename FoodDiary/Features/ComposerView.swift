@@ -174,7 +174,7 @@ struct ComposerView: View {
         }
         Task { @MainActor in
             if await AVCaptureDevice.requestAccess(for: .video) { sheet = .camera }
-            else { draft.errorMessage = "请在 iPhone「设置」中允许食记访问相机，或从相册选择照片。" }
+            else { draft.errorMessage = "请在 iPhone「设置」中允许小食痰记访问相机，或从相册选择照片。" }
         }
     }
 }

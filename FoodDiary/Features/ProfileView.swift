@@ -124,7 +124,7 @@ struct ProfileView: View {
             }.buttonStyle(.plain)
             Button("记录体重", systemImage: "plus") { sheet = .weight }
                 .buttonStyle(.glass).frame(maxWidth: .infinity)
-            Text("活动消耗包含运动与日常活动。饮食摄入按食记中已保存的餐食汇总。")
+            Text("活动消耗包含运动与日常活动。饮食摄入按小食痰记中已保存的餐食汇总。")
                 .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 4)
         }
     }

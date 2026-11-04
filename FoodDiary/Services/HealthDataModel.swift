@@ -36,7 +36,7 @@ final class HealthDataModel {
             accessRequested = true
             UserDefaults.standard.set(true, forKey: "appleHealthAccessRequested")
             try await loadSnapshot()
-        } catch { errorMessage = "暂时无法读取 Apple 健康，请解锁手机，并在健康 App 中检查食记的访问权限。" }
+        } catch { errorMessage = "暂时无法读取 Apple 健康，请解锁手机，并在健康 App 中检查小食痰记的访问权限。" }
     }
 
     func refresh() async {

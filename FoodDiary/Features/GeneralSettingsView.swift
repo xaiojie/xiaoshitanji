@@ -22,12 +22,11 @@ struct GeneralSettingsView: View {
             Form {
                 Section {
                     HStack(spacing: 16) {
-                        Image(systemName: "leaf.fill")
-                            .font(.system(size: 30)).foregroundStyle(Theme.accent)
+                        Image("BrandMark").resizable().scaledToFill()
                             .frame(width: 58, height: 58)
-                            .background(Theme.sage.opacity(0.15), in: .rect(cornerRadius: 17))
+                            .clipShape(.rect(cornerRadius: 17))
                         VStack(alignment: .leading, spacing: 5) {
-                            Text("食记").font(.title2.bold())
+                            Text("小食痰记").font(.title2.bold())
                             Text("随手记下，好好吃饭").font(.subheadline).foregroundStyle(.secondary)
                         }
                     }
@@ -87,7 +86,7 @@ struct GeneralSettingsView: View {
                         LabeledContent("最近刷新", value: date.formatted(.dateTime.month().day().hour().minute()))
                     }
                     if health.accessRequested && !health.hasData {
-                        Text("暂无可读取数据。可在健康 App 的个人资料 → App → 食记中检查各项访问权限。")
+                        Text("暂无可读取数据。可在健康 App 的个人资料 → App → 小食痰记中检查各项访问权限。")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Button(health.isLoading ? "正在读取…" : "连接 Apple 健康 / 管理访问") {
@@ -117,7 +116,7 @@ struct GeneralSettingsView: View {
                 } header: {
                     Text("本机数据")
                 } footer: {
-                    Text("导出的 JSON 包含饮食、照片、个人资料、手动体重、烟包及抽烟和分烟记录。API Key 单独保存在钥匙串中。Apple 健康读取数据按需刷新。也可在「文件」App 的食记目录中找到 FoodDiary/diary.json。")
+                    Text("导出的 JSON 包含饮食、照片、个人资料、手动体重、烟包及抽烟和分烟记录。API Key 单独保存在钥匙串中。Apple 健康读取数据按需刷新。也可在「文件」App 的小食痰记目录中找到 FoodDiary/diary.json。")
                 }
 
                 if let errorMessage { Section { ErrorNotice(message: errorMessage) } }
@@ -130,7 +129,7 @@ struct GeneralSettingsView: View {
                 }
 
                 Section {
-                    LabeledContent("版本", value: "0.4.1 饮食与戒烟版")
+                    LabeledContent("版本", value: "0.4.2 奶蛙版")
                     Text("描述日常份量或拍张照片，AI 会估算热量和营养。识别结果可通过自然语言或份量选项继续修正。")
                         .font(.caption).foregroundStyle(.secondary)
                 }
