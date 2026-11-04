@@ -20,7 +20,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.10.0-yellow" alt="version" />
-  <img src="https://img.shields.io/badge/tests-134%20passed-brightgreen" alt="tests" />
+  <img src="https://img.shields.io/badge/tests-143%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -141,6 +141,12 @@
 - **冲突自动合并**：上传带基线版本；云端有更新版本时先下载，按 id 取并集（本地重复项优先），合并后再上传，不会用旧数据覆盖新数据；
 - **大小护栏**：单次快照上限 8 MB，超过会提示先清理内嵌照片；
 - **密码与账号**：用户名 3–32 位小写字母/数字/`_`/`.`/`-`，密码 8–128 位；同一账号可登录多台设备，改密码会吊销其他设备的令牌。
+
+### 本机备份与导出
+
+- **每天一份备份**：每天第一次打开 App 时把当前日记写到 `FoodDiary/Backups/diary-YYYY-MM-DD.json`，保留最近 14 份，可在通用设置里关掉；
+- **CSV 导出**：餐次、体重、抽烟三张表一次导出（UTF-8、逗号转义、CRLF），直接丢进 Excel 或 Numbers；
+- **JSON 导出**：整份日记原样导出，用于迁移或排查。
 
 ## 快速开始
 
@@ -294,6 +300,8 @@ flowchart LR
 | `templates` | 常吃组合（整餐食物、使用次数、最近使用时间） |
 | `energy` | 能量目标设置（性别、出生年、活动水平、减脂/维持/增肌、每周速度、校准值） |
 
+本机备份写在 `FoodDiary/Backups/`，每天一份、保留 14 份，格式与主文件一致；CSV 导出只含餐次、体重和抽烟三类记录，不带照片。
+
 同步令牌与账号信息**不在**这个文件里，存在 Keychain（服务 `com.jay.fooddiary.sync`）。
 
 写入策略：
@@ -334,6 +342,8 @@ swift test
 | `ObservationTests` | 上下文聚合与缺口、证据行、指纹稳定性、回答校验与 30 条上限、五种本地模式的触发与不触发、追问请求与解析 |
 | `EnergyTests` | BMR 公式、活动系数、减脂/增肌缺口、安全下限、宏量分配、体重趋势校准、缺失体重与非法参数、旧文档兼容 |
 | `WellnessTests` | 范围与预设餐次、缺失与零、分烟排除、各币种费用、测量来源、请求字段、报告格式与旧文件兼容 |
+| `DiaryCSVTests` | 逐食物行与表头、逗号/引号/换行转义、体重与抽烟表、文件名与写盘、空文档 |
+| `BackupTests` | 同一天只写一份、按保留数量裁剪、还原往返、坏文件拒绝 |
 | `CloudSyncTests` | 服务器地址规范化、账号密码本地校验、请求构造与 Bearer 头、登录/状态/快照/上传/版本解析、409 与 413 分支、8 MB 上限、冲突合并的并集与本机优先、吸烟合并 |
 
 界面布局、相机、键盘、健康授权和真实联网调用依赖真机，不在自动化测试范围内。
@@ -349,7 +359,7 @@ swift test
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 0.10.0，构建号 14 |
+| 版本 | 0.10.0，构建号 15 |
 
 Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完成授权弹窗。
 

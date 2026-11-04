@@ -14,6 +14,9 @@ struct GeneralSettingsView: View {
     @State private var goalText = ""
     @State private var errorMessage: String?
     @State private var feedback: String?
+    @State private var csvText = ""
+    @State private var exportingCSV = false
+    @AppStorage("autoBackupEnabled") private var autoBackup = true
 
     init(isPresented: Bool = false) { self.isPresented = isPresented }
 
@@ -37,7 +40,7 @@ struct GeneralSettingsView: View {
                             .clipShape(.rect(cornerRadius: 14))
                         VStack(alignment: .leading, spacing: 5) {
                             Text("小食痰记").font(.headline)
-                            Text("0.6.0 · 黄油奶蛙版").font(.caption).foregroundStyle(Theme.mutedInk)
+                            Text("0.10.0 · 云同步版").font(.caption).foregroundStyle(Theme.mutedInk)
                         }
                     }.frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 12)
                 }.padding(20)
@@ -48,6 +51,14 @@ struct GeneralSettingsView: View {
             .toolbar {
                 if isPresented {
                     ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } }
+                }
+            }
+            .fileExporter(isPresented: $exportingCSV,
+                          document: CSVFileDocument(text: csvText),
+                          contentType: .commaSeparatedText,
+                          defaultFilename: "小食痰记-记录") { result in
+                if case .failure(let error) = result {
+                    errorMessage = error.localizedDescription
                 }
             }
             .onAppear {
@@ -130,6 +141,27 @@ struct GeneralSettingsView: View {
             LabeledContent("饮食记录", value: "\(diary.document.records.count) 餐")
             ShareLink(item: diary.fileURL) { Label("导出记录 JSON", systemImage: "square.and.arrow.up") }
                 .disabled(!FileManager.default.fileExists(atPath: diary.fileURL.path)).accessibilityIdentifier("exportDiary")
+            Toggle(isOn: $autoBackup) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("每天自动备份")
+                    Text("保留最近 14 份，存在本机，不上传。").font(.caption).foregroundStyle(Theme.mutedInk)
+                }
+            }
+            .accessibilityIdentifier("autoBackupToggle")
+            if let date = BackupService.latestBackupDate {
+                Label("最近备份：\(date.formatted(date: .abbreviated, time: .shortened))",
+                      systemImage: "clock.arrow.circlepath")
+                    .font(.caption).foregroundStyle(Theme.mutedInk)
+                    .accessibilityIdentifier("latestBackup")
+            }
+            Button {
+                csvText = DiaryCSV.document(diary.document)
+                exportingCSV = true
+            } label: {
+                Label("导出 CSV（表格）", systemImage: "tablecells")
+            }
+            .disabled(diary.document.records.isEmpty)
+            .accessibilityIdentifier("exportCSV")
             if let error = diary.loadError {
                 ErrorNotice(message: error)
                 Button("重新读取记录", action: diary.reload)
