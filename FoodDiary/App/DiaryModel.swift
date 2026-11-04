@@ -46,7 +46,8 @@ final class DiaryModel {
 
     /// 落盘、更新内存、再刷新小组件；所有写路径都走这里。
     private func commit(_ next: DiaryDocument) throws {
-        try commit(next)
+        try store.save(next)
+        document = next
         publishWidgetSnapshot()
     }
 
