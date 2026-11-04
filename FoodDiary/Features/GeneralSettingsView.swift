@@ -2,6 +2,14 @@ import SwiftUI
 import NutritionCore
 
 struct GeneralSettingsView: View {
+    /// 直接读 Bundle 里的版本，避免这里写死后和实际安装包对不上。
+    private var versionText: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = info?["CFBundleVersion"] as? String
+        return build.map { "版本 \(short) (\($0))" } ?? "版本 \(short)"
+    }
+
     @Environment(DiaryModel.self) private var diary
     @Environment(HealthDataModel.self) private var health
     @Environment(\.dismiss) private var dismiss
@@ -42,7 +50,7 @@ struct GeneralSettingsView: View {
                             .clipShape(.rect(cornerRadius: 14))
                         VStack(alignment: .leading, spacing: 5) {
                             Text("小食痰记").font(.headline)
-                            Text("0.10.0 · 云同步版").font(.caption).foregroundStyle(Theme.mutedInk)
+                            Text(versionText).font(.caption).foregroundStyle(Theme.mutedInk)
                         }
                     }.frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 12)
                 }.padding(20)
