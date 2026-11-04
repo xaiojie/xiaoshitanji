@@ -40,4 +40,12 @@ final class DiaryModel {
         try store.save(next)
         document = next
     }
+
+    func saveReview(_ review: DietReview, snapshot: [MealRecord]) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        try next.saveReview(review, snapshot: snapshot)
+        try store.save(next)
+        document = next
+    }
 }

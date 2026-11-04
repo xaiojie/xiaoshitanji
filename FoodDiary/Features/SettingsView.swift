@@ -3,6 +3,8 @@ import NutritionCore
 
 struct SettingsView: View {
     @Environment(DiaryModel.self) private var diary
+    @Environment(\.dismiss) private var dismiss
+    let isPresented: Bool
     @AppStorage("dailyCalorieGoal") private var goal = 0.0
     @State private var apiKey = ""
     @State private var revealKey = false
@@ -11,6 +13,8 @@ struct SettingsView: View {
     @State private var goalText = ""
     @State private var errorMessage: String?
     @State private var feedback: String?
+
+    init(isPresented: Bool = false) { self.isPresented = isPresented }
 
     var body: some View {
         NavigationStack {
@@ -101,12 +105,17 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    LabeledContent("版本", value: "0.1.0 MVP")
-                    Text("AI 营养数值为估算，可在保存前修改食物、重量和每 100 克营养。")
+                    LabeledContent("版本", value: "0.2.0 AI 记餐版")
+                    Text("描述日常份量或拍张照片，AI 会估算热量和营养。识别结果可通过自然语言或份量选项继续修正。")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
             .navigationTitle("我的")
+            .toolbar {
+                if isPresented {
+                    ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } }
+                }
+            }
             .onAppear {
                 loadKey()
                 goalEnabled = goal > 0
@@ -129,7 +138,7 @@ struct SettingsView: View {
         do {
             try KeychainStore.save(apiKey)
             apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-            feedback = apiKey.isEmpty ? "API Key 已移除，仍可手动记餐。" : "API Key 已保存，可前往「今天」分析饮食。"
+            feedback = apiKey.isEmpty ? "API Key 已移除，已有饮食记录保留在本机。" : "API Key 已保存，可前往「饮食」分析这一餐。"
             errorMessage = nil
         } catch { errorMessage = error.localizedDescription; feedback = nil }
     }

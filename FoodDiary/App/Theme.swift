@@ -2,14 +2,46 @@ import SwiftUI
 import NutritionCore
 
 enum Theme {
-    static let accent = Color(red: 0.27, green: 0.42, blue: 0.29)
-    static let sage = Color(red: 0.56, green: 0.68, blue: 0.49)
-    static let carbohydrate = Color(red: 0.54, green: 0.65, blue: 0.45)
-    static let fat = Color(red: 0.79, green: 0.58, blue: 0.28)
+    static let accent = Color(red: 0.10, green: 0.63, blue: 0.44)
+    static let sage = Color(red: 0.43, green: 0.73, blue: 0.52)
+    static let carbohydrate = Color(red: 0.96, green: 0.56, blue: 0.36)
+    static let fat = Color(red: 0.40, green: 0.55, blue: 0.91)
     static let background = Color(uiColor: .systemGroupedBackground)
+    static let surface = Color(uiColor: .secondarySystemGroupedBackground)
+
+    static func mealColor(_ kind: MealKind) -> Color {
+        switch kind {
+        case .breakfast: .orange
+        case .lunch: Color(red: 0.88, green: 0.63, blue: 0.16)
+        case .dinner: .indigo
+        case .snack: .pink
+        }
+    }
 
     static func number(_ value: Double, decimals: Int = 0) -> String {
         value.formatted(.number.precision(.fractionLength(0...decimals)))
+    }
+}
+
+extension View {
+    func contentCard() -> some View {
+        padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.surface, in: .rect(cornerRadius: 26))
+    }
+}
+
+struct MealIcon: View {
+    let kind: MealKind
+    var size: CGFloat = 42
+
+    var body: some View {
+        Image(systemName: kind.symbol)
+            .font(.system(size: size * 0.43, weight: .semibold))
+            .foregroundStyle(Theme.mealColor(kind))
+            .frame(width: size, height: size)
+            .background(Theme.mealColor(kind).opacity(0.12), in: .circle)
+            .accessibilityHidden(true)
     }
 }
 

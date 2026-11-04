@@ -7,7 +7,7 @@ struct FoodDiaryApp: App {
     var body: some Scene {
         WindowGroup {
             TabView {
-                Tab("今天", systemImage: "calendar") { TodayView() }
+                Tab("饮食", systemImage: "fork.knife") { TodayView() }
                 Tab("趋势", systemImage: "chart.bar.xaxis") { TrendsView() }
                 Tab("我的", systemImage: "person.crop.circle") { SettingsView() }
             }

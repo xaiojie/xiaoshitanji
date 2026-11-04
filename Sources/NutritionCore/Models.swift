@@ -15,7 +15,7 @@ public enum DiaryError: Error, LocalizedError, Sendable {
         case .unreadableDiary: "饮食记录文件无法读取。原文件已保留，请先导出备份后检查。"
         case .unsupportedVersion: "记录来自更新版本的应用，请升级应用后再打开。"
         case .storage(let message): "记录未能保存，草稿已保留。\(message)"
-        case .missingAPIKey: "请先在「我的」中配置 DeepSeek API Key，也可以手动记录。"
+        case .missingAPIKey: "请先在「我的」中配置 DeepSeek API Key，再开始 AI 记餐。"
         case .http(401): "DeepSeek API Key 无效，请到「我的」中检查。"
         case .http(402): "DeepSeek 账户余额不足，请充值后重试。"
         case .http(429): "DeepSeek 请求较多，请稍后重试。"
@@ -53,7 +53,7 @@ public struct Nutrition: Codable, Equatable, Sendable {
 
     public func validate() throws {
         guard [calories, protein, carbohydrates, fat].allSatisfy({ $0.isFinite && $0 >= 0 }) else {
-            throw DiaryError.invalidInput("热量和营养数值需填写有效的非负数字。")
+            throw DiaryError.invalidInput("热量或营养估算无效，请重新分析。")
         }
     }
 }
@@ -64,24 +64,41 @@ public struct FoodItem: Identifiable, Codable, Equatable, Sendable {
     public var grams: Double
     public var per100g: Nutrition
     public var notes: String
+    public var portionDescription: String?
 
     public init(id: UUID = UUID(), name: String = "", grams: Double = 100,
-                per100g: Nutrition = .zero, notes: String = "") {
+                per100g: Nutrition = .zero, notes: String = "", portionDescription: String? = nil) {
         self.id = id
         self.name = name
         self.grams = grams
         self.per100g = per100g
         self.notes = notes
+        self.portionDescription = portionDescription
     }
 
     public var nutrition: Nutrition { per100g.scaled(by: grams / 100) }
+    public var portionLabel: String {
+        let label = portionDescription?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return label.isEmpty ? "一份" : label
+    }
+
+    public func scaledPortion(by multiplier: Double, description: String) throws -> FoodItem {
+        guard multiplier.isFinite && multiplier > 0 else {
+            throw DiaryError.invalidInput("请选择有效的食用份量。")
+        }
+        var food = self
+        food.grams *= multiplier
+        food.portionDescription = description
+        try food.validate()
+        return food
+    }
 
     public func validate() throws {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw DiaryError.invalidInput("请填写食物名称。")
+            throw DiaryError.invalidInput("没有识别到食物名称，请补充描述后重试。")
         }
         guard grams.isFinite && grams > 0 else {
-            throw DiaryError.invalidInput("「\(name)」的食用重量需要大于 0 克。")
+            throw DiaryError.invalidInput("「\(name)」的份量估算无效，请重新分析。")
         }
         try per100g.validate()
         try nutrition.validate()
@@ -143,11 +160,12 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
     public var model: String?
     public var summary: String
     public var assumptions: [String]
+    public var adjustments: [String]?
 
     public init(id: UUID = UUID(), date: Date = .now, kind: MealKind = .lunch,
                 foods: [FoodItem] = [], originalText: String = "", photoJPEG: Data? = nil,
                 source: RecordSource = .manual, model: String? = nil,
-                summary: String = "", assumptions: [String] = []) {
+                summary: String = "", assumptions: [String] = [], adjustments: [String]? = nil) {
         self.id = id
         self.date = date
         self.kind = kind
@@ -158,6 +176,7 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
         self.model = model
         self.summary = summary
         self.assumptions = assumptions
+        self.adjustments = adjustments
     }
 
     public var nutrition: Nutrition { foods.reduce(.zero) { $0 + $1.nutrition } }
@@ -180,6 +199,7 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
             model = nil
             summary = ""
             assumptions = []
+            adjustments = nil
         }
     }
 
@@ -201,8 +221,21 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
 public struct DiaryDocument: Codable, Sendable {
     public var schemaVersion: Int = 1
     public var records: [MealRecord]
+    public var reviews: [DietReview]
 
-    public init(records: [MealRecord] = []) { self.records = records }
+    public init(records: [MealRecord] = [], reviews: [DietReview] = []) {
+        self.records = records
+        self.reviews = reviews
+    }
+
+    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        records = try container.decode([MealRecord].self, forKey: .records)
+        reviews = try container.decodeIfPresent([DietReview].self, forKey: .reviews) ?? []
+    }
 
     public func validate() throws {
         guard schemaVersion == 1 else { throw DiaryError.unsupportedVersion }
@@ -210,18 +243,43 @@ public struct DiaryDocument: Codable, Sendable {
             throw DiaryError.unreadableDiary
         }
         for record in records { try record.validate() }
+        for review in reviews { try review.validate() }
     }
 
     public mutating func upsert(_ record: MealRecord) throws {
         try record.validate()
         if let index = records.firstIndex(where: { $0.id == record.id }) {
+            if records[index] == record { return }
+            invalidateReview(on: records[index].date)
             records[index] = record
         } else {
             records.append(record)
         }
+        invalidateReview(on: record.date)
     }
 
-    public mutating func remove(id: UUID) { records.removeAll { $0.id == id } }
+    public mutating func remove(id: UUID) {
+        if let record = records.first(where: { $0.id == id }) { invalidateReview(on: record.date) }
+        records.removeAll { $0.id == id }
+    }
+
+    public func review(on date: Date, calendar: Calendar = .current) -> DietReview? {
+        reviews.first { calendar.isDate($0.date, inSameDayAs: date) }
+    }
+
+    public mutating func saveReview(_ review: DietReview, snapshot: [MealRecord], calendar: Calendar = .current) throws {
+        try review.validate()
+        guard !snapshot.isEmpty, review.recordCount == snapshot.count,
+              records(on: review.date, calendar: calendar) == snapshot.sorted(by: { $0.date < $1.date }) else {
+            throw DiaryError.invalidInput("饮食记录已更新，请重新分析这一天。")
+        }
+        reviews.removeAll { calendar.isDate($0.date, inSameDayAs: review.date) }
+        reviews.append(review)
+    }
+
+    private mutating func invalidateReview(on date: Date) {
+        reviews.removeAll { Calendar.current.isDate($0.date, inSameDayAs: date) }
+    }
 
     public func records(on date: Date, calendar: Calendar = .current) -> [MealRecord] {
         records.filter { calendar.isDate($0.date, inSameDayAs: date) }.sorted { $0.date < $1.date }
