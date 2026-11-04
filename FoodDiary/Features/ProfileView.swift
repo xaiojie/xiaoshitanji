@@ -7,7 +7,7 @@ private enum ProfileSection: String, CaseIterable, Identifiable {
 }
 
 private enum ProfileSheet: String, Identifiable {
-    case editor, settings, weight, wellness, observation, sync
+    case editor, settings, weight, wellness, observation, sync, keepGoing
     var id: Self { self }
 }
 
@@ -31,6 +31,7 @@ struct ProfileView: View {
                     profileHeader
                     wellnessEntry
                     observationEntry
+                    keepGoingEntry
                     syncEntry
                     BrandSegments(options: ProfileSection.allCases.map { ($0, $0.rawValue) }, selection: $section)
                     if let error = diary.loadError { ErrorNotice(message: error).contentCard() }
@@ -63,6 +64,7 @@ struct ProfileView: View {
                 case .weight: WeightEditorView()
                 case .wellness: WellnessReviewView()
                 case .observation: ObservationView()
+                case .keepGoing: KeepGoingView()
                 case .sync: CloudSyncView()
                 }
             }
@@ -103,6 +105,20 @@ struct ProfileView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("cloudSyncEntry")
+    }
+
+    private var keepGoingEntry: some View {
+        Button { sheet = .keepGoing } label: {
+            HStack(spacing: 13) {
+                Image(systemName: "flame.circle.fill").font(.system(size: 34)).foregroundStyle(Theme.accent)
+                VStack(alignment: .leading, spacing: 5) {
+                    Label("青蛙的坚持", systemImage: "flame").font(.headline)
+                    Text("连续天数、累计餐数和里程碑。").font(.caption).foregroundStyle(Theme.mutedInk)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(Theme.mutedInk)
+            }.foregroundStyle(Theme.ink).contentCard()
+        }.buttonStyle(.plain).accessibilityIdentifier("keepGoingEntry")
     }
 
     private var observationEntry: some View {

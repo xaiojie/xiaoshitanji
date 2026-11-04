@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.10.0-yellow" alt="version" />
-  <img src="https://img.shields.io/badge/tests-143%20passed-brightgreen" alt="tests" />
+  <img src="https://img.shields.io/badge/version-0.11.0-yellow" alt="version" />
+  <img src="https://img.shields.io/badge/tests-149%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -141,6 +141,13 @@
 - **冲突自动合并**：上传带基线版本；云端有更新版本时先下载，按 id 取并集（本地重复项优先），合并后再上传，不会用旧数据覆盖新数据；
 - **大小护栏**：单次快照上限 8 MB，超过会提示先清理内嵌照片；
 - **密码与账号**：用户名 3–32 位小写字母/数字/`_`/`.`/`-`，密码 8–128 位；同一账号可登录多台设备，改密码会吊销其他设备的令牌。
+
+### 青蛙的坚持
+
+- **连续天数**：今天或昨天有记录才算「还在连」，断一天就归零，最长记录同时保留；
+- **累计成果**：累计餐数、记录天数、戒烟天数，一眼看到这段时间攒下了什么；
+- **11 个里程碑**：第一餐、连记 3/7/30 天、30/100/365 餐、体重十次、第一个常吃、七天/三十天没点烟；
+- **不制造焦虑**：没解锁的徽章只写「还没解锁」，不催、不排名、不上传。
 
 ### 本机备份与导出
 
@@ -343,6 +350,7 @@ swift test
 | `EnergyTests` | BMR 公式、活动系数、减脂/增肌缺口、安全下限、宏量分配、体重趋势校准、缺失体重与非法参数、旧文档兼容 |
 | `WellnessTests` | 范围与预设餐次、缺失与零、分烟排除、各币种费用、测量来源、请求字段、报告格式与旧文件兼容 |
 | `DiaryCSVTests` | 逐食物行与表头、逗号/引号/换行转义、体重与抽烟表、文件名与写盘、空文档 |
+| `MilestoneTests` | 连续/最长天数、断档归零、昨天宽限、里程碑阈值解锁、戒烟天数与空文档 |
 | `BackupTests` | 同一天只写一份、按保留数量裁剪、还原往返、坏文件拒绝 |
 | `CloudSyncTests` | 服务器地址规范化、账号密码本地校验、请求构造与 Bearer 头、登录/状态/快照/上传/版本解析、409 与 413 分支、8 MB 上限、冲突合并的并集与本机优先、吸烟合并 |
 
@@ -359,7 +367,7 @@ swift test
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 0.10.0，构建号 15 |
+| 版本 | 0.11.0，构建号 16 |
 
 Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完成授权弹窗。
 
@@ -367,7 +375,7 @@ Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完
 
 ## 项目状态与路线图
 
-**当前版本 0.10.0「云同步版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余 → 本地模式识别与带依据的自由追问 → 自建服务器云端同步与版本恢复。
+**当前版本 0.11.0「成果可见版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余 → 本地模式识别与带依据的自由追问 → 自建服务器云端同步与版本恢复 → 本机备份、CSV 导出与成果里程碑。
 
 | 状态 | 事项 |
 | --- | --- |
