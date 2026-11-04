@@ -102,6 +102,33 @@ final class DiaryModel {
         document = next
     }
 
+    func savePlan(_ plan: WorkoutPlan) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        try next.savePlan(plan)
+        try store.save(next)
+        document = next
+    }
+
+    func deletePlan(_ plan: WorkoutPlan) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        next.removePlan(id: plan.id)
+        try store.save(next)
+        document = next
+    }
+
+    /// 从计划开练，返回刚生成的训练（用于提示）。
+    @discardableResult
+    func startWorkout(from plan: WorkoutPlan, on date: Date = .now) throws -> WorkoutRecord? {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        let workout = try next.startWorkout(fromPlan: plan.id, on: date)
+        try store.save(next)
+        document = next
+        return workout
+    }
+
     func saveTemplate(_ template: MealTemplate) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document

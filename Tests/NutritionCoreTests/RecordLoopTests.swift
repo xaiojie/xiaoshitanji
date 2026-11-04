@@ -185,11 +185,11 @@ struct RecordLoopTests {
         try old.validate()
 
         let current = DiaryDocument()
-        #expect(current.schemaVersion == 4)
+        #expect(current.schemaVersion == 5)
         try current.validate()
 
         let newer = try JSONDecoder().decode(DiaryDocument.self,
-                                             from: Data(#"{"schemaVersion":5,"records":[]}"#.utf8))
+                                             from: Data(#"{"schemaVersion":6,"records":[]}"#.utf8))
         #expect(throws: DiaryError.self) { try newer.validate() }
     }
 
@@ -206,9 +206,9 @@ struct RecordLoopTests {
 
         let data = try Data(contentsOf: store.fileURL)
         let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        #expect(object?["schemaVersion"] as? Int == 4)
+        #expect(object?["schemaVersion"] as? Int == 5)
         let reloaded = try store.load()
-        #expect(reloaded.schemaVersion == 4)
+        #expect(reloaded.schemaVersion == 5)
         #expect(reloaded.templates.count == 1)
         #expect(reloaded.templates[0].foods[0].isManual == false)
     }

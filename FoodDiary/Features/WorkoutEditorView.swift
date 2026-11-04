@@ -5,6 +5,7 @@ struct WorkoutEditorView: View {
     @Environment(\.dismiss) private var dismiss
     let workout: WorkoutRecord?
     let onSave: (WorkoutRecord) -> Void
+    var onSavePlan: ((WorkoutPlan) -> Void)? = nil
 
     @State private var date: Date
     @State private var kind: WorkoutKind
@@ -18,10 +19,14 @@ struct WorkoutEditorView: View {
     @State private var heartRateText: String
     @State private var exercises: [StrengthExercise]
     @State private var errorMessage: String?
+    @State private var saveAsPlan = false
+    @State private var planName = ""
 
-    init(workout: WorkoutRecord?, onSave: @escaping (WorkoutRecord) -> Void) {
+    init(workout: WorkoutRecord?, onSave: @escaping (WorkoutRecord) -> Void,
+         onSavePlan: ((WorkoutPlan) -> Void)? = nil) {
         self.workout = workout
         self.onSave = onSave
+        self.onSavePlan = onSavePlan
         _date = State(initialValue: workout?.date ?? .now)
         _kind = State(initialValue: workout?.kind ?? .strength)
         _title = State(initialValue: workout?.title ?? "")
@@ -112,6 +117,15 @@ struct WorkoutEditorView: View {
                     }
                 }
 
+                if workout == nil, onSavePlan != nil {
+                    Section("复用") {
+                        Toggle("存为训练计划", isOn: $saveAsPlan)
+                        if saveAsPlan {
+                            TextField("计划名称", text: $planName)
+                        }
+                    }
+                }
+
                 Section("感受") {
                     Toggle("记录体感强度", isOn: $chargesEffort)
                     if chargesEffort {
@@ -167,6 +181,11 @@ struct WorkoutEditorView: View {
         }
         do {
             try record.validate()
+            if saveAsPlan, let onSavePlan {
+                let plan = WorkoutPlan(workout: record, name: planName)
+                try plan.validate()
+                onSavePlan(plan)
+            }
             onSave(record)
             dismiss()
         } catch {

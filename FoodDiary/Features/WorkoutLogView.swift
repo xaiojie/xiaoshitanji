@@ -27,6 +27,18 @@ struct WorkoutLogView: View {
                     .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
                 }
 
+                if !diary.document.plans.isEmpty {
+                    Section("计划") {
+                        ForEach(diary.document.recentPlans()) { plan in
+                            Button { start(plan) } label: { planRow(plan) }
+                                .buttonStyle(.plain)
+                                .swipeActions {
+                                    Button("删除", role: .destructive) { try? diary.deletePlan(plan) }
+                                }
+                        }
+                    }
+                }
+
                 if diary.document.workouts.isEmpty {
                     Section {
                         VStack(alignment: .leading, spacing: 8) {
@@ -61,10 +73,10 @@ struct WorkoutLogView: View {
                 }
             }
             .sheet(isPresented: $adding) {
-                WorkoutEditorView(workout: nil) { save($0) }
+                WorkoutEditorView(workout: nil, onSave: { save($0) }, onSavePlan: { savePlan($0) })
             }
             .sheet(item: $editing) { workout in
-                WorkoutEditorView(workout: workout) { save($0) }
+                WorkoutEditorView(workout: workout, onSave: { save($0) }, onSavePlan: { savePlan($0) })
             }
             .alert("没有保存", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
                 Button("好", role: .cancel) { errorMessage = nil }
@@ -83,6 +95,35 @@ struct WorkoutLogView: View {
         let calendar = Calendar.current
         let groups = Dictionary(grouping: diary.document.workouts) { calendar.startOfDay(for: $0.date) }
         return groups.keys.sorted(by: >).map { ($0, groups[$0]!.sorted { $0.date > $1.date }) }
+    }
+
+    private func planRow(_ plan: WorkoutPlan) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: plan.kind.symbol).frame(width: 30)
+                .foregroundStyle(Theme.olive)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(plan.displayName).font(.subheadline.weight(.semibold))
+                Text(plan.summary + (plan.useCount > 0 ? " · 用过 \(plan.useCount) 次" : "") )
+                    .font(.caption).foregroundStyle(Theme.mutedInk)
+            }
+            Spacer()
+            Image(systemName: "play.circle.fill").font(.title3).foregroundStyle(Theme.accent)
+        }
+        .foregroundStyle(Theme.ink)
+        .padding(.vertical, 2)
+        .accessibilityIdentifier("plan-\(plan.id.uuidString)")
+    }
+
+    private func start(_ plan: WorkoutPlan) {
+        do {
+            _ = try diary.startWorkout(from: plan)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func savePlan(_ plan: WorkoutPlan) {
+        do { try diary.savePlan(plan) } catch { errorMessage = error.localizedDescription }
     }
 
     private func row(_ workout: WorkoutRecord) -> some View {

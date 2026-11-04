@@ -63,7 +63,7 @@ struct WorkoutTests {
         #expect(document.workouts.isEmpty)
     }
 
-    @Test("v2 旧文件仍能读，新文件写 v4")
+    @Test("v2 旧文件仍能读，新文件写当前版本")
     func legacyCompatibility() throws {
         var document = DiaryDocument(records: [])
         document.schemaVersion = 2
@@ -77,6 +77,6 @@ struct WorkoutTests {
         #expect(decoded.schemaVersion == 2)
 
         let fresh = try decoder.decode(DiaryDocument.self, from: encoder.encode(DiaryDocument()))
-        #expect(fresh.schemaVersion == 4)
+        #expect(fresh.schemaVersion == DiaryDocument.currentSchemaVersion)
     }
 }
