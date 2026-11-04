@@ -11,6 +11,8 @@ struct TodayView: View {
     @State private var reviewTask: Task<Void, Never>?
     @State private var reviewRequestID: UUID?
     @State private var reviewError: String?
+    @State private var liveActivity = IntakeActivityManager.shared
+    @State private var liveActivityError: String?
 
     private var records: [MealRecord] { diary.document.records(on: selectedDate) }
     private var nutrition: Nutrition { diary.document.total(on: selectedDate) }
@@ -92,6 +94,10 @@ struct TodayView: View {
             .onChange(of: selectedDate) { _, _ in cancelReview(); reviewError = nil }
             .onChange(of: goal) { _, _ in cancelReview(); reviewError = nil }
             .onDisappear(perform: cancelReview)
+            .alert("实时活动", isPresented: Binding(get: { liveActivityError != nil },
+                                                   set: { if !$0 { liveActivityError = nil } })) {
+                Button("好", role: .cancel) { liveActivityError = nil }
+            } message: { Text(liveActivityError ?? "") }
         }
     }
 
@@ -156,6 +162,15 @@ struct TodayView: View {
     private func cancelReview() {
         reviewRequestID = nil
         reviewTask?.cancel()
+    }
+
+    private func toggleLiveActivity() {
+        if liveActivity.isRunning {
+            liveActivity.end()
+            return
+        }
+        liveActivity.start(state: IntakeActivityManager.state(for: diary.document, budget: budget))
+        liveActivityError = liveActivity.errorMessage
     }
 
     /// 快捷指令留下的那句话：取一次就清掉，直接开记录页。

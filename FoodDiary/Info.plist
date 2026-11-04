@@ -25,6 +25,10 @@
     <string>把你说的一餐转成文字；设备支持时会优先在本地识别。</string>
     <key>NSHealthShareUsageDescription</key>
     <string>读取步数、活动能量、锻炼时长、步行跑步距离及身高体重，用于健康主页和汇总分析。你可以在确认后将所选汇总数值发送给 DeepSeek 生成建议。</string>
+    <key>NSSupportsLiveActivities</key>
+    <true/>
+    <key>NSSupportsLiveActivitiesFrequentUpdates</key>
+    <true/>
     <key>UIFileSharingEnabled</key>
     <true/>
     <key>LSSupportsOpeningDocumentsInPlace</key>

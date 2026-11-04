@@ -38,8 +38,24 @@ final class DiaryModel {
             }
             document = loaded
             loadError = nil
+            publishWidgetSnapshot()
         } catch {
             loadError = error.localizedDescription
+        }
+    }
+
+    /// 落盘、更新内存、再刷新小组件；所有写路径都走这里。
+    private func commit(_ next: DiaryDocument) throws {
+        try commit(next)
+        publishWidgetSnapshot()
+    }
+
+    private func publishWidgetSnapshot(on date: Date = .now) {
+        let budget = energyBudget(on: date)
+        WidgetSnapshotWriter.write(document: document, budget: budget, on: date)
+        if IntakeActivityManager.shared.isRunning {
+            IntakeActivityManager.shared.update(
+                state: IntakeActivityManager.state(for: document, budget: budget, on: date))
         }
     }
 
@@ -53,32 +69,28 @@ final class DiaryModel {
         }
         var next = document
         try next.upsert(record)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func delete(_ record: MealRecord) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         next.remove(id: record.id)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func saveReview(_ review: DietReview, snapshot: [MealRecord]) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         try next.saveReview(review, snapshot: snapshot)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func saveWellnessReview(_ report: WellnessReview) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         try next.saveWellnessReview(report)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     /// 当天训练记录里填的消耗热量；没填就算 0，不猜。
@@ -90,32 +102,28 @@ final class DiaryModel {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         try next.saveWorkout(workout)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func deleteWorkout(_ workout: WorkoutRecord) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         next.removeWorkout(id: workout.id)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func savePlan(_ plan: WorkoutPlan) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         try next.savePlan(plan)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func deletePlan(_ plan: WorkoutPlan) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         next.removePlan(id: plan.id)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     /// 从计划开练，返回刚生成的训练（用于提示）。
@@ -124,8 +132,7 @@ final class DiaryModel {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         let workout = try next.startWorkout(fromPlan: plan.id, on: date)
-        try store.save(next)
-        document = next
+        try commit(next)
         return workout
     }
 
@@ -133,31 +140,27 @@ final class DiaryModel {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         try next.saveTemplate(template)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func deleteTemplate(id: UUID) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         next.removeTemplate(id: id)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func saveObservation(_ answer: AnalysisAnswer) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         try next.saveObservation(answer)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func deleteObservation(id: UUID) {
         var next = document
         next.removeObservation(id: id)
-        try? store.save(next)
-        document = next
+        try? commit(next)
     }
 
     /// 使用次数只影响排序，记录失败时不影响用户继续套用。
@@ -171,8 +174,7 @@ final class DiaryModel {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         try next.updateProfile(profile, weightKG: weightKG)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func saveEnergySettings(_ settings: EnergySettings) throws {
@@ -180,8 +182,7 @@ final class DiaryModel {
         var next = document
         try settings.validate()
         next.energy = settings
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     /// 某天的体重：优先取该天及以前最近的一次，没有历史就用最新一次。
@@ -211,24 +212,21 @@ final class DiaryModel {
         next.schemaVersion = DiaryDocument.currentSchemaVersion
         _ = try next.externalizePhotos(in: photosDirectory)
         try next.validate()
-        try store.save(next)
-        self.document = next
+        try commit(next)
     }
 
     func saveWeight(_ weight: WeightRecord) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         try next.saveWeight(weight)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func deleteWeight(_ weight: WeightRecord) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         next.removeWeight(id: weight.id)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 
     func openSmokingPack(_ pack: CigarettePack) throws {
@@ -271,7 +269,6 @@ final class DiaryModel {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         try update(&next.smoking)
-        try store.save(next)
-        document = next
+        try commit(next)
     }
 }

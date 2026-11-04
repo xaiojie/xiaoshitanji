@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.14.0-yellow" alt="version" />
+  <img src="https://img.shields.io/badge/version-0.15.0-yellow" alt="version" />
   <img src="https://img.shields.io/badge/tests-174%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
@@ -152,6 +152,13 @@
 - **训练计划**：把常练的一套存成计划（容量、次数、目标重量），下次点一下就能开练，组数自动展开成实际训练；
 - **一处看全**：累计次数、总时长、力量容量和有氧公里数在「我的 → 训练记录」顶部。
 
+### 小组件与灵动岛
+
+- **今日摄入小组件**：主屏小/中尺寸显示今天的热量、剩余、三大营养素与餐数，半小时刷新一次，保存记录后立刻刷新；
+- **灵动岛 / 锁屏实时活动**：在首页菜单里手动打开「灵动岛显示今日摄入」，锁屏显示摄入与剩余，灵动岛紧凑态只留数字；
+- **数据怎么共享**：App 每次保存后把今日数字写进 App Group `group.com.jay.fooddiary` 的 `widget-snapshot.json`，小组件只读这一份，不解析整份日记；
+- **可关闭**：实时活动随时能关，小组件不想要就删掉，App 内不额外耗电。
+
 ### 快捷指令与 Siri
 
 - **一句话记一餐**：「用 小食痰记 记一餐」说出吃了什么，App 打开时自动填进记录页；
@@ -248,6 +255,7 @@ swift test
 | AI | DeepSeek Chat Completions、JSON Output、vision |
 | 健康 | HealthKit（只读） |
 | 图像 | ImageIO（缩图 + 重编码）、UIImagePickerController |
+| 系统集成 | WidgetKit · ActivityKit · App Intents · UserNotifications · Speech |
 | 测试 | Swift Testing（`swift-testing`） |
 
 ---
@@ -261,9 +269,12 @@ FoodDiary/                      SwiftUI 界面、Keychain、相机与图片处�
 ├── Services/                   HealthKit 读取、照片处理、Keychain
 └── Assets.xcassets/            奶蛙素材与餐次图标
 
-FoodDiary.xcodeproj/            iPhone 原生工程（自动签名、HealthKit entitlement）
+FoodDiaryWidgets/               小组件扩展：今日摄入 + 灵动岛实时活动
+Shared/                         App 与扩展共用：小组件快照、实时活动属性
+
+FoodDiary.xcodeproj/            iPhone 原生工程（自动签名、HealthKit + App Group）
 Sources/NutritionCore/          纯逻辑 Swift Package，无 UIKit 依赖
-Tests/NutritionCoreTests/       103 个 Swift Testing 用例
+Tests/NutritionCoreTests/       174 个 Swift Testing 用例
 docs/superpowers/               设计规格（specs）与实施计划（plans）
 work/                           本地构建与验证记录（Git 忽略）
 ```
@@ -402,7 +413,7 @@ swift test
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 0.14.0，构建号 25 |
+| 版本 | 0.15.0，构建号 26 |
 
 Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完成授权弹窗。
 
@@ -410,7 +421,7 @@ Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完
 
 ## 项目状态与路线图
 
-**当前版本 0.14.0「训练计划版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余 → 本地模式识别与带依据的自由追问 → 自建服务器云端同步与版本恢复 → 本机备份、CSV 导出与成果里程碑 → 每日提醒与训练记录 → 照片外置、抽烟累计、统一趋势与训练消耗联动。
+**当前版本 0.15.0「系统集成版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余 → 本地模式识别与带依据的自由追问 → 自建服务器云端同步与版本恢复 → 本机备份、CSV 导出与成果里程碑 → 每日提醒与训练记录 → 照片外置、抽烟累计、统一趋势与训练消耗联动。
 
 | 状态 | 事项 |
 | --- | --- |
