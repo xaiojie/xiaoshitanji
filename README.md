@@ -20,7 +20,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.13.0-yellow" alt="version" />
-  <img src="https://img.shields.io/badge/tests-161%20passed-brightgreen" alt="tests" />
+  <img src="https://img.shields.io/badge/tests-169%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -110,6 +110,7 @@
 - 体重历史：手动记录 + Apple 健康测量合并展示，取时间最新的一条，同一时间优先手动记录。
 - Apple 健康**只读**：步数、活动能量、锻炼时长、步行跑步距离、体重、身高。授权后读取近 7 天活动趋势，保留无数据日期的空缺；读取失败时保留已有快照并给出提示。
 - 能量目标：BMR（Mifflin-St Jeor）× 活动系数估算维持热量，再按减脂/维持/增肌推导每日目标与蛋白质/碳水/脂肪；记录 2–4 周后可用体重趋势校准维持热量。没设置时仍可只填一个参考热量（界面显示为「参考」而非硬性目标）。
+- 训练消耗计入当天：训练记录里填的消耗热量会加到当天目标上，卡片显示「训练 +N」；没填就不加，不猜。
 
 ### 戒烟记录
 
@@ -363,7 +364,7 @@ swift test
 | `SmokingTests` | 烟包快照、库存重放校验、多币种分离、未知尼古丁与价格、AI 识别字段合并 |
 | `RecordLoopTests` | 手动录入解析与校验、手改营养值、餐内增改、常吃组合增删与上限、最近食物搜索、v1→v2 兼容与版本写盘 |
 | `ObservationTests` | 上下文聚合与缺口、证据行、指纹稳定性、回答校验与 30 条上限、五种本地模式的触发与不触发、追问请求与解析 |
-| `EnergyTests` | BMR 公式、活动系数、减脂/增肌缺口、安全下限、宏量分配、体重趋势校准、缺失体重与非法参数、旧文档兼容 |
+| `EnergyTests` | BMR 公式、活动系数、减脂/增肌缺口、安全下限、宏量分配、体重趋势校准、缺失体重与非法参数、旧文档兼容、训练消耗计入当日收支 |
 | `WellnessTests` | 范围与预设餐次、缺失与零、分烟排除、各币种费用、测量来源、请求字段、报告格式与旧文件兼容 |
 | `DiaryCSVTests` | 逐食物行与表头、逗号/引号/换行转义、体重与抽烟表、文件名与写盘、空文档 |
 | `SmokingStatsTests` | 按根数累计、分烟不计入自己抽、按烟包单价折算、多币种分开、未填价格 |
@@ -386,7 +387,7 @@ swift test
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 0.13.0，构建号 21 |
+| 版本 | 0.13.0，构建号 22 |
 
 Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完成授权弹窗。
 
@@ -394,7 +395,7 @@ Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完
 
 ## 项目状态与路线图
 
-**当前版本 0.13.0「统一趋势版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余 → 本地模式识别与带依据的自由追问 → 自建服务器云端同步与版本恢复 → 本机备份、CSV 导出与成果里程碑 → 每日提醒与训练记录 → 照片外置、抽烟累计与统一趋势。
+**当前版本 0.13.0「统一趋势版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余 → 本地模式识别与带依据的自由追问 → 自建服务器云端同步与版本恢复 → 本机备份、CSV 导出与成果里程碑 → 每日提醒与训练记录 → 照片外置、抽烟累计、统一趋势与训练消耗联动。
 
 | 状态 | 事项 |
 | --- | --- |

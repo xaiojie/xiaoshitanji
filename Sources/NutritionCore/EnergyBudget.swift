@@ -231,3 +231,27 @@ public enum EnergyCalculator {
                             dailyDelta: effectiveDelta, age: age, usedCalibration: settings.usesCalibration)
     }
 }
+
+/// 当天的收支：训练消耗加到目标上，剩下的才是还能吃多少。
+public struct DailyBalance: Sendable, Equatable {
+    public var targetCalories: Double
+    public var burnedCalories: Double
+    public var intakeCalories: Double
+
+    public init(targetCalories: Double, burnedCalories: Double, intakeCalories: Double) {
+        self.targetCalories = targetCalories
+        self.burnedCalories = burnedCalories
+        self.intakeCalories = intakeCalories
+    }
+
+    public var target: Double { targetCalories + burnedCalories }
+    public var remaining: Double { target - intakeCalories }
+    public var isOver: Bool { remaining < 0 }
+
+    public static func make(budget: EnergyBudget?, burned: Double, intake: Nutrition) -> DailyBalance? {
+        guard let budget else { return nil }
+        return DailyBalance(targetCalories: budget.targetCalories,
+                            burnedCalories: max(0, burned),
+                            intakeCalories: intake.calories)
+    }
+}

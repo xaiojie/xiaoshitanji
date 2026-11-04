@@ -139,3 +139,34 @@ struct EnergyTests {
         #expect(decoded.templates.isEmpty)
     }
 }
+
+@Suite("当日收支")
+struct DailyBalanceTests {
+    private func budget() -> EnergyBudget {
+        EnergyBudget(bmr: 1500, maintenance: 2100, targetCalories: 1800,
+                     proteinGrams: 110, carbGrams: 200, fatGrams: 55,
+                     dailyDelta: -300, age: 30, usedCalibration: false)
+    }
+
+    @Test("训练消耗加到目标上")
+    func addsBurnedCalories() {
+        let balance = DailyBalance.make(budget: budget(), burned: 300,
+                                        intake: Nutrition(calories: 1600, protein: 100, carbohydrates: 180, fat: 50))
+        #expect(balance?.target == 2100)
+        #expect(balance?.remaining == 500)
+        #expect(balance?.isOver == false)
+    }
+
+    @Test("超过时给出负剩余")
+    func overshoot() {
+        let balance = DailyBalance.make(budget: budget(), burned: 0,
+                                        intake: Nutrition(calories: 2000, protein: 100, carbohydrates: 180, fat: 50))
+        #expect(balance?.remaining == -200)
+        #expect(balance?.isOver == true)
+    }
+
+    @Test("没有能量设置就没有收支")
+    func requiresBudget() {
+        #expect(DailyBalance.make(budget: nil, burned: 100, intake: .zero) == nil)
+    }
+}
