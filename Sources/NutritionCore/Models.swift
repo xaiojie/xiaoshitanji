@@ -314,13 +314,14 @@ public struct DiaryDocument: Codable, Sendable {
     public var smoking: SmokingDiary
     public var wellnessReviews: [WellnessReview]
     public var templates: [MealTemplate]
+    public var observations: [AnalysisAnswer]
     /// 为 nil 时还没有配置能量目标，App 退回旧的「参考热量」。
     public var energy: EnergySettings?
 
     public init(records: [MealRecord] = [], reviews: [DietReview] = [],
                 profile: HealthProfile = HealthProfile(), weights: [WeightRecord] = [], smoking: SmokingDiary = SmokingDiary(),
                 wellnessReviews: [WellnessReview] = [], templates: [MealTemplate] = [],
-                energy: EnergySettings? = nil) {
+                observations: [AnalysisAnswer] = [], energy: EnergySettings? = nil) {
         self.records = records
         self.reviews = reviews
         self.profile = profile
@@ -328,10 +329,11 @@ public struct DiaryDocument: Codable, Sendable {
         self.smoking = smoking
         self.wellnessReviews = wellnessReviews
         self.templates = templates
+        self.observations = observations
         self.energy = energy
     }
 
-    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights, smoking, wellnessReviews, templates, energy }
+    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights, smoking, wellnessReviews, templates, observations, energy }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -343,6 +345,7 @@ public struct DiaryDocument: Codable, Sendable {
         smoking = try container.decodeIfPresent(SmokingDiary.self, forKey: .smoking) ?? SmokingDiary()
         wellnessReviews = try container.decodeIfPresent([WellnessReview].self, forKey: .wellnessReviews) ?? []
         templates = try container.decodeIfPresent([MealTemplate].self, forKey: .templates) ?? []
+        observations = try container.decodeIfPresent([AnalysisAnswer].self, forKey: .observations) ?? []
         energy = try container.decodeIfPresent(EnergySettings.self, forKey: .energy)
     }
 
@@ -362,6 +365,8 @@ public struct DiaryDocument: Codable, Sendable {
         for report in wellnessReviews { try report.validate() }
         guard Set(templates.map(\.id)).count == templates.count else { throw DiaryError.unreadableDiary }
         for template in templates { try template.validate() }
+        guard Set(observations.map(\.id)).count == observations.count else { throw DiaryError.unreadableDiary }
+        for answer in observations { try answer.validate() }
         try energy?.validate()
     }
 
@@ -390,6 +395,24 @@ public struct DiaryDocument: Codable, Sendable {
         try report.validate()
         wellnessReviews.removeAll { $0.snapshot.period == report.snapshot.period }
         wellnessReviews.append(report)
+    }
+
+    public mutating func saveObservation(_ answer: AnalysisAnswer) throws {
+        try answer.validate()
+        observations.removeAll { $0.id == answer.id }
+        observations.append(answer)
+        if observations.count > 30 {
+            observations.sort { $0.createdAt > $1.createdAt }
+            observations.removeLast(observations.count - 30)
+        }
+    }
+
+    public mutating func removeObservation(id: UUID) {
+        observations.removeAll { $0.id == id }
+    }
+
+    public func observations(for period: WellnessPeriod) -> [AnalysisAnswer] {
+        observations.filter { $0.period == period }.sorted { $0.createdAt > $1.createdAt }
     }
 
     public mutating func updateProfile(_ profile: HealthProfile, weightKG: Double? = nil, date: Date = .now) throws {

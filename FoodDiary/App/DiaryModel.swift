@@ -73,6 +73,21 @@ final class DiaryModel {
         document = next
     }
 
+    func saveObservation(_ answer: AnalysisAnswer) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        try next.saveObservation(answer)
+        try store.save(next)
+        document = next
+    }
+
+    func deleteObservation(id: UUID) {
+        var next = document
+        next.removeObservation(id: id)
+        try? store.save(next)
+        document = next
+    }
+
     /// 使用次数只影响排序，记录失败时不影响用户继续套用。
     func markTemplateUsed(id: UUID) {
         guard var template = document.templates.first(where: { $0.id == id }) else { return }

@@ -7,7 +7,7 @@ private enum ProfileSection: String, CaseIterable, Identifiable {
 }
 
 private enum ProfileSheet: String, Identifiable {
-    case editor, settings, weight, wellness
+    case editor, settings, weight, wellness, observation
     var id: Self { self }
 }
 
@@ -30,6 +30,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     profileHeader
                     wellnessEntry
+                    observationEntry
                     BrandSegments(options: ProfileSection.allCases.map { ($0, $0.rawValue) }, selection: $section)
                     if let error = diary.loadError { ErrorNotice(message: error).contentCard() }
                     switch section {
@@ -60,6 +61,7 @@ struct ProfileView: View {
                 case .settings: GeneralSettingsView(isPresented: true)
                 case .weight: WeightEditorView()
                 case .wellness: WellnessReviewView()
+                case .observation: ObservationView()
                 }
             }
             .refreshable { await health.refresh() }
@@ -82,6 +84,20 @@ struct ProfileView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Theme.darkGradient, in: .rect(cornerRadius: 24))
         }.buttonStyle(.plain).accessibilityIdentifier("wellnessReview")
+    }
+
+    private var observationEntry: some View {
+        Button { sheet = .observation } label: {
+            HStack(spacing: 13) {
+                Image(systemName: "eye.circle.fill").font(.system(size: 34)).foregroundStyle(Theme.accent)
+                VStack(alignment: .leading, spacing: 5) {
+                    Label("蛙的观察", systemImage: "sparkle.magnifyingglass").font(.headline)
+                    Text("找模式，也能追问记录里的细节。").font(.caption).foregroundStyle(Theme.mutedInk)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(Theme.mutedInk)
+            }.foregroundStyle(Theme.ink).contentCard()
+        }.buttonStyle(.plain).accessibilityIdentifier("observationInsight")
     }
 
     private var profileHeader: some View {
