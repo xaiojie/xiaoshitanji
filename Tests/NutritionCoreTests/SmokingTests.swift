@@ -10,6 +10,76 @@ struct SmokingTests {
                       openedAt: date, openingCount: remaining)
     }
 
+    @Test func openingSavedCigaretteCreatesFreshPackAndPreservesThePreviousStock() throws {
+        var journal = SmokingDiary()
+        let original = pack(remaining: 7)
+        try journal.openPack(original)
+        try journal.record(.smoked, count: 1, date: date)
+        try journal.openAnotherPack(like: original.id, date: date.addingTimeInterval(60))
+        let current = try #require(journal.activePack)
+        #expect(current.id != original.id)
+        #expect(current.product == original.product)
+        #expect(journal.remaining(in: current.id) == 20)
+        #expect(journal.remaining(in: original.id) == 6)
+        #expect(journal.summary(on: date).smoked == 1)
+        try journal.activatePack(id: original.id)
+        #expect(journal.remaining(in: original.id) == 6)
+        #expect(journal.savedCigarettes.count == 1)
+        #expect(throws: DiaryError.self) { try journal.openAnotherPack(like: UUID()) }
+        #expect(journal.packs.count == 2)
+    }
+
+    @Test func savedCigaretteLibraryKeepsLatestVariantDetailsAndDifferentNames() throws {
+        var journal = SmokingDiary()
+        let original = pack()
+        try journal.openPack(original)
+        var newer = pack(price: 32)
+        try journal.openPack(newer)
+        newer.product.name = "另一种香烟"
+        newer.id = UUID()
+        try journal.openPack(newer)
+        #expect(journal.savedCigarettes.count == 2)
+        #expect(journal.savedCigarettes.first?.product.name == "另一种香烟")
+        #expect(journal.savedCigarettes.last?.product.pricePerPack == 32)
+    }
+
+    @Test func aiCorrectionsUpdateRecognizedValuesAndSidePhotosKeepUnknownFields() throws {
+        let content = #"{"name":"","pricePerPack":25,"priceEvidence":"这包买了25元","nicotineMG":null,"currency":"CNY"}"#
+        let response = try JSONSerialization.data(withJSONObject: ["choices": [["finish_reason": "stop", "message": ["content": content]]]])
+        let result = try DeepSeekClient.parseCigaretteResponse(data: response, statusCode: 200)
+        var draft = CigaretteProductDraft(product: CigaretteProduct(name: "已识别名称", nicotineMG: 0.5, pricePerPack: 30))
+        draft.applyRecognition(result)
+        let product = try draft.makeProduct()
+        #expect(product.name == "已识别名称")
+        #expect(product.pricePerPack == 25)
+        #expect(product.nicotineMG == 0.5)
+    }
+
+    @Test func aiCanExplicitlyClearWrongValuesWithoutTreatingPartialPhotosAsClearRequests() throws {
+        let text = "烟碱量未知，请清除尼古丁，旧价格不确定，请清空价格"
+        let content = #"{"name":"","nicotineMG":null,"pricePerPack":null,"clearFields":["nicotineMG","pricePerPack"],"clearEvidence":{"nicotineMG":"请清除尼古丁","pricePerPack":"请清空价格"}}"#
+        let response = try JSONSerialization.data(withJSONObject: ["choices": [["finish_reason": "stop", "message": ["content": content]]]])
+        let result = try DeepSeekClient.parseCigaretteResponse(data: response, statusCode: 200, userText: text)
+        var draft = CigaretteProductDraft(product: CigaretteProduct(name: "已识别名称", nicotineMG: 0.8, pricePerPack: 30))
+        draft.applyRecognition(result)
+        let product = try draft.makeProduct()
+        #expect(product.name == "已识别名称")
+        #expect(product.nicotineMG == nil)
+        #expect(product.pricePerPack == nil)
+        #expect(throws: DiaryError.self) { try DeepSeekClient.parseCigaretteResponse(data: response, statusCode: 200) }
+    }
+
+    @Test func aiCanCorrectCurrencyFromExplicitUserTextWithoutChangingTheAmount() throws {
+        let content = #"{"name":"","currency":"CNY","currencyEvidence":"币种改成人民币"}"#
+        let response = try JSONSerialization.data(withJSONObject: ["choices": [["finish_reason": "stop", "message": ["content": content]]]])
+        let result = try DeepSeekClient.parseCigaretteResponse(data: response, statusCode: 200, userText: "币种改成人民币，金额不变")
+        var draft = CigaretteProductDraft(product: CigaretteProduct(name: "已识别名称", pricePerPack: 25, currency: .usd))
+        draft.applyRecognition(result)
+        let product = try draft.makeProduct()
+        #expect(product.pricePerPack == 25)
+        #expect(product.currency == .cny)
+    }
+
     @Test func sharingOnlyReducesStockAndSmokingCountsPersonalLabelYield() throws {
         var diary = SmokingDiary()
         let pack = pack(remaining: 8)

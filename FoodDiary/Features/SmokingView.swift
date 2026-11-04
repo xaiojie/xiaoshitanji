@@ -3,10 +3,10 @@ import Charts
 import NutritionCore
 
 private enum SmokingSheet: Identifiable {
-    case newPack, share, stock, history, edit(CigarettePack)
+    case choosePack, share, stock, history, edit(CigarettePack)
     var id: String {
         switch self {
-        case .newPack: "new"
+        case .choosePack: "choosePack"
         case .share: "share"
         case .stock: "stock"
         case .history: "history"
@@ -52,7 +52,7 @@ struct SmokingView: View {
             }
             .sheet(item: $sheet) { destination in
                 switch destination {
-                case .newPack: SmokingPackEditorView()
+                case .choosePack: SmokingPackPickerView()
                 case .edit(let pack): SmokingPackEditorView(pack: pack)
                 case .share: SmokingCountView(kind: .shared)
                 case .stock: SmokingCountView(kind: .stockCheck)
@@ -91,7 +91,7 @@ struct SmokingView: View {
                 }
             }
             Button(action: recordOne) {
-                Label(pack == nil ? "添加当前烟包" : (remaining == 0 ? "这包已空，添加烟包" : "抽一根"),
+                Label(pack == nil ? "选择当前烟包" : (remaining == 0 ? "这包已空，换一包" : "抽一根"),
                       systemImage: pack == nil || remaining == 0 ? "plus" : "plus.circle")
                     .font(.headline).frame(maxWidth: .infinity, minHeight: 42)
             }
@@ -142,7 +142,7 @@ struct SmokingView: View {
             HStack {
                 Label("当前这一包", systemImage: "rectangle.stack").font(.headline)
                 Spacer()
-                Button("换一包") { sheet = .newPack }.font(.caption.weight(.semibold))
+                Button("换一包") { sheet = .choosePack }.font(.caption.weight(.semibold))
             }
             if let pack {
                 HStack(spacing: 14) {
@@ -173,12 +173,12 @@ struct SmokingView: View {
                         Button("分给别人", systemImage: "person.2") { sheet = .share }.disabled(remaining == 0)
                         Button("校准余量", systemImage: "slider.horizontal.3") { sheet = .stock }
                         Spacer(minLength: 0)
-                        Button("编辑烟包", systemImage: "pencil") { sheet = .edit(pack) }.labelStyle(.iconOnly)
+                        Button("AI 识别烟盒", systemImage: "viewfinder") { sheet = .edit(pack) }.labelStyle(.iconOnly)
                     }.font(.caption).buttonStyle(.glass)
                 }
             } else {
-                HealthEmptyView(symbol: "rectangle.stack.badge.plus", title: "先记下手里的这一包", detail: "拍烟盒识别名称和标注值，填写价格及现在还剩几根。")
-                Button("拍照添加烟包", systemImage: "camera") { sheet = .newPack }.buttonStyle(.glassProminent)
+                HealthEmptyView(symbol: "rectangle.stack.badge.plus", title: "选一包，开始记录", detail: "从已有香烟中选择，或拍照让 AI 识别新香烟。")
+                Button("选择香烟", systemImage: "rectangle.stack") { sheet = .choosePack }.buttonStyle(.glassProminent)
             }
         }.contentCard()
     }
@@ -205,7 +205,7 @@ struct SmokingView: View {
     }
 
     private func recordOne() {
-        guard pack != nil, remaining > 0 else { sheet = .newPack; return }
+        guard pack != nil, remaining > 0 else { sheet = .choosePack; return }
         currentDate = .now
         do { try diary.recordSmoking(.smoked, count: 1); errorMessage = nil; feedback = "已记录这一根，今天共记录 \(today.smoked) 根。" }
         catch { errorMessage = error.localizedDescription; feedback = nil }

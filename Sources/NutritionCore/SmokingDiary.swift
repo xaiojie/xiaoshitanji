@@ -105,6 +105,19 @@ public struct SmokingDiary: Codable, Equatable, Sendable {
 
     public var activePack: CigarettePack? { packs.first { $0.id == activePackID } }
     public var latestSmoke: SmokingEvent? { events.filter { $0.kind == .smoked }.max { $0.date < $1.date } }
+    public var savedCigarettes: [CigarettePack] {
+        var names = Set<String>()
+        return packs.reversed().filter { pack in
+            names.insert(pack.product.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()).inserted
+        }
+    }
+
+    public mutating func openAnotherPack(like packID: UUID, date: Date = .now) throws {
+        guard let saved = packs.first(where: { $0.id == packID }) else {
+            throw DiaryError.invalidInput("找不到已保存的香烟，请重新选择。")
+        }
+        try openPack(CigarettePack(product: saved.product, openedAt: date, photoJPEG: saved.photoJPEG))
+    }
 
     public func remaining(in packID: UUID) -> Int {
         guard let pack = packs.first(where: { $0.id == packID }) else { return 0 }

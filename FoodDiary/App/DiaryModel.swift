@@ -81,6 +81,10 @@ final class DiaryModel {
         try updateSmoking { try $0.activatePack(id: id) }
     }
 
+    func openAnotherSmokingPack(like id: UUID) throws {
+        try updateSmoking { try $0.openAnotherPack(like: id) }
+    }
+
     func updateSmokingPack(_ pack: CigarettePack) throws {
         try updateSmoking { try $0.updatePack(pack) }
     }

@@ -93,7 +93,7 @@ struct SmokingHistoryView: View {
                             }.font(.caption)
                         }
                         Spacer()
-                        Button("编辑资料", systemImage: "pencil") { editing = SmokingPackEdit(pack: pack) }.font(.caption)
+                        Button("AI 识别", systemImage: "viewfinder") { editing = SmokingPackEdit(pack: pack) }.font(.caption)
                     }
                 }.contentCard()
             }

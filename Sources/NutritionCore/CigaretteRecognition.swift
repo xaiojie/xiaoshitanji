@@ -1,8 +1,14 @@
 import Foundation
 
+public enum CigaretteField: String, Codable, Sendable {
+    case name, nicotineMG, pricePerPack
+}
+
 public struct CigaretteRecognition: Sendable {
     public let product: CigaretteProduct
     public let evidence: [String]
+    public let clearedFields: Set<CigaretteField>
+    public let currencyCorrection: SmokingCurrency?
 }
 
 public struct CigaretteProductDraft: Equatable, Sendable {
@@ -21,14 +27,27 @@ public struct CigaretteProductDraft: Equatable, Sendable {
     }
 
     public mutating func fillMissing(from recognition: CigaretteRecognition) {
-        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { name = recognition.product.name }
-        if nicotineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            nicotineText = HealthMeasurementInput.format(recognition.product.nicotineMG)
+        applyRecognition(recognition, preserveExisting: true)
+    }
+
+    public mutating func applyRecognition(_ recognition: CigaretteRecognition, preserveExisting: Bool = false) {
+        if (!preserveExisting || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty),
+           !recognition.product.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            name = recognition.product.name
         }
-        if priceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, recognition.product.pricePerPack != nil {
-            priceText = HealthMeasurementInput.format(recognition.product.pricePerPack)
+        if (!preserveExisting || nicotineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty),
+           let nicotine = recognition.product.nicotineMG {
+            nicotineText = HealthMeasurementInput.format(nicotine)
+        }
+        if (!preserveExisting || priceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty),
+           let price = recognition.product.pricePerPack {
+            priceText = HealthMeasurementInput.format(price)
             currency = recognition.product.currency
         }
+        if recognition.clearedFields.contains(.name) { name = "" }
+        if recognition.clearedFields.contains(.nicotineMG) { nicotineText = "" }
+        if recognition.clearedFields.contains(.pricePerPack) { priceText = "" }
+        if let correctedCurrency = recognition.currencyCorrection { currency = correctedCurrency }
         let additions = ([recognition.product.notes] + recognition.evidence).filter { !$0.isEmpty }
         notes = ([notes] + additions).filter { !$0.isEmpty }.joined(separator: "\n")
     }
@@ -62,11 +81,11 @@ public extension DeepSeekClient {
                             currency: SmokingCurrency = .cny) async throws -> CigaretteRecognition {
         let request = try Self.makeCigaretteRequest(text: text, imageJPEG: imageJPEG, apiKey: apiKey)
         let (data, status) = try await complete(request)
-        return try Self.parseCigaretteResponse(data: data, statusCode: status, currency: currency)
+        return try Self.parseCigaretteResponse(data: data, statusCode: status, currency: currency, userText: text)
     }
 
     static func parseCigaretteResponse(data: Data, statusCode: Int,
-                                       currency: SmokingCurrency = .cny) throws -> CigaretteRecognition {
+                                       currency: SmokingCurrency = .cny, userText: String = "") throws -> CigaretteRecognition {
         guard (200..<300).contains(statusCode) else { throw DiaryError.http(statusCode) }
         do {
             let envelope = try JSONDecoder().decode(Completion.self, from: data)
@@ -74,21 +93,30 @@ public extension DeepSeekClient {
                 throw DiaryError.invalidResponse("烟盒识别未完成，请重试。")
             }
             let payload = try JSONDecoder().decode(CigarettePayload.self, from: Data(content.utf8))
+            let clearedFields = Set((payload.clearFields ?? []).filter { field in
+                guard let quote = payload.clearEvidence?[field.rawValue]?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !quote.isEmpty else { return false }
+                return userText.contains(quote)
+            })
             let nicotineEvidence = payload.nicotineEvidence?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let priceEvidence = payload.priceEvidence?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let nicotine = nicotineEvidence.isEmpty ? nil : payload.nicotineMG
             let recognizedCurrency = payload.currency.flatMap(SmokingCurrency.init(rawValue:))
+            let currencyQuote = payload.currencyEvidence?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let currencyCorrection = !currencyQuote.isEmpty && userText.contains(currencyQuote) ? recognizedCurrency : nil
             let currencySupported = payload.currency == nil || recognizedCurrency != nil
             let price = priceEvidence.isEmpty || !currencySupported ? nil : payload.pricePerPack
             let product = CigaretteProduct(name: payload.name, nicotineMG: nicotine, pricePerPack: price,
                 currency: recognizedCurrency ?? currency, notes: payload.notes ?? "")
             try product.validate(requireName: false)
-            guard !product.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || nicotine != nil || price != nil else {
-                throw DiaryError.invalidResponse("没有读到可用的烟盒信息，请补拍或手动填写。")
+            guard !product.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || nicotine != nil || price != nil
+                    || !clearedFields.isEmpty || currencyCorrection != nil else {
+                throw DiaryError.invalidResponse("没有读到可用的烟盒信息，请补拍或用一句话补充。")
             }
-            return CigaretteRecognition(product: product, evidence: [nicotineEvidence, priceEvidence].filter { !$0.isEmpty })
+            return CigaretteRecognition(product: product, evidence: [nicotineEvidence, priceEvidence].filter { !$0.isEmpty },
+                clearedFields: clearedFields, currencyCorrection: currencyCorrection)
         } catch let error as DiaryError { throw error }
-        catch { throw DiaryError.invalidResponse("烟盒信息无法可靠读取，请补拍标注位置或手动填写。") }
+        catch { throw DiaryError.invalidResponse("烟盒信息无法可靠读取，请补拍标注位置或用一句话补充。") }
     }
 
     private static var cigarettePrompt: String {
@@ -99,7 +127,10 @@ public extension DeepSeekClient {
         不得把焦油量或一氧化碳量当作烟碱量，不得根据品牌记忆猜测尼古丁。
         只有图片清晰可见或用户文字明确提供时填写nicotineMG，并在nicotineEvidence原样摘录证据，否则两项均null。
         pricePerPack只读取用户明确提供的每包购买价、可见价签或小票，不得猜测市场价格。priceEvidence摘录证据，缺失则价格与证据均null。
+        用户本次文字中明确更正的信息优先于图片旧信息。只返回本次有依据的字段，无法读取的字段保留null，不要推测。
+        用户文字明确要求清空旧值，或说明旧值错误且当前未知时，clearFields返回需清空的name/nicotineMG/pricePerPack，clearEvidence按字段原样摘录用户要求。普通补拍读不清时返回空数组，禁止因图片缺失字段清空已有资料。
         currency只在币种明确时填CNY/VND/USD/HKD，其他币种返回原三字母代码，无法判断为null。
+        用户只更正币种时可只返回currency，currencyEvidence原样摘录用户文字中的币种更正要求，金额未知时保留null。
         notes用简体中文说明看不清的部分，提醒用户确认。无法识别名称时name为空字符串，仍返回其余可读字段以支持分次补拍。
         JSON格式 {"name":"品牌及规格","nicotineMG":null,"nicotineEvidence":null,"pricePerPack":null,"priceEvidence":null,"currency":null,"notes":"请补拍烟盒侧面的烟气烟碱标注"}
         """
@@ -114,4 +145,7 @@ private struct CigarettePayload: Decodable {
     let priceEvidence: String?
     let currency: String?
     let notes: String?
+    let clearFields: [CigaretteField]?
+    let clearEvidence: [String: String]?
+    let currencyEvidence: String?
 }
