@@ -32,7 +32,14 @@ public enum DiaryWidgetStore {
     public static let fileName = "widget-snapshot.json"
 
     public static var directory: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+        guard let base = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup) else {
+            return nil
+        }
+        let library = base.appending(path: "Library", directoryHint: .isDirectory)
+        if !FileManager.default.fileExists(atPath: library.path(percentEncoded: false)) {
+            try? FileManager.default.createDirectory(at: library, withIntermediateDirectories: true)
+        }
+        return library
     }
 
     public static var fileURL: URL? {
