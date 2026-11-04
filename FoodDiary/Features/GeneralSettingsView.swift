@@ -129,7 +129,7 @@ struct GeneralSettingsView: View {
                 }
 
                 Section {
-                    LabeledContent("版本", value: "0.4.2 奶蛙版")
+                    LabeledContent("版本", value: "0.4.3 奶蛙版")
                     Text("描述日常份量或拍张照片，AI 会估算热量和营养。识别结果可通过自然语言或份量选项继续修正。")
                         .font(.caption).foregroundStyle(.secondary)
                 }
