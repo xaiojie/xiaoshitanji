@@ -64,6 +64,15 @@ public struct ObservationFacts: Codable, Equatable, Sendable {
 
     public let averageSteps: Double?
     public let averageExerciseMinutes: Double?
+    public let averageSleepHours: Double?
+    public let averageHeartRateBPM: Double?
+    public let restingHeartRateBPM: Double?
+    public let heartRateVariabilityMS: Double?
+    public let latestVO2Max: Double?
+    public let averageHeadphoneAudioMinutes: Double?
+    public let healthWorkoutSessions: Int?
+    public let healthWorkoutMinutes: Double?
+    public let healthWorkoutCalories: Double?
 
     public let gaps: [String]
 
@@ -95,6 +104,12 @@ public struct ObservationFacts: Codable, Equatable, Sendable {
             gaps.append("区间内只有一次体重，无法判断变化")
         }
         if !summary.activity.hasData { gaps.append("没有可读取的 Apple 健康活动数据") }
+        if summary.activity.sleepHours.observedDays == 0 { gaps.append("没有睡眠数据") }
+        if summary.activity.restingHeartRate.observedDays == 0, summary.activity.averageHeartRate.observedDays == 0 {
+            gaps.append("没有心率数据")
+        }
+        if summary.activity.vo2Max.observedDays == 0 { gaps.append("没有有氧适能（最大摄氧量）数据") }
+        if summary.activity.workoutSessions.observedDays == 0 { gaps.append("区间内没有体能训练记录") }
         if summary.smoking.eventDays == 0 { gaps.append("区间内没有吸烟记录") }
         if summary.smoking.unpricedCount > 0 { gaps.append("\(summary.smoking.unpricedCount) 根香烟缺少价格") }
 
@@ -119,6 +134,15 @@ public struct ObservationFacts: Codable, Equatable, Sendable {
             unknownNicotineCount: summary.smoking.unknownNicotineCount,
             averageSteps: summary.activity.steps.average,
             averageExerciseMinutes: summary.activity.exerciseMinutes.average,
+            averageSleepHours: summary.activity.sleepHours.average,
+            averageHeartRateBPM: summary.activity.averageHeartRate.average,
+            restingHeartRateBPM: summary.activity.restingHeartRate.average,
+            heartRateVariabilityMS: summary.activity.heartRateVariability.average,
+            latestVO2Max: summary.activity.vo2Max.average,
+            averageHeadphoneAudioMinutes: summary.activity.headphoneAudioMinutes.average,
+            healthWorkoutSessions: summary.activity.workoutSessions.total.map { Int($0.rounded()) },
+            healthWorkoutMinutes: summary.activity.workoutMinutes.total,
+            healthWorkoutCalories: summary.activity.workoutCalories.total,
             gaps: gaps)
 
         let formatter = DateFormatter()
@@ -128,6 +152,10 @@ public struct ObservationFacts: Codable, Equatable, Sendable {
         var parts = ["依据：\(formatter.string(from: summary.startDate))–\(formatter.string(from: summary.endDate))"]
         if summary.diet.recordCount > 0 { parts.append("的 \(summary.diet.recordCount) 餐 / \(summary.diet.recordedDays) 个记录日") }
         if summary.body.latestWeight != nil { parts.append("、体重记录") }
+        if let sleep = facts.averageSleepHours { parts.append("、日均睡眠 \(String(format: "%.1f", sleep)) 小时") }
+        if let minutes = facts.healthWorkoutMinutes, let sessions = facts.healthWorkoutSessions {
+            parts.append("、\(sessions) 次体能训练共 \(Int(minutes.rounded())) 分钟")
+        }
         if summary.smoking.eventDays > 0 { parts.append("、\(summary.smoking.smoked) 根烟") }
         let evidence = parts.joined()
         return ObservationContext(facts: facts, evidence: evidence)

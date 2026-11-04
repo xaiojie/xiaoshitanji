@@ -42,16 +42,36 @@ public struct WellnessActivity: Codable, Equatable, Sendable {
     public let activeCalories: WellnessMetric
     public let exerciseMinutes: WellnessMetric
     public let distanceMeters: WellnessMetric
+    public let sleepHours: WellnessMetric
+    public let averageHeartRate: WellnessMetric
+    public let restingHeartRate: WellnessMetric
+    public let heartRateVariability: WellnessMetric
+    public let vo2Max: WellnessMetric
+    public let headphoneAudioMinutes: WellnessMetric
+    public let workoutSessions: WellnessMetric
+    public let workoutMinutes: WellnessMetric
+    public let workoutCalories: WellnessMetric
 
     init(days: [HealthActivityDay]) {
         steps = WellnessMetric(days.map(\.steps))
         activeCalories = WellnessMetric(days.map(\.activeCalories))
         exerciseMinutes = WellnessMetric(days.map(\.exerciseMinutes))
         distanceMeters = WellnessMetric(days.map(\.distanceMeters))
+        sleepHours = WellnessMetric(days.map(\.sleepHours))
+        averageHeartRate = WellnessMetric(days.map(\.averageHeartRate))
+        restingHeartRate = WellnessMetric(days.map(\.restingHeartRate))
+        heartRateVariability = WellnessMetric(days.map(\.heartRateVariabilityMS))
+        vo2Max = WellnessMetric(days.map(\.vo2Max))
+        headphoneAudioMinutes = WellnessMetric(days.map(\.headphoneAudioMinutes))
+        workoutSessions = WellnessMetric(days.map(\.workoutSessions))
+        workoutMinutes = WellnessMetric(days.map(\.workoutMinutes))
+        workoutCalories = WellnessMetric(days.map(\.workoutCalories))
     }
 
     public var hasData: Bool {
-        [steps, activeCalories, exerciseMinutes, distanceMeters].contains { $0.observedDays > 0 }
+        [steps, activeCalories, exerciseMinutes, distanceMeters, sleepHours, averageHeartRate,
+         restingHeartRate, heartRateVariability, vo2Max, headphoneAudioMinutes,
+         workoutSessions, workoutMinutes, workoutCalories].contains { $0.observedDays > 0 }
     }
 }
 
@@ -228,7 +248,10 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
             throw DiaryError.invalidInput("汇总数值无效，请重新读取记录。")
         }
         try diet.total?.validate()
-        let metrics = [activity.steps, activity.activeCalories, activity.exerciseMinutes, activity.distanceMeters]
+        let metrics = [activity.steps, activity.activeCalories, activity.exerciseMinutes, activity.distanceMeters,
+                       activity.sleepHours, activity.averageHeartRate, activity.restingHeartRate,
+                       activity.heartRateVariability, activity.vo2Max, activity.headphoneAudioMinutes,
+                       activity.workoutSessions, activity.workoutMinutes, activity.workoutCalories]
         guard metrics.allSatisfy({
             $0.observedDays >= 0 && $0.observedDays <= dayCount
                 && ($0.observedDays == 0 ? $0.total == nil : $0.total.map { $0.isFinite && $0 >= 0 } == true)

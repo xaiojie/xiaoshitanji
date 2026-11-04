@@ -50,7 +50,9 @@
   - 4.2 本机备份：每天首启写 `FoodDiary/Backups/diary-YYYY-MM-DD.json`，保留 14 份，设置里可关。
   - 4.4 CSV 导出：餐次/体重/抽烟三张表，逗号引号换行转义，`fileExporter` 交给系统。
   - 4.1 照片外置（schema v4）：`MealRecord.photoFileName` / `CigarettePack.photoFileName`，文件写 `FoodDiary/Photos/record-<id>.jpg`、`pack-<id>.jpg`；`DiaryDocument.externalizePhotos(in:)` 在启动与整体替换时把旧 base64 迁出并清空；保存单条记录/烟包时也先落盘再写文档。
-- [x] **主线 5 · 系统集成**（5.1–5.5 全部落地）
+- [x] **主线 5 · 系统集成**（5.1–5.6 全部落地）
+  - 5.6 健康数据全景：`HealthActivityDay` 增加睡眠、平均/静息心率、HRV、有氧适能、耳机音量、体能训练（次数/分钟/消耗）；`HealthDataModel` 授权读取 `sleepAnalysis`、`heartRate`、`restingHeartRate`、`heartRateVariabilitySDNN`、`vo2Max`、`headphoneAudioExposure` 与 `HKWorkout`，训练按 `HKWorkoutActivityType` 映射为力量/有氧；体检、趋势图、AI 上下文（`WellnessActivity` / `ObservationFacts`）共用同一份日数据；缺失项进入 `gaps`，提示词明确「只按数值解读、不做医学判断」。
+  - 5.5 快捷指令：`LogMealIntent` + `PendingMeal`，Siri/快捷指令记餐后进 App 补全；语音输入走 `SpeechTranscriber`。
 - [x] **主线 6 · 运动健身**（6.1/6.2/6.3/6.4 全部落地）
 - [x] **主线 7 · 成果感与统一视图**（7.1/7.2/7.3 全部落地）
   - 7.3 连续天数与成就：`Milestones.stats` 今天/昨天有记录才算连，最长记录保留；11 个里程碑（第一餐、连记 3/7/30 天、30/100/365 餐、体重十次、第一个常吃、七天/三十天没点烟）；「青蛙的坚持」页面从「我的」进入。

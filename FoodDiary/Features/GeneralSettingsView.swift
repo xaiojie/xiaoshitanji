@@ -134,7 +134,7 @@ struct GeneralSettingsView: View {
                     .disabled(health.isLoading)
             }
             if let error = health.errorMessage { ErrorNotice(message: error) }
-            Text("按所选权限读取步数、活动能量、锻炼时长、步行跑步距离、体重和身高。汇总分析可以选择包含这些数值，发送前会再次确认。可在健康 App 中调整访问权限。")
+            Text("按所选权限读取步数、活动能量、锻炼分钟、步行跑步距离、睡眠、心率、静息心率、心率变异性、有氧适能、耳机音量、体能训练，以及体重和身高。汇总分析可以选择包含这些数值，发送前会再次确认。可在健康 App 中调整访问权限。")
                 .font(.caption).foregroundStyle(Theme.mutedInk).lineSpacing(3)
         }
     }

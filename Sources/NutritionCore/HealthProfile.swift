@@ -76,14 +76,37 @@ public struct HealthActivityDay: Identifiable, Equatable, Sendable {
     public var activeCalories: Double?
     public var exerciseMinutes: Double?
     public var distanceMeters: Double?
+    public var sleepHours: Double?
+    public var averageHeartRate: Double?
+    public var restingHeartRate: Double?
+    public var heartRateVariabilityMS: Double?
+    public var vo2Max: Double?
+    public var headphoneAudioMinutes: Double?
+    public var workoutSessions: Double?
+    public var workoutMinutes: Double?
+    public var workoutCalories: Double?
     public var id: Date { date }
 
     public init(date: Date, steps: Double? = nil, activeCalories: Double? = nil,
-                exerciseMinutes: Double? = nil, distanceMeters: Double? = nil) {
+                exerciseMinutes: Double? = nil, distanceMeters: Double? = nil,
+                sleepHours: Double? = nil, averageHeartRate: Double? = nil,
+                restingHeartRate: Double? = nil, heartRateVariabilityMS: Double? = nil,
+                vo2Max: Double? = nil, headphoneAudioMinutes: Double? = nil,
+                workoutSessions: Double? = nil, workoutMinutes: Double? = nil,
+                workoutCalories: Double? = nil) {
         self.date = date
         self.steps = steps
         self.activeCalories = activeCalories
         self.exerciseMinutes = exerciseMinutes
         self.distanceMeters = distanceMeters
+        self.sleepHours = sleepHours
+        self.averageHeartRate = averageHeartRate
+        self.restingHeartRate = restingHeartRate
+        self.heartRateVariabilityMS = heartRateVariabilityMS
+        self.vo2Max = vo2Max
+        self.headphoneAudioMinutes = headphoneAudioMinutes
+        self.workoutSessions = workoutSessions
+        self.workoutMinutes = workoutMinutes
+        self.workoutCalories = workoutCalories
     }
 }

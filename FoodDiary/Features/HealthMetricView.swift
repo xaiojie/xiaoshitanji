@@ -3,14 +3,22 @@ import Charts
 import NutritionCore
 
 enum ActivityMetric: String, CaseIterable, Identifiable {
-    case steps, calories, minutes, distance
+    case steps, calories, minutes, distance, workouts
+    case sleep, restingHeartRate, heartRate, hrv, vo2Max, audio
     var id: Self { self }
     var title: String {
         switch self {
         case .steps: "步数"
         case .calories: "活动消耗"
-        case .minutes: "锻炼时长"
+        case .minutes: "锻炼分钟"
         case .distance: "步行跑步距离"
+        case .workouts: "体能训练"
+        case .sleep: "睡眠"
+        case .restingHeartRate: "静息心率"
+        case .heartRate: "平均心率"
+        case .hrv: "心率变异性"
+        case .vo2Max: "有氧适能"
+        case .audio: "耳机音量暴露"
         }
     }
     var symbol: String {
@@ -19,6 +27,13 @@ enum ActivityMetric: String, CaseIterable, Identifiable {
         case .calories: "flame.fill"
         case .minutes: "figure.run"
         case .distance: "point.bottomleft.forward.to.point.topright.scurvepath"
+        case .workouts: "dumbbell.fill"
+        case .sleep: "bed.double.fill"
+        case .restingHeartRate: "heart.fill"
+        case .heartRate: "waveform.path.ecg"
+        case .hrv: "waveform.path"
+        case .vo2Max: "lungs.fill"
+        case .audio: "headphones"
         }
     }
     var color: Color {
@@ -27,6 +42,13 @@ enum ActivityMetric: String, CaseIterable, Identifiable {
         case .calories: .orange
         case .minutes: Theme.fat
         case .distance: .purple
+        case .workouts: Theme.olive
+        case .sleep: .indigo
+        case .restingHeartRate: .red
+        case .heartRate: .pink
+        case .hrv: .teal
+        case .vo2Max: .cyan
+        case .audio: .yellow
         }
     }
     var unit: String {
@@ -35,6 +57,19 @@ enum ActivityMetric: String, CaseIterable, Identifiable {
         case .calories: "千卡"
         case .minutes: "分钟"
         case .distance: "公里"
+        case .workouts: "分钟"
+        case .sleep: "小时"
+        case .restingHeartRate, .heartRate: "次/分"
+        case .hrv: "毫秒"
+        case .vo2Max: "毫升/公斤/分钟"
+        case .audio: "分钟"
+        }
+    }
+    var decimals: Int {
+        switch self {
+        case .distance: 2
+        case .sleep, .vo2Max: 1
+        default: 0
         }
     }
     var detail: String {
@@ -43,6 +78,13 @@ enum ActivityMetric: String, CaseIterable, Identifiable {
         case .calories: "来自 Apple 健康的活动能量，包含锻炼和日常活动中消耗的能量。"
         case .minutes: "来自 Apple 健康记录的锻炼分钟数。"
         case .distance: "来自 Apple 健康记录的步行与跑步距离。"
+        case .workouts: "来自 Apple 健康的体能训练，按训练时长汇总。"
+        case .sleep: "来自 Apple 健康（手表或睡眠 App）的睡着时长，按醒来那天统计。"
+        case .restingHeartRate: "Apple 健康在静息状态下测得的心率。"
+        case .heartRate: "当天所有心率样本的平均值。"
+        case .hrv: "心率变异性（SDNN），数值越高通常代表恢复越好。"
+        case .vo2Max: "有氧适能，Apple 健康估算的最大摄氧量。"
+        case .audio: "戴耳机听音频的累计时长，用来观察用耳习惯。"
         }
     }
     func value(in day: HealthActivityDay) -> Double? {
@@ -51,10 +93,17 @@ enum ActivityMetric: String, CaseIterable, Identifiable {
         case .calories: day.activeCalories
         case .minutes: day.exerciseMinutes
         case .distance: day.distanceMeters.map { $0 / 1000 }
+        case .workouts: day.workoutMinutes
+        case .sleep: day.sleepHours
+        case .restingHeartRate: day.restingHeartRate
+        case .heartRate: day.averageHeartRate
+        case .hrv: day.heartRateVariabilityMS
+        case .vo2Max: day.vo2Max
+        case .audio: day.headphoneAudioMinutes
         }
     }
     func formatted(_ value: Double?) -> String {
-        value.map { Theme.number($0, decimals: self == .distance ? 2 : 0) } ?? "—"
+        value.map { Theme.number($0, decimals: decimals) } ?? "—"
     }
 }
 
@@ -121,6 +170,9 @@ struct HealthMetricDetailView: View {
                     }
                 }.contentCard()
                 ActivityChartCard(metric: metric, days: health.days)
+                if metric == .workouts {
+                    HealthWorkoutListCard(workouts: health.workouts)
+                }
                 VStack(alignment: .leading, spacing: 16) {
                     Text("每日数据").font(.headline)
                     ForEach(health.days.reversed()) { day in
@@ -199,6 +251,40 @@ struct DietHealthDetailView: View {
         }
         .background(Theme.background).navigationTitle("饮食摄入").navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
+    }
+}
+
+struct HealthWorkoutListCard: View {
+    let workouts: [HealthWorkout]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Label("最近的体能训练", systemImage: "dumbbell.fill").font(.headline).foregroundStyle(Theme.ink)
+                Spacer()
+                Text("来自 Apple 健康").font(.caption).foregroundStyle(.secondary)
+            }
+            if workouts.isEmpty {
+                HealthEmptyView(symbol: "dumbbell", title: "暂无训练记录", detail: "在 Apple 健康里记录一次训练后，这里会显示时长、消耗和心率。")
+            } else {
+                ForEach(workouts.prefix(8)) { workout in
+                    HStack(spacing: 12) {
+                        Image(systemName: workout.kind.symbol)
+                            .foregroundStyle(workout.kind == .strength ? Theme.olive : .orange)
+                            .frame(width: 26)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(workout.title).font(.subheadline.weight(.medium))
+                            Text(workout.date.formatted(.dateTime.month().day().hour().minute()))
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(workout.summaryLine).font(.caption).monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .contentCard()
     }
 }
 

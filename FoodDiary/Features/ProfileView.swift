@@ -264,6 +264,12 @@ struct ProfileView: View {
                     ActivityChartCard(metric: metric, days: health.days)
                 }.buttonStyle(.plain)
             }
+            ForEach([ActivityMetric.workouts, .sleep, .restingHeartRate, .heartRate, .hrv, .vo2Max, .audio]) { metric in
+                NavigationLink { HealthMetricDetailView(metric: metric) } label: {
+                    ActivityChartCard(metric: metric, days: health.days)
+                }.buttonStyle(.plain)
+            }
+            HealthWorkoutListCard(workouts: health.workouts)
         }
     }
 
@@ -317,7 +323,7 @@ struct ProfileView: View {
                     .frame(width: 42, height: 42).background(Theme.surface, in: .rect(cornerRadius: 12))
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Apple 健康").font(.headline)
-                    Text(health.accessRequested ? (health.hasData ? "数据来源 · 步数、活动与身体测量" : "已请求访问，等待可读取的数据") : "连接步数、活动和身体测量")
+                    Text(health.accessRequested ? (health.hasData ? "数据来源 · 活动、睡眠、心率、有氧适能与训练" : "已请求访问，等待可读取的数据") : "连接活动、睡眠、心率与体能训练")
                         .font(.caption).foregroundStyle(Theme.mutedInk)
                 }
                 Spacer(minLength: 0)
