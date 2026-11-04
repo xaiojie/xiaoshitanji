@@ -72,4 +72,32 @@ final class DiaryModel {
         try store.save(next)
         document = next
     }
+
+    func openSmokingPack(_ pack: CigarettePack) throws {
+        try updateSmoking { try $0.openPack(pack) }
+    }
+
+    func activateSmokingPack(_ id: UUID) throws {
+        try updateSmoking { try $0.activatePack(id: id) }
+    }
+
+    func updateSmokingPack(_ pack: CigarettePack) throws {
+        try updateSmoking { try $0.updatePack(pack) }
+    }
+
+    func recordSmoking(_ kind: SmokingEventKind, count: Int) throws {
+        try updateSmoking { try $0.record(kind, count: count) }
+    }
+
+    func removeSmokingEvent(_ id: UUID) throws {
+        try updateSmoking { try $0.removeEvent(id: id) }
+    }
+
+    private func updateSmoking(_ update: (inout SmokingDiary) throws -> Void) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        try update(&next.smoking)
+        try store.save(next)
+        document = next
+    }
 }

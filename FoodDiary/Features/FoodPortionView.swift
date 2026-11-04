@@ -26,6 +26,8 @@ struct FoodPortionView: View {
                     }
                     .contentCard()
 
+                    if let label = food.nutritionLabel { NutritionLabelCard(label: label) }
+
                     VStack(alignment: .leading, spacing: 14) {
                         Text("实际吃了多少？").font(.headline)
                         Text("按上方当前份量调整，热量与营养会一起重算。")
@@ -55,7 +57,9 @@ struct FoodPortionView: View {
 
                     DisclosureGroup("查看估算依据") {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("内部估算重量约 \(Theme.number(food.grams)) 克，实际记录可以直接用份、碗、个来描述。")
+                            if food.nutritionLabel == nil {
+                                Text("内部估算重量约 \(Theme.number(food.grams)) 克，实际记录可以直接用份、碗、个来描述。")
+                            }
                             if !food.notes.isEmpty { Text(food.notes) }
                         }
                         .font(.caption).foregroundStyle(.secondary).padding(.top, 8)

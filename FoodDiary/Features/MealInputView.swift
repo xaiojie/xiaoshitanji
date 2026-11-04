@@ -31,6 +31,7 @@ struct MealMetadataView: View {
 
 struct MealInputView: View {
     @Binding var text: String
+    @Binding var mode: FoodAnalysisMode
     @Binding var photoItem: PhotosPickerItem?
     let photoJPEG: Data?
     let loadingPhoto: Bool
@@ -44,13 +45,18 @@ struct MealInputView: View {
                 Label("AI 饮食助手", systemImage: "sparkles")
                     .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
                 Text("这一餐，吃了什么？").font(.title2.bold())
-                Text("拍张照，或像聊天一样描述。份量、热量和营养交给 AI 来估算。")
+                Text("商品拍营养成分表，正餐拍碗里的食物。再说一句吃了多少，AI 帮你分析。")
                     .font(.subheadline).foregroundStyle(.secondary).lineSpacing(4)
             }
             .padding(.top, 4)
 
             VStack(alignment: .leading, spacing: 18) {
-                TextField("比如：一碗牛肉粉，一杯无糖豆浆，粉只吃了一半", text: $text, axis: .vertical)
+                Picker("分析方式", selection: $mode) {
+                    ForEach(FoodAnalysisMode.allCases) { Text($0.title).tag($0) }
+                }.pickerStyle(.segmented)
+                Text(mode == .label ? "拍清每100克/毫升或每份的营养值，尽量带上净含量。" : "可补充大碗、小碗、装满程度，以及饭、菜、汤实际吃了多少。")
+                    .font(.caption).foregroundStyle(.secondary)
+                TextField("比如：这盒牛奶喝了半盒，或一碗牛肉粉只吃了面", text: $text, axis: .vertical)
                     .lineLimit(4...8).font(.body).lineSpacing(4)
                     .accessibilityIdentifier("mealDescription")
                 if let data = photoJPEG, let image = UIImage(data: data) {
@@ -62,7 +68,7 @@ struct MealInputView: View {
                 }
                 Divider()
                 HStack(spacing: 12) {
-                    Button(action: onCamera) { Label("拍摄食物", systemImage: "camera") }
+                    Button(action: onCamera) { Label("拍照", systemImage: "camera") }
                         .accessibilityIdentifier("takePhoto")
                     PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
                         Label("相册选图", systemImage: "photo.on.rectangle")
@@ -76,7 +82,7 @@ struct MealInputView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 Text("这些说法都可以").font(.subheadline.weight(.semibold))
-                ForEach(["早餐两个包子，一杯豆浆", "午饭一份外卖，米饭剩了一半", "刚喝了一杯中杯拿铁，少糖"], id: \.self) { example in
+                ForEach(["这盒牛奶喝了半盒，按营养表计算", "一小碗熟米饭，一碗青菜和牛肉", "大碗牛肉粉，面吃完了，汤没有喝"], id: \.self) { example in
                     Button { text = example } label: {
                         HStack {
                             Text(example).font(.subheadline).foregroundStyle(.secondary)

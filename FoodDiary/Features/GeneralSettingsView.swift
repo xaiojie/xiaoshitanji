@@ -57,7 +57,7 @@ struct GeneralSettingsView: View {
                 } header: {
                     Text("DeepSeek")
                 } footer: {
-                    Text("Key 保存在这台 iPhone 的钥匙串中。点击 AI 分析时，输入的饮食文字与压缩后的照片会发送到 DeepSeek 官方接口，费用由你的 API 账户承担。清空后保存可移除 Key。")
+                    Text("Key 保存在这台 iPhone 的钥匙串中。点击饮食或烟盒的 AI 识别时，对应文字和处理后的照片会发送到 DeepSeek 官方接口，费用由你的 API 账户承担。清空后保存可移除 Key。")
                 }
 
                 Section {
@@ -117,7 +117,7 @@ struct GeneralSettingsView: View {
                 } header: {
                     Text("本机数据")
                 } footer: {
-                    Text("导出的 JSON 包含饮食、照片、个人资料和手动体重记录，API Key 单独保存在钥匙串中。Apple 健康读取数据按需刷新。也可在「文件」App 的食记目录中找到 FoodDiary/diary.json。")
+                    Text("导出的 JSON 包含饮食、照片、个人资料、手动体重、烟包及抽烟和分烟记录。API Key 单独保存在钥匙串中。Apple 健康读取数据按需刷新。也可在「文件」App 的食记目录中找到 FoodDiary/diary.json。")
                 }
 
                 if let errorMessage { Section { ErrorNotice(message: errorMessage) } }
@@ -130,7 +130,7 @@ struct GeneralSettingsView: View {
                 }
 
                 Section {
-                    LabeledContent("版本", value: "0.3.0 个人健康版")
+                    LabeledContent("版本", value: "0.4.0 饮食与戒烟版")
                     Text("描述日常份量或拍张照片，AI 会估算热量和营养。识别结果可通过自然语言或份量选项继续修正。")
                         .font(.caption).foregroundStyle(.secondary)
                 }

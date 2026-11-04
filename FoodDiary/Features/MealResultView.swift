@@ -35,6 +35,10 @@ struct MealResultView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(food.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 Text(food.portionLabel).font(.caption).foregroundStyle(.secondary)
+                                if let label = food.nutritionLabel {
+                                    Label(label.portionIsEstimated ? "营养标签 · 份量估算" : "按营养标签换算", systemImage: "doc.text.viewfinder")
+                                        .font(.caption2).foregroundStyle(Theme.accent)
+                                }
                             }
                             Spacer(minLength: 4)
                             Text("约 \(Theme.number(food.nutrition.calories)) 千卡")
@@ -108,5 +112,28 @@ struct EstimateExplanationView: View {
             .font(.caption).foregroundStyle(.secondary).padding(.top, 12)
         }
         .font(.subheadline).contentCard()
+    }
+}
+
+struct NutritionLabelCard: View {
+    let label: NutritionLabel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("营养标签依据", systemImage: "doc.text.viewfinder").font(.headline)
+            Text("每 \(Theme.number(label.basisAmount, decimals: 2)) \(label.unit.title)")
+                .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
+            LabeledContent("能量", value: "\(Theme.number(label.energy, decimals: 2)) \(label.energyUnit.rawValue)")
+            LabeledContent("蛋白质", value: "\(Theme.number(label.protein, decimals: 2)) 克")
+            LabeledContent("碳水化合物", value: "\(Theme.number(label.carbohydrates, decimals: 2)) 克")
+            LabeledContent("脂肪", value: "\(Theme.number(label.fat, decimals: 2)) 克")
+            Divider()
+            LabeledContent("本次食用", value: "\(Theme.number(label.consumedAmount, decimals: 2)) \(label.unit.title)")
+            Text(label.portionIsEstimated ? "营养值由 AI 读取标签，食用份量含估算。可继续描述净含量和剩余量来修正。" : "营养值由 AI 读取标签，按本次食用量换算。请核对原图和计量单位。")
+                .font(.caption).foregroundStyle(.secondary)
+            if label.energyUnit == .kilojoules {
+                Text("千焦 ÷ 4.184 = 千卡").font(.caption2).foregroundStyle(.secondary)
+            }
+        }.font(.subheadline).contentCard()
     }
 }

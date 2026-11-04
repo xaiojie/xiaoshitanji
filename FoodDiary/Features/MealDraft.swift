@@ -32,6 +32,9 @@ final class MealDraft {
     }
 
     func updateText(_ text: String) { record.updateInput(text: text, photoJPEG: record.photoJPEG) }
+    func updateMode(_ mode: FoodAnalysisMode) {
+        record.updateInput(text: record.originalText, photoJPEG: record.photoJPEG, analysisMode: mode)
+    }
     func removePhoto() { record.updateInput(text: record.originalText, photoJPEG: nil) }
     func analyze() { performAnalysis(instruction: nil) }
 
@@ -106,7 +109,8 @@ final class MealDraft {
                 if let instruction {
                     estimate = try await client.refine(record: snapshot, instruction: instruction, apiKey: key)
                 } else {
-                    estimate = try await client.analyze(text: snapshot.originalText, imageJPEG: snapshot.photoJPEG, apiKey: key)
+                    estimate = try await client.analyze(text: snapshot.originalText, imageJPEG: snapshot.photoJPEG,
+                        apiKey: key, mode: snapshot.analysisMode ?? .automatic)
                 }
                 try Task.checkCancellation()
                 guard requestID == id else { return }

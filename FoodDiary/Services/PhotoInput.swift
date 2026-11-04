@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 import NutritionCore
 
 enum PhotoInput {
-    nonisolated static func prepareJPEG(_ data: Data, maxPixelSize: Int = 1280) throws -> Data {
+    nonisolated static func prepareJPEG(_ data: Data, maxPixelSize: Int = 1920) throws -> Data {
         guard data.count <= 50_000_000,
               let source = CGImageSourceCreateWithData(data as CFData, nil) else {
             throw DiaryError.invalidInput("照片无法读取，请选择一张有效的图片。")

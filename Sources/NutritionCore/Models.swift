@@ -15,8 +15,8 @@ public enum DiaryError: Error, LocalizedError, Sendable {
         case .unreadableDiary: "饮食记录文件无法读取。原文件已保留，请先导出备份后检查。"
         case .unsupportedVersion: "记录来自更新版本的应用，请升级应用后再打开。"
         case .storage(let message): "记录未能保存，草稿已保留。\(message)"
-        case .missingAPIKey: "请先在「我的」中配置 DeepSeek API Key，再开始 AI 记餐。"
-        case .http(401): "DeepSeek API Key 无效，请到「我的」中检查。"
+        case .missingAPIKey: "请先在「我的 → 通用设置」中配置 DeepSeek API Key，再使用 AI 识别。"
+        case .http(401): "DeepSeek API Key 无效，请到「通用设置」中检查。"
         case .http(402): "DeepSeek 账户余额不足，请充值后重试。"
         case .http(429): "DeepSeek 请求较多，请稍后重试。"
         case .http(400), .http(422): "DeepSeek 无法处理这次输入，请检查模型设置或更换照片后重试。"
@@ -65,18 +65,21 @@ public struct FoodItem: Identifiable, Codable, Equatable, Sendable {
     public var per100g: Nutrition
     public var notes: String
     public var portionDescription: String?
+    public var nutritionLabel: NutritionLabel?
 
     public init(id: UUID = UUID(), name: String = "", grams: Double = 100,
-                per100g: Nutrition = .zero, notes: String = "", portionDescription: String? = nil) {
+                per100g: Nutrition = .zero, notes: String = "", portionDescription: String? = nil,
+                nutritionLabel: NutritionLabel? = nil) {
         self.id = id
         self.name = name
         self.grams = grams
         self.per100g = per100g
         self.notes = notes
         self.portionDescription = portionDescription
+        self.nutritionLabel = nutritionLabel
     }
 
-    public var nutrition: Nutrition { per100g.scaled(by: grams / 100) }
+    public var nutrition: Nutrition { nutritionLabel?.nutrition ?? per100g.scaled(by: grams / 100) }
     public var portionLabel: String {
         let label = portionDescription?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return label.isEmpty ? "一份" : label
@@ -88,6 +91,7 @@ public struct FoodItem: Identifiable, Codable, Equatable, Sendable {
         }
         var food = self
         food.grams *= multiplier
+        food.nutritionLabel?.consumedAmount *= multiplier
         food.portionDescription = description
         try food.validate()
         return food
@@ -101,6 +105,7 @@ public struct FoodItem: Identifiable, Codable, Equatable, Sendable {
             throw DiaryError.invalidInput("「\(name)」的份量估算无效，请重新分析。")
         }
         try per100g.validate()
+        try nutritionLabel?.validate()
         try nutrition.validate()
     }
 }
@@ -161,11 +166,13 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
     public var summary: String
     public var assumptions: [String]
     public var adjustments: [String]?
+    public var analysisMode: FoodAnalysisMode?
 
     public init(id: UUID = UUID(), date: Date = .now, kind: MealKind = .lunch,
                 foods: [FoodItem] = [], originalText: String = "", photoJPEG: Data? = nil,
                 source: RecordSource = .manual, model: String? = nil,
-                summary: String = "", assumptions: [String] = [], adjustments: [String]? = nil) {
+                summary: String = "", assumptions: [String] = [], adjustments: [String]? = nil,
+                analysisMode: FoodAnalysisMode? = nil) {
         self.id = id
         self.date = date
         self.kind = kind
@@ -177,6 +184,7 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
         self.summary = summary
         self.assumptions = assumptions
         self.adjustments = adjustments
+        self.analysisMode = analysisMode
     }
 
     public var nutrition: Nutrition { foods.reduce(.zero) { $0 + $1.nutrition } }
@@ -203,10 +211,12 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
         date = calendar.date(bySettingHour: time.hour, minute: time.minute, second: time.second, of: date) ?? date
     }
 
-    public mutating func updateInput(text: String, photoJPEG: Data?) {
-        guard text != originalText || photoJPEG != self.photoJPEG else { return }
+    public mutating func updateInput(text: String, photoJPEG: Data?, analysisMode: FoodAnalysisMode? = nil) {
+        let mode = analysisMode ?? self.analysisMode ?? .automatic
+        guard text != originalText || photoJPEG != self.photoJPEG || mode != (self.analysisMode ?? .automatic) else { return }
         originalText = text
         self.photoJPEG = photoJPEG
+        self.analysisMode = mode
         if source != .manual {
             foods = []
             source = .manual
@@ -238,16 +248,18 @@ public struct DiaryDocument: Codable, Sendable {
     public var reviews: [DietReview]
     public var profile: HealthProfile
     public var weights: [WeightRecord]
+    public var smoking: SmokingDiary
 
     public init(records: [MealRecord] = [], reviews: [DietReview] = [],
-                profile: HealthProfile = HealthProfile(), weights: [WeightRecord] = []) {
+                profile: HealthProfile = HealthProfile(), weights: [WeightRecord] = [], smoking: SmokingDiary = SmokingDiary()) {
         self.records = records
         self.reviews = reviews
         self.profile = profile
         self.weights = weights
+        self.smoking = smoking
     }
 
-    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights }
+    private enum CodingKeys: CodingKey { case schemaVersion, records, reviews, profile, weights, smoking }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -256,6 +268,7 @@ public struct DiaryDocument: Codable, Sendable {
         reviews = try container.decodeIfPresent([DietReview].self, forKey: .reviews) ?? []
         profile = try container.decodeIfPresent(HealthProfile.self, forKey: .profile) ?? HealthProfile()
         weights = try container.decodeIfPresent([WeightRecord].self, forKey: .weights) ?? []
+        smoking = try container.decodeIfPresent(SmokingDiary.self, forKey: .smoking) ?? SmokingDiary()
     }
 
     public func validate() throws {
@@ -268,6 +281,7 @@ public struct DiaryDocument: Codable, Sendable {
         try profile.validate()
         guard Set(weights.map(\.id)).count == weights.count else { throw DiaryError.unreadableDiary }
         for weight in weights { try weight.validate() }
+        try smoking.validate()
     }
 
     public mutating func updateProfile(_ profile: HealthProfile, weightKG: Double? = nil, date: Date = .now) throws {

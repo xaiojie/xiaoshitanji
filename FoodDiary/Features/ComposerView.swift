@@ -43,6 +43,7 @@ struct ComposerView: View {
                     } else {
                         MealInputView(
                             text: Binding(get: { draft.record.originalText }, set: draft.updateText),
+                            mode: Binding(get: { draft.record.analysisMode ?? .automatic }, set: draft.updateMode),
                             photoItem: $photoItem, photoJPEG: draft.record.photoJPEG,
                             loadingPhoto: draft.photoLoadID != nil,
                             onCamera: openCamera,
