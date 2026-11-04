@@ -202,7 +202,10 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
     public var kind: MealKind
     public var foods: [FoodItem]
     public var originalText: String
+    /// 旧数据里内嵌的 base64 照片；迁移后为 nil。
     public var photoJPEG: Data?
+    /// 照片文件名（相对 `Photos/`），新数据只存这个。
+    public var photoFileName: String?
     public var source: RecordSource
     public var model: String?
     public var summary: String
@@ -212,6 +215,7 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
 
     public init(id: UUID = UUID(), date: Date = .now, kind: MealKind = .lunch,
                 foods: [FoodItem] = [], originalText: String = "", photoJPEG: Data? = nil,
+                photoFileName: String? = nil,
                 source: RecordSource = .manual, model: String? = nil,
                 summary: String = "", assumptions: [String] = [], adjustments: [String]? = nil,
                 analysisMode: FoodAnalysisMode? = nil) {
@@ -221,6 +225,7 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
         self.foods = foods
         self.originalText = originalText
         self.photoJPEG = photoJPEG
+        self.photoFileName = photoFileName
         self.source = source
         self.model = model
         self.summary = summary
@@ -258,6 +263,8 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
         guard text != originalText || photoJPEG != self.photoJPEG || mode != (self.analysisMode ?? .automatic) else { return }
         originalText = text
         self.photoJPEG = photoJPEG
+        // 换了照片就让旧文件名失效，保存时会按记录 id 重新写文件。
+        self.photoFileName = nil
         self.analysisMode = mode
         if source != .manual {
             foods = []
@@ -288,6 +295,9 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
     }
 
     public func validate() throws {
+        if let photoFileName, !PhotoArchive.validName(photoFileName) {
+            throw DiaryError.invalidInput("照片文件名不合法。")
+        }
         guard date.timeIntervalSinceReferenceDate.isFinite else {
             throw DiaryError.invalidInput("请选择有效的记录时间。")
         }
@@ -305,7 +315,8 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
 public struct DiaryDocument: Codable, Sendable {
     /// 2：新增「常吃组合」（templates）与手填食物标记（FoodItem.isManual）。
     /// 3：新增训练记录（workouts）。
-    public static let currentSchemaVersion = 3
+    /// 4：照片外置（photoFileName），diary.json 不再内嵌 base64。
+    public static let currentSchemaVersion = 4
 
     public var schemaVersion: Int = DiaryDocument.currentSchemaVersion
     public var records: [MealRecord]

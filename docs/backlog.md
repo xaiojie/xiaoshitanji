@@ -41,7 +41,7 @@
   - 3.4 餐食改进建议并入追问与回顾，不再单开请求，避免同一份数据两次付费。
   - 3.2 周报/月报继续由「汇总分析」生成（已有 3 项行动与数据快照）；「蛙的观察」页面不重复摘要。
   - 数据结构：`DiaryDocument.observations`（可选，旧文件不受影响）。
-- [x] **主线 4 · 数据安全**（4.2 本机备份与 4.4 CSV 已落地；4.1 照片外置待做）
+- [x] **主线 4 · 数据安全**（4.1/4.2/4.3/4.4 全部落地）
   - 4.3 云端同步：FastAPI + PostgreSQL 跑在 `sub2api-US`（154.201.78.199），`docker compose` 只监听 `127.0.0.1:8787`，宿主机 nginx 反代 `xiaoshitanji.papaclaoud.top`，Let's Encrypt 证书，每日 04:17 续期 cron。
   - 认证：用户名 + 密码（Argon2id），登录发 30 天 Bearer 令牌（库里只存 SHA-256），改密吊销其他设备，登录失败按「IP|用户名」限流。
   - 数据：整份日记作快照，`baseVersion` 乐观锁，内容相同不升版，保留最近 20 版；`/v1/sync/restore/{version}` 复制成新的 head。
@@ -49,7 +49,7 @@
   - 测试：`server/` 24 个 pytest；Swift 侧 `CloudSyncTests` 12 个用例。线上冒烟（注册/上传/下载/409/删号）已过。
   - 4.2 本机备份：每天首启写 `FoodDiary/Backups/diary-YYYY-MM-DD.json`，保留 14 份，设置里可关。
   - 4.4 CSV 导出：餐次/体重/抽烟三张表，逗号引号换行转义，`fileExporter` 交给系统。
-  - 配图与私密性：同步的仍是整份 diary.json，照片目前 base64 内嵌（4.1 待做）。
+  - 4.1 照片外置（schema v4）：`MealRecord.photoFileName` / `CigarettePack.photoFileName`，文件写 `FoodDiary/Photos/record-<id>.jpg`、`pack-<id>.jpg`；`DiaryDocument.externalizePhotos(in:)` 在启动与整体替换时把旧 base64 迁出并清空；保存单条记录/烟包时也先落盘再写文档。
 - [~] **主线 5 · 系统集成**（5.1 提醒已落地；5.2 小组件、5.3 灵动岛、5.4 快捷指令、5.5 语音待做）
 - [~] **主线 6 · 运动健身**（6.1 力量 + 6.2 有氧已落地；6.3 训练计划、6.4 与能量目标联动待做）
 - [x] **主线 7 · 成果感**（7.2、7.3 已落地；7.1 统一趋势待做）

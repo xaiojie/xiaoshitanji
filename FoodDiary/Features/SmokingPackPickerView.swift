@@ -85,7 +85,7 @@ struct SmokingPackPickerView: View {
 
     private func cigaretteIcon(_ pack: CigarettePack) -> some View {
         Group {
-            if let data = pack.photoJPEG, let image = UIImage(data: data) {
+            if let data = diary.photoData(for: pack), let image = UIImage(data: data) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
                 Image(systemName: "rectangle.stack.fill").font(.title2).foregroundStyle(Theme.olive)

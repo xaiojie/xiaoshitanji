@@ -2,12 +2,13 @@ import SwiftUI
 import NutritionCore
 
 struct MealResultView: View {
+    @Environment(DiaryModel.self) private var diary
     let record: MealRecord
     let onFood: (FoodItem) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            if let photo = record.photoJPEG { ScanPhotoPreview(data: photo, height: 260) }
+            if let photo = diary.photoData(for: record) { ScanPhotoPreview(data: photo, height: 260) }
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Label("已识别 · 待你确认", systemImage: "checkmark.circle.fill")

@@ -10,6 +10,20 @@ final class DiaryModel {
     @ObservationIgnored private let store: DiaryStore
 
     var fileURL: URL { store.fileURL }
+    var photosDirectory: URL { fileURL.deletingLastPathComponent().appending(path: PhotoArchive.directoryName) }
+
+    /// 记录的照片：新数据写在 Photos/ 里，旧数据还内嵌在文档里时直接给内存数据。
+    func photoData(for record: MealRecord) -> Data? {
+        if let data = record.photoJPEG { return data }
+        guard let name = record.photoFileName else { return nil }
+        return PhotoArchive.load(name: name, in: photosDirectory)
+    }
+
+    func photoData(for pack: CigarettePack) -> Data? {
+        if let data = pack.photoJPEG { return data }
+        guard let name = pack.photoFileName else { return nil }
+        return PhotoArchive.load(name: name, in: photosDirectory)
+    }
 
     init() {
         store = DiaryStore(fileURL: URL.documentsDirectory.appending(path: "FoodDiary/diary.json"))
@@ -18,7 +32,11 @@ final class DiaryModel {
 
     func reload() {
         do {
-            document = try store.load()
+            var loaded = try store.load()
+            if try loaded.externalizePhotos(in: photosDirectory) {
+                try store.save(loaded)
+            }
+            document = loaded
             loadError = nil
         } catch {
             loadError = error.localizedDescription
@@ -27,6 +45,12 @@ final class DiaryModel {
 
     func save(_ record: MealRecord) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var record = record
+        if let data = record.photoJPEG {
+            record.photoFileName = try PhotoArchive.save(data, name: PhotoArchive.recordName(record.id),
+                                                         in: photosDirectory)
+            record.photoJPEG = nil
+        }
         var next = document
         try next.upsert(record)
         try store.save(next)
@@ -153,6 +177,7 @@ final class DiaryModel {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
         next.schemaVersion = DiaryDocument.currentSchemaVersion
+        _ = try next.externalizePhotos(in: photosDirectory)
         try next.validate()
         try store.save(next)
         self.document = next
@@ -175,6 +200,12 @@ final class DiaryModel {
     }
 
     func openSmokingPack(_ pack: CigarettePack) throws {
+        var pack = pack
+        if let data = pack.photoJPEG {
+            pack.photoFileName = try PhotoArchive.save(data, name: PhotoArchive.packName(pack.id),
+                                                       in: photosDirectory)
+            pack.photoJPEG = nil
+        }
         try updateSmoking { try $0.openPack(pack) }
     }
 
@@ -187,6 +218,12 @@ final class DiaryModel {
     }
 
     func updateSmokingPack(_ pack: CigarettePack) throws {
+        var pack = pack
+        if let data = pack.photoJPEG {
+            pack.photoFileName = try PhotoArchive.save(data, name: PhotoArchive.packName(pack.id),
+                                                       in: photosDirectory)
+            pack.photoJPEG = nil
+        }
         try updateSmoking { try $0.updatePack(pack) }
     }
 

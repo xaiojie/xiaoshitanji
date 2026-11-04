@@ -2,6 +2,7 @@ import SwiftUI
 import NutritionCore
 
 struct MealSectionCard: View {
+    @Environment(DiaryModel.self) private var diary
     let kind: MealKind
     let records: [MealRecord]
     let onAdd: () -> Void
@@ -70,7 +71,7 @@ struct MealSectionCard: View {
     }
 
     @ViewBuilder private var mealImage: some View {
-        if let data = records.first?.photoJPEG, let image = UIImage(data: data) {
+        if let record = records.first, let data = diary.photoData(for: record), let image = UIImage(data: data) {
             Image(uiImage: image).resizable().scaledToFill().frame(width: 54, height: 50)
                 .clipShape(.rect(cornerRadius: 12)).accessibilityHidden(true)
         } else if !thumbnail.isEmpty {

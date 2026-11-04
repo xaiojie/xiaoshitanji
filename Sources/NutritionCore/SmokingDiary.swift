@@ -48,15 +48,19 @@ public struct CigarettePack: Identifiable, Codable, Equatable, Sendable {
     public var product: CigaretteProduct
     public var openedAt: Date
     public var openingCount: Int
+    /// 旧数据内嵌的照片；迁移后为 nil。
     public var photoJPEG: Data?
+    /// 照片文件名（相对 `Photos/`）。
+    public var photoFileName: String?
 
     public init(id: UUID = UUID(), product: CigaretteProduct, openedAt: Date = .now,
-                openingCount: Int = 20, photoJPEG: Data? = nil) {
+                openingCount: Int = 20, photoJPEG: Data? = nil, photoFileName: String? = nil) {
         self.id = id
         self.product = product
         self.openedAt = openedAt
         self.openingCount = openingCount
         self.photoJPEG = photoJPEG
+        self.photoFileName = photoFileName
     }
 
     public func validate() throws {
@@ -124,6 +128,19 @@ public struct SmokingDiary: Codable, Equatable, Sendable {
         return events.filter { $0.packID == packID }.reduce(pack.openingCount) { count, event in
             event.kind == .stockCheck ? event.count : count - event.count
         }
+    }
+
+    /// 把烟包照片写到文件，旧文件迁移与保存新包都用这一条。
+    public mutating func externalizePhotos(in directory: URL) throws -> Bool {
+        var changed = false
+        for index in packs.indices where packs[index].photoJPEG != nil {
+            guard let data = packs[index].photoJPEG else { continue }
+            let name = try PhotoArchive.save(data, name: PhotoArchive.packName(packs[index].id), in: directory)
+            packs[index].photoFileName = name
+            packs[index].photoJPEG = nil
+            changed = true
+        }
+        return changed
     }
 
     public mutating func openPack(_ pack: CigarettePack) throws {

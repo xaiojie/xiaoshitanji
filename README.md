@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.12.0-yellow" alt="version" />
+  <img src="https://img.shields.io/badge/version-0.13.0-yellow" alt="version" />
   <img src="https://img.shields.io/badge/tests-161%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
@@ -306,12 +306,12 @@ flowchart LR
 
 ## 数据与隐私
 
-所有记录在 App Documents 下的**一个文件**里：`FoodDiary/diary.json`。
+所有记录在 App Documents 下的**一个文件**里：`FoodDiary/diary.json`；照片单独放在 `FoodDiary/Photos/`，文档里只存文件名（`record-<id>.jpg` / `pack-<id>.jpg`），旧文件里的 base64 首次启动会自动迁移成文件。
 
 | 字段 | 内容 |
 | --- | --- |
-| `schemaVersion` | 当前为 3（v1/v2 文件可直接读取并自动升级；高版本文件不会被旧版本覆盖） |
-| `records` | 餐次、日期、食物、原始输入、处理后照片、修正历史 |
+| `schemaVersion` | 当前为 4（v1–v3 文件可直接读取并自动升级；高版本文件不会被旧版本覆盖） |
+| `records` | 餐次、日期、食物、原始输入、照片文件名、修正历史 |
 | `reviews` | 每日 AI 回顾与生成时的热量目标 |
 | `profile` | 昵称、头像、身高、目标体重 |
 | `weights` | 手动体重历史 |
@@ -385,7 +385,7 @@ swift test
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 0.12.0，构建号 19 |
+| 版本 | 0.13.0，构建号 20 |
 
 Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完成授权弹窗。
 
@@ -393,7 +393,7 @@ Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完
 
 ## 项目状态与路线图
 
-**当前版本 0.12.0「训练记录版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余 → 本地模式识别与带依据的自由追问 → 自建服务器云端同步与版本恢复 → 本机备份、CSV 导出与成果里程碑 → 每日提醒与训练记录。
+**当前版本 0.13.0「照片外置版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余 → 本地模式识别与带依据的自由追问 → 自建服务器云端同步与版本恢复 → 本机备份、CSV 导出与成果里程碑 → 每日提醒与训练记录 → 照片外置与抽烟累计。
 
 | 状态 | 事项 |
 | --- | --- |

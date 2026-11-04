@@ -72,6 +72,7 @@ final class MealDraft {
         record.assumptions = []
         record.originalText = ""
         record.photoJPEG = nil
+        record.photoFileName = nil
         record.adjustments = (record.adjustments ?? []) + [note]
         reviewing = true
         errorMessage = nil
