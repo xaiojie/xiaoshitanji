@@ -132,6 +132,16 @@ final class DiaryModel {
         return try? EnergyCalculator.budget(settings: settings, weightKG: weight, heightCM: height)
     }
 
+    /// 同步下载或合并后整体替换本机文档。
+    func replaceDocument(_ document: DiaryDocument) throws {
+        guard loadError == nil else { throw DiaryError.unreadableDiary }
+        var next = document
+        next.schemaVersion = DiaryDocument.currentSchemaVersion
+        try next.validate()
+        try store.save(next)
+        self.document = next
+    }
+
     func saveWeight(_ weight: WeightRecord) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document

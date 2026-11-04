@@ -7,7 +7,7 @@ private enum ProfileSection: String, CaseIterable, Identifiable {
 }
 
 private enum ProfileSheet: String, Identifiable {
-    case editor, settings, weight, wellness, observation
+    case editor, settings, weight, wellness, observation, sync
     var id: Self { self }
 }
 
@@ -31,6 +31,7 @@ struct ProfileView: View {
                     profileHeader
                     wellnessEntry
                     observationEntry
+                    syncEntry
                     BrandSegments(options: ProfileSection.allCases.map { ($0, $0.rawValue) }, selection: $section)
                     if let error = diary.loadError { ErrorNotice(message: error).contentCard() }
                     switch section {
@@ -62,6 +63,7 @@ struct ProfileView: View {
                 case .weight: WeightEditorView()
                 case .wellness: WellnessReviewView()
                 case .observation: ObservationView()
+                case .sync: CloudSyncView()
                 }
             }
             .refreshable { await health.refresh() }
@@ -84,6 +86,23 @@ struct ProfileView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Theme.darkGradient, in: .rect(cornerRadius: 24))
         }.buttonStyle(.plain).accessibilityIdentifier("wellnessReview")
+    }
+
+    private var syncEntry: some View {
+        Button { sheet = .sync } label: {
+            HStack(spacing: 13) {
+                Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                    .font(.system(size: 34)).foregroundStyle(Theme.accent)
+                VStack(alignment: .leading, spacing: 5) {
+                    Label("云端同步", systemImage: "icloud.and.arrow.up").font(.headline)
+                    Text("换手机不丢记录，数据在自己的服务器。").font(.caption).foregroundStyle(Theme.mutedInk)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption)
+            }.foregroundStyle(Theme.ink).contentCard()
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("cloudSyncEntry")
     }
 
     private var observationEntry: some View {

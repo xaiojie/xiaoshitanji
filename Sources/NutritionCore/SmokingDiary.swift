@@ -162,6 +162,22 @@ public struct SmokingDiary: Codable, Equatable, Sendable {
         events.append(SmokingEvent(id: UUID(), packID: pack.id, date: date, kind: kind, count: count))
     }
 
+    /// 合并另一份记录（例如云端）：按 id 去重，本机已有的不动。
+    public mutating func merge(_ other: SmokingDiary) {
+        var seenPacks = Set(packs.map(\.id))
+        for pack in other.packs where !seenPacks.contains(pack.id) {
+            packs.append(pack)
+            seenPacks.insert(pack.id)
+        }
+        var seenEvents = Set(events.map(\.id))
+        for event in other.events where !seenEvents.contains(event.id) {
+            events.append(event)
+            seenEvents.insert(event.id)
+        }
+        events.sort { $0.date < $1.date }
+        if activePackID == nil { activePackID = other.activePackID }
+    }
+
     public mutating func removeEvent(id: UUID) throws {
         var next = self
         next.events.removeAll { $0.id == id }
