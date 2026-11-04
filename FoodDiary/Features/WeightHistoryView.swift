@@ -45,7 +45,7 @@ struct WeightHistoryView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Button("记录体重", systemImage: "plus") { editing = WeightEditRequest() }
-                        .buttonStyle(.glassProminent).accessibilityIdentifier("addWeight")
+                        .yellowAction().accessibilityIdentifier("addWeight")
                 }.contentCard()
 
                 if !records.isEmpty {
@@ -53,9 +53,9 @@ struct WeightHistoryView: View {
                         Text("最近 \(chartRecords.count) 次测量").font(.headline)
                         Chart(chartRecords) { record in
                             LineMark(x: .value("时间", record.date), y: .value("公斤", record.kilograms))
-                                .foregroundStyle(Theme.accent)
+                                .foregroundStyle(Theme.olive)
                             PointMark(x: .value("时间", record.date), y: .value("公斤", record.kilograms))
-                                .foregroundStyle(Theme.accent).symbolSize(35)
+                                .foregroundStyle(Theme.olive).symbolSize(35)
                                 .accessibilityLabel(record.date.formatted(.dateTime.month().day().hour().minute()))
                                 .accessibilityValue("\(Theme.number(record.kilograms, decimals: 2)) 公斤，\(record.source.title)")
                         }
@@ -77,7 +77,7 @@ struct WeightHistoryView: View {
                 ForEach(records) { record in
                     HStack(spacing: 14) {
                         Image(systemName: record.source == .manual ? "scalemass.fill" : "heart.fill")
-                            .foregroundStyle(record.source == .manual ? Theme.accent : .pink)
+                            .foregroundStyle(record.source == .manual ? Theme.olive : .pink)
                             .frame(width: 38, height: 38)
                             .background(Theme.accent.opacity(0.07), in: .circle)
                         VStack(alignment: .leading, spacing: 6) {
@@ -102,6 +102,7 @@ struct WeightHistoryView: View {
             }.padding(20)
         }
         .background(Theme.background).navigationTitle("体重记录").navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
         .sheet(item: $editing) { WeightEditorView(record: $0.record) }
         .alert("删除这条体重记录？", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
             Button("取消", role: .cancel) { deleting = nil }
@@ -145,6 +146,7 @@ struct WeightEditorView: View {
                 } footer: { Text("记录一次真实测量。即使数值相同，也会保留这次新的测量时间。") }
                 if let errorMessage { Section { ErrorNotice(message: errorMessage) } }
             }
+            .scrollContentBackground(.hidden).background(Theme.background)
             .navigationTitle(record == nil ? "记录体重" : "编辑体重")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

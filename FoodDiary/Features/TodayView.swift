@@ -25,15 +25,24 @@ struct TodayView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    dateNavigation
+                VStack(alignment: .leading, spacing: 14) {
                     if let error = diary.loadError {
                         ErrorNotice(message: error).contentCard()
                         Button("重新读取", action: diary.reload).buttonStyle(.bordered)
                     } else {
                         DailyIntakeCard(nutrition: nutrition, goal: goal, mealCount: records.count,
-                                        foodCount: foodCount, onGoal: { sheet = .settings })
-                        NutritionDistributionCard(nutrition: nutrition)
+                            foodCount: foodCount, date: selectedDate, isToday: isToday,
+                            onDate: { sheet = .calendar }, onPrevious: { moveDate(by: -1) }, onNext: { moveDate(by: 1) },
+                            onGoal: { sheet = .settings })
+                        VStack(spacing: 0) {
+                            ForEach([MealKind.breakfast, .lunch, .snack, .dinner]) { kind in
+                                MealSectionCard(kind: kind, records: records.filter { $0.kind == kind },
+                                    onAdd: { openMeal(kind) }, onRecord: { sheet = .record($0) })
+                                if kind != .dinner { Divider().overlay(Theme.gold.opacity(0.07)).padding(.leading, 72) }
+                            }
+                        }
+                        .padding(.horizontal, 12).padding(.vertical, 4)
+                        .background(Theme.surface, in: .rect(cornerRadius: 24))
                         CoachCard(review: review, recordCount: records.count, busy: reviewRequestID != nil, onAction: coachAction)
                         if let reviewError {
                             VStack(alignment: .leading, spacing: 12) {
@@ -43,16 +52,6 @@ struct TodayView: View {
                             }
                             .contentCard()
                         }
-                        HStack {
-                            Text("\(isToday ? "今日" : "当日")饮食").font(.title3.bold())
-                            Spacer()
-                            Text("早餐到加餐，都好好记录").font(.caption).foregroundStyle(.secondary)
-                        }
-                        .padding(.horizontal, 4).padding(.top, 8)
-                        ForEach(MealKind.allCases) { kind in
-                            MealSectionCard(kind: kind, records: records.filter { $0.kind == kind },
-                                onAdd: { openMeal(kind) }, onRecord: { sheet = .record($0) })
-                        }
                         Text("食物份量与营养由 AI 估算，支持用日常语言继续修正。")
                             .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 4)
                     }
@@ -60,22 +59,17 @@ struct TodayView: View {
                 .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 16)
             }
             .background(Theme.background)
-            .navigationTitle("饮食")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("选择日期", systemImage: "calendar") { sheet = .calendar }
-                        .accessibilityIdentifier("chooseDate")
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
             .safeAreaInset(edge: .bottom) {
                 Button { sheet = .entry } label: {
-                    Label("AI 记饮食", systemImage: "sparkles")
+                    Label("扫描记一餐", systemImage: "viewfinder")
                         .font(.headline).frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .buttonStyle(.glassProminent)
+                .buttonStyle(.glassProminent).tint(Theme.ink).foregroundStyle(Theme.surface)
                 .disabled(diary.loadError != nil)
                 .accessibilityIdentifier("addMeal")
-                .padding(.horizontal, 24).padding(.vertical, 10)
+                .padding(.horizontal, 24).padding(.vertical, 8)
+                .background(Theme.background.opacity(0.95))
             }
             .sheet(item: $sheet, content: sheetContent)
             .onChange(of: scenePhase) { _, phase in
@@ -86,25 +80,6 @@ struct TodayView: View {
             .onChange(of: goal) { _, _ in cancelReview(); reviewError = nil }
             .onDisappear(perform: cancelReview)
         }
-    }
-
-    private var dateNavigation: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(isToday ? "今天，也好好吃饭" : "回看这一天").font(.subheadline.weight(.medium))
-                Text(selectedDate.formatted(.dateTime.month().day().weekday(.wide)))
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 4)
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    Button("前一天", systemImage: "chevron.left") { moveDate(by: -1) }
-                    Button("后一天", systemImage: "chevron.right") { moveDate(by: 1) }.disabled(isToday)
-                }
-                .labelStyle(.iconOnly).buttonStyle(.glass).buttonBorderShape(.circle)
-            }
-        }
-        .padding(.horizontal, 4).padding(.bottom, 4)
     }
 
     @ViewBuilder

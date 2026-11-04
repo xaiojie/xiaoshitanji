@@ -137,6 +137,7 @@ struct HealthMetricDetailView: View {
             }.padding(20)
         }
         .background(Theme.background).navigationTitle(metric.title).navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
         .refreshable { await health.refresh() }
     }
 }
@@ -197,6 +198,7 @@ struct DietHealthDetailView: View {
             }.padding(20)
         }
         .background(Theme.background).navigationTitle("饮食摄入").navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
     }
 }
 

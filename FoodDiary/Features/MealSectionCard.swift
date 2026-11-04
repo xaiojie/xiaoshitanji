@@ -6,50 +6,79 @@ struct MealSectionCard: View {
     let records: [MealRecord]
     let onAdd: () -> Void
     let onRecord: (MealRecord) -> Void
+    @State private var expanded = false
 
     private var calories: Double { records.reduce(0) { $0 + $1.nutrition.calories } }
+    private var thumbnail: String {
+        switch kind {
+        case .breakfast: "FoodBreakfast"
+        case .lunch: "FoodLunch"
+        case .snack: "FoodSnack"
+        case .dinner: ""
+        }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 11) {
-                MealIcon(kind: kind)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(kind.title).font(.headline)
-                    Text(records.isEmpty ? "记录这一餐的美味" : "\(Theme.number(calories)) 千卡 · \(records.count) 条记录")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 4)
-                Button(action: onAdd) { Label(records.isEmpty ? "记录" : "添加", systemImage: "plus") }
-                    .font(.caption.weight(.semibold)).buttonStyle(.bordered)
-                    .accessibilityIdentifier("add-\(kind.rawValue)")
-            }
-            ForEach(records) { record in
-                Divider()
-                Button { onRecord(record) } label: {
-                    HStack(spacing: 12) {
-                        if let data = record.photoJPEG, let image = UIImage(data: data) {
-                            Image(uiImage: image).resizable().scaledToFill()
-                                .frame(width: 52, height: 56).clipShape(.rect(cornerRadius: 14))
+        VStack(spacing: 0) {
+            Button {
+                if records.isEmpty { onAdd() }
+                else { withAnimation(.snappy) { expanded.toggle() } }
+            } label: {
+                HStack(spacing: 11) {
+                    mealImage
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(kind.title).font(.system(size: 16, weight: .bold))
+                        if let first = records.first {
+                            Text(records.count == 1 ? first.date.formatted(.dateTime.hour().minute()) : "\(records.count) 条饮食记录")
+                                .font(.system(size: 11)).foregroundStyle(Theme.mutedInk)
+                        } else {
+                            Text("待记录").font(.system(size: 11)).foregroundStyle(Theme.mutedInk)
                         }
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(record.foodNames).font(.subheadline.weight(.medium)).foregroundStyle(.primary).lineLimit(2)
-                            Text(record.foods.map(\.portionLabel).joined(separator: " · "))
-                                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                            Text(record.date, style: .time).font(.caption2).foregroundStyle(.tertiary)
-                        }
-                        Spacer(minLength: 4)
-                        VStack(alignment: .trailing, spacing: 5) {
-                            Text(Theme.number(record.nutrition.calories)).font(.subheadline.bold()).foregroundStyle(.primary)
-                            Text("千卡").font(.caption2).foregroundStyle(.secondary)
-                        }
-                        Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
                     }
-                    .contentShape(.rect)
+                    Spacer(minLength: 4)
+                    if !records.isEmpty {
+                        Text("\(Theme.number(calories)) 千卡").font(.system(size: 17, weight: .heavy)).monospacedDigit()
+                    }
+                    Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold))
+                        .rotationEffect(.degrees(expanded ? 90 : 0)).foregroundStyle(Theme.mutedInk)
                 }
-                .buttonStyle(.plain).accessibilityIdentifier("meal-\(record.id)")
+                .foregroundStyle(Theme.ink).frame(minHeight: 66).contentShape(.rect)
+            }
+            .buttonStyle(.plain).accessibilityIdentifier(records.isEmpty ? "add-\(kind.rawValue)" : "open-\(kind.rawValue)")
+            if expanded {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(records) { record in
+                        Button { onRecord(record) } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(record.foodNames).font(.subheadline.weight(.medium)).lineLimit(2)
+                                    Text(record.foods.map(\.portionLabel).joined(separator: " · "))
+                                        .font(.caption).foregroundStyle(Theme.mutedInk).lineLimit(2)
+                                }
+                                Spacer()
+                                Text(record.date, style: .time).font(.caption).foregroundStyle(Theme.mutedInk)
+                                Image(systemName: "pencil").font(.caption)
+                            }.foregroundStyle(Theme.ink).padding(.vertical, 5)
+                        }.buttonStyle(.plain).accessibilityIdentifier("meal-\(record.id)")
+                    }
+                    Button("再记一条\(kind.title)", systemImage: "plus", action: onAdd)
+                        .font(.caption.weight(.semibold)).buttonStyle(.glass)
+                }
+                .padding(.leading, 65).padding(.bottom, 14)
             }
         }
-        .contentCard()
+    }
+
+    @ViewBuilder private var mealImage: some View {
+        if let data = records.first?.photoJPEG, let image = UIImage(data: data) {
+            Image(uiImage: image).resizable().scaledToFill().frame(width: 54, height: 50)
+                .clipShape(.rect(cornerRadius: 12)).accessibilityHidden(true)
+        } else if !thumbnail.isEmpty {
+            Image(thumbnail).resizable().scaledToFit().frame(width: 54, height: 56).accessibilityHidden(true)
+        } else {
+            Image(systemName: "takeoutbag.and.cup.and.straw.fill").font(.system(size: 30))
+                .foregroundStyle(Theme.gold).frame(width: 54, height: 56).accessibilityHidden(true)
+        }
     }
 }
 
@@ -69,7 +98,7 @@ struct RecordEntrySheet: View {
                 Label("拍照或文字 · AI 便捷记餐", systemImage: "sparkles")
                     .font(.headline).frame(maxWidth: .infinity, minHeight: 46)
             }
-            .buttonStyle(.glassProminent)
+            .yellowAction()
             HStack(spacing: 12) {
                 ForEach(MealKind.allCases) { kind in
                     Button { onSelect(kind) } label: {
@@ -84,6 +113,7 @@ struct RecordEntrySheet: View {
             }
         }
         .padding(24)
+        .presentationBackground(Theme.background)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }

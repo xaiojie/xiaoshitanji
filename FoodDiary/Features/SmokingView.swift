@@ -31,25 +31,36 @@ struct SmokingView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("给每一次选择，留一点觉察")
-                        .font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 4)
+                VStack(alignment: .leading, spacing: 15) {
+                    HStack {
+                        BrandPageTitle(title: "戒烟")
+                        Spacer()
+                        Button("全部记录与烟包", systemImage: "clock.arrow.circlepath") { sheet = .history }
+                            .labelStyle(.iconOnly).buttonStyle(.glass).buttonBorderShape(.circle)
+                    }.padding(.horizontal, 3)
                     todayHero
-                    if let error = diary.loadError ?? errorMessage { ErrorNotice(message: error).contentCard() }
-                    if let feedback { Text(feedback).font(.caption).foregroundStyle(Theme.accent).padding(.horizontal, 4) }
-                    personalSummary
                     currentPack
+                    Button(action: recordOne) {
+                        Label(pack == nil ? "选择当前烟包" : (remaining == 0 ? "换一包" : "抽一根"), systemImage: "wind")
+                            .font(.title3.bold()).frame(maxWidth: .infinity, minHeight: 46)
+                    }.yellowAction().disabled(diary.loadError != nil).accessibilityIdentifier("smokeOne")
+                    HStack(spacing: 12) {
+                        Button { sheet = .share } label: {
+                            Label("分给别人", systemImage: "person.2").frame(maxWidth: .infinity, minHeight: 30)
+                        }.disabled(pack == nil || remaining == 0)
+                        Button { sheet = .choosePack } label: {
+                            Label("换一包", systemImage: "arrow.left.arrow.right").frame(maxWidth: .infinity, minHeight: 30)
+                        }
+                    }.font(.subheadline.weight(.semibold)).buttonStyle(.glass).controlSize(.large)
+                    if let error = diary.loadError ?? errorMessage { ErrorNotice(message: error).contentCard() }
+                    if let feedback { Text(feedback).font(.caption).foregroundStyle(Theme.mutedInk).padding(.horizontal, 4) }
+                    personalSummary
                     SmokingTrendCard(journal: journal, endingOn: currentDate)
                     recentEvents
                     NicotineExplanation()
-                }.padding(20)
+                }.padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 18)
             }
-            .background(Theme.background).navigationTitle("戒烟记录")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("全部记录与烟包", systemImage: "clock.arrow.circlepath") { sheet = .history }
-                }
-            }
+            .background(Theme.background).toolbar(.hidden, for: .navigationBar)
             .sheet(item: $sheet) { destination in
                 switch destination {
                 case .choosePack: SmokingPackPickerView()
@@ -66,121 +77,94 @@ struct SmokingView: View {
     }
 
     private var todayHero: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            HStack {
-                Label("今天已记录", systemImage: "leaf").font(.subheadline.weight(.medium))
-                Spacer()
-                Text(currentDate.formatted(.dateTime.month().day().weekday())).font(.caption)
-            }.foregroundStyle(.white.opacity(0.8))
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text("\(today.smoked)")
-                    .font(.system(size: 80, weight: .light, design: .rounded)).monospacedDigit()
-                    .contentTransition(.numericText()).accessibilityIdentifier("smokedToday")
-                Text("根").font(.title3).foregroundStyle(.white.opacity(0.75))
-                Spacer()
-                Image(systemName: "lungs.fill").font(.system(size: 55, weight: .ultraLight))
-                    .foregroundStyle(.white.opacity(0.24)).accessibilityHidden(true)
-            }
-            TimelineView(.periodic(from: .now, by: 60)) { context in
-                if let last = journal.latestSmoke {
-                    let minutes = max(0, Int(context.date.timeIntervalSince(last.date) / 60))
-                    Label(minutes < 60 ? "距上次记录 \(minutes) 分钟" : "距上次记录 \(minutes / 60) 小时 \(minutes % 60) 分钟", systemImage: "clock")
-                        .font(.caption).foregroundStyle(.white.opacity(0.8))
-                } else {
-                    Text("从真实记录开始，慢慢看见自己的节奏").font(.caption).foregroundStyle(.white.opacity(0.8))
+        HStack(alignment: .bottom, spacing: 0) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("今日已记录").font(.caption.weight(.medium)).foregroundStyle(.white.opacity(0.82))
+                HStack(alignment: .firstTextBaseline, spacing: 7) {
+                    Text("\(today.smoked)").font(.system(size: 78, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Theme.accent).monospacedDigit().contentTransition(.numericText())
+                        .accessibilityIdentifier("smokedToday")
+                    Text("根").font(.title3.bold()).foregroundStyle(Theme.surface)
                 }
-            }
-            Button(action: recordOne) {
-                Label(pack == nil ? "选择当前烟包" : (remaining == 0 ? "这包已空，换一包" : "抽一根"),
-                      systemImage: pack == nil || remaining == 0 ? "plus" : "plus.circle")
-                    .font(.headline).frame(maxWidth: .infinity, minHeight: 42)
-            }
-            .buttonStyle(.glass).tint(.white)
-            .disabled(diary.loadError != nil).accessibilityIdentifier("smokeOne")
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    if let last = journal.latestSmoke {
+                        let minutes = max(0, Int(context.date.timeIntervalSince(last.date) / 60))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("距上次记录").font(.caption2)
+                            Text(minutes < 60 ? "\(minutes) 分钟" : "\(minutes / 60) 小时 \(minutes % 60) 分钟")
+                                .font(.caption.weight(.semibold))
+                        }
+                    } else { Text("从第一条记录开始").font(.caption) }
+                }.foregroundStyle(.white.opacity(0.72))
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(.bottom, 12)
+            Image("MilkFrogStanding").resizable().scaledToFit().frame(width: 137, height: 211)
+                .accessibilityHidden(true)
+                .overlay(alignment: .topLeading) {
+                    FrogSpeech(text: "下一根，\n晚点再说呗。")
+                        .frame(width: 122).offset(x: -96, y: -6)
+                }
         }
-        .padding(24).foregroundStyle(.white)
-        .background(LinearGradient(colors: [Color(red: 0.08, green: 0.35, blue: 0.29), Color(red: 0.08, green: 0.22, blue: 0.23)],
-                                  startPoint: .topLeading, endPoint: .bottomTrailing), in: .rect(cornerRadius: 32))
+        .padding(.horizontal, 20).padding(.top, 18).padding(.bottom, 5)
+        .background(Theme.darkGradient, in: .rect(cornerRadius: 28))
         .animation(.snappy, value: today.smoked)
     }
 
-    private var personalSummary: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top, spacing: 22) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("尼古丁标注累计", systemImage: "drop").font(.caption).foregroundStyle(.secondary)
-                    Text(today.smoked == today.unknownNicotineCount ? "—" : "\(Theme.number(today.knownNicotineMG, decimals: 2)) mg")
-                        .font(.title2.bold()).monospacedDigit()
-                    Text(today.unknownNicotineCount > 0 ? "\(today.unknownNicotineCount) 根缺少标注值" : "按自己抽的根数累计")
-                        .font(.caption2).foregroundStyle(.secondary)
-                }.frame(maxWidth: .infinity, alignment: .leading)
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("分给别人", systemImage: "person.2").font(.caption).foregroundStyle(.secondary)
-                    Text("\(today.shared) 根").font(.title2.bold()).monospacedDigit()
-                    Text("单独记录分烟数量").font(.caption2).foregroundStyle(.secondary)
-                }.frame(maxWidth: .infinity, alignment: .leading)
-            }
-            Divider()
-            HStack(alignment: .top) {
-                Text("自己抽的折算费用").font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                VStack(alignment: .trailing, spacing: 5) {
-                    ForEach(SmokingCurrency.allCases) { currency in
-                        if let cost = today.costs[currency] {
-                            Text(cost, format: .currency(code: currency.rawValue)).font(.subheadline.weight(.semibold))
-                        }
-                    }
-                    if today.costs.isEmpty { Text("—").font(.subheadline) }
-                    if today.unpricedCount > 0 { Text("\(today.unpricedCount) 根缺少价格").font(.caption2).foregroundStyle(.secondary) }
+    private var currentPack: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("当前烟包").font(.caption.weight(.semibold))
+                Text(pack == nil ? "— / 20 根" : "\(remaining) / 20 根")
+                    .font(.system(size: 21, weight: .heavy, design: .rounded)).monospacedDigit()
+                Spacer(minLength: 0)
+                if let pack {
+                    Menu("烟包操作", systemImage: "ellipsis.circle") {
+                        Button("校准余量", systemImage: "slider.horizontal.3") { sheet = .stock }
+                        Button("AI 识别烟盒", systemImage: "viewfinder") { sheet = .edit(pack) }
+                    }.labelStyle(.iconOnly).font(.body)
                 }
             }
-        }.contentCard()
+            HStack(spacing: 4) {
+                ForEach(0..<20) { index in
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(index < remaining ? Theme.gold : Theme.surface.opacity(0.65))
+                        .overlay { RoundedRectangle(cornerRadius: 5).strokeBorder(Theme.surface, lineWidth: 1) }
+                        .frame(maxWidth: .infinity).frame(height: 35)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(pack == nil ? "尚未选择烟包" : "当前烟包剩余\(remaining)根，共20根")
+            HStack {
+                Text(pack?.product.name ?? "从已有香烟中选一包，或扫描新香烟")
+                    .lineLimit(1)
+                Spacer()
+                Text("分给别人 \(today.shared) 根")
+            }.font(.system(size: 10)).foregroundStyle(Theme.mutedInk)
+        }
+        .padding(16).background(Theme.yellowGradient.opacity(0.66), in: .rect(cornerRadius: 24))
     }
 
-    private var currentPack: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                Label("当前这一包", systemImage: "rectangle.stack").font(.headline)
-                Spacer()
-                Button("换一包") { sheet = .choosePack }.font(.caption.weight(.semibold))
-            }
-            if let pack {
-                HStack(spacing: 14) {
-                    if let data = pack.photoJPEG, let image = UIImage(data: data) {
-                        Image(uiImage: image).resizable().scaledToFill().frame(width: 54, height: 66)
-                            .clipShape(.rect(cornerRadius: 12))
-                    }
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(pack.product.name).font(.title3.bold())
-                        HStack(spacing: 8) {
-                            if let price = pack.product.pricePerPack { Text(price, format: .currency(code: pack.product.currency.rawValue)) }
-                            Text("20 根 / 包")
-                        }.font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 0)
-                    VStack(spacing: 4) {
-                        Text("\(remaining)").font(.system(size: 34, weight: .semibold, design: .rounded)).monospacedDigit()
-                        Text("根剩余").font(.caption2).foregroundStyle(.secondary)
+    private var personalSummary: some View {
+        HStack(alignment: .top, spacing: 15) {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("尼古丁标注累计", systemImage: "drop").font(.caption).foregroundStyle(Theme.mutedInk)
+                Text(today.smoked == today.unknownNicotineCount ? "—" : "\(Theme.number(today.knownNicotineMG, decimals: 2)) mg")
+                    .font(.title3.bold()).monospacedDigit()
+                if today.unknownNicotineCount > 0 {
+                    Text("\(today.unknownNicotineCount) 根缺少标注值").font(.caption2).foregroundStyle(Theme.mutedInk)
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            Divider()
+            VStack(alignment: .leading, spacing: 8) {
+                Label("自己抽的折算费用", systemImage: "creditcard").font(.caption).foregroundStyle(Theme.mutedInk)
+                ForEach(SmokingCurrency.allCases) { currency in
+                    if let cost = today.costs[currency] {
+                        Text(cost, format: .currency(code: currency.rawValue)).font(.title3.bold())
                     }
                 }
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 10), spacing: 7) {
-                    ForEach(0..<20) { index in
-                        Capsule().fill(index < remaining ? Theme.accent : Theme.accent.opacity(0.09)).frame(height: 18)
-                    }
-                }.accessibilityElement(children: .ignore).accessibilityLabel("当前烟包剩余\(remaining)根，共20根")
-                GlassEffectContainer {
-                    HStack(spacing: 10) {
-                        Button("分给别人", systemImage: "person.2") { sheet = .share }.disabled(remaining == 0)
-                        Button("校准余量", systemImage: "slider.horizontal.3") { sheet = .stock }
-                        Spacer(minLength: 0)
-                        Button("AI 识别烟盒", systemImage: "viewfinder") { sheet = .edit(pack) }.labelStyle(.iconOnly)
-                    }.font(.caption).buttonStyle(.glass)
-                }
-            } else {
-                HealthEmptyView(symbol: "rectangle.stack.badge.plus", title: "选一包，开始记录", detail: "从已有香烟中选择，或拍照让 AI 识别新香烟。")
-                Button("选择香烟", systemImage: "rectangle.stack") { sheet = .choosePack }.buttonStyle(.glassProminent)
-            }
-        }.contentCard()
+                if today.costs.isEmpty { Text("—").font(.title3.bold()) }
+                if today.unpricedCount > 0 { Text("\(today.unpricedCount) 根缺少价格").font(.caption2).foregroundStyle(Theme.mutedInk) }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+        }.fixedSize(horizontal: false, vertical: true).contentCard()
     }
 
     private var recentEvents: some View {
@@ -194,12 +178,12 @@ struct SmokingView: View {
                 SmokingEventRow(event: event, productName: journal.packs.first { $0.id == event.packID }?.product.name ?? "")
             }
             if journal.events.isEmpty {
-                Text("自己抽的、分出去的和余量校准都会留在这里。").font(.subheadline).foregroundStyle(.secondary)
+                Text("自己抽的、分出去的和余量校准都会留在这里。").font(.subheadline).foregroundStyle(Theme.mutedInk)
             } else if let last = journal.events.last {
                 Button("撤销上一条 · \(last.kind.title) \(last.count) 根", systemImage: "arrow.uturn.backward") {
                     do { try diary.removeSmokingEvent(last.id); errorMessage = nil; feedback = "已撤销上一条记录。" }
                     catch { errorMessage = error.localizedDescription }
-                }.font(.caption).foregroundStyle(.secondary)
+                }.font(.caption).foregroundStyle(Theme.mutedInk)
             }
         }.contentCard()
     }
@@ -249,7 +233,7 @@ struct SmokingEventRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: event.kind == .smoked ? "wind" : (event.kind == .shared ? "person.2" : "slider.horizontal.3"))
-                .foregroundStyle(event.kind == .smoked ? Theme.accent : Theme.fat).frame(width: 30)
+                .foregroundStyle(event.kind == .smoked ? Theme.olive : Theme.fat).frame(width: 30)
             VStack(alignment: .leading, spacing: 5) {
                 Text("\(event.kind.title) \(event.count) 根").font(.subheadline.weight(.medium))
                 Text(productName).font(.caption2).foregroundStyle(.secondary).lineLimit(1)

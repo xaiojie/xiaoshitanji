@@ -15,7 +15,7 @@ struct FoodPortionView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Label("当前估算份量", systemImage: "sparkles").font(.caption).foregroundStyle(Theme.accent)
+                        Label("当前估算份量", systemImage: "sparkles").font(.caption).foregroundStyle(Theme.olive)
                         Text(food.name).font(.title2.bold())
                         HStack {
                             Text(food.portionLabel).font(.headline).foregroundStyle(.secondary)
@@ -50,7 +50,7 @@ struct FoodPortionView: View {
                             onCorrection("关于「\(food.name)」：\(description)")
                             dismiss()
                         }
-                        .buttonStyle(.borderedProminent)
+                        .yellowAction()
                         .disabled(description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .contentCard()

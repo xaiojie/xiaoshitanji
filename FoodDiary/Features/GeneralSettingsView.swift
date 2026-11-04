@@ -123,17 +123,18 @@ struct GeneralSettingsView: View {
                 if let feedback {
                     Section {
                         Label(feedback, systemImage: "checkmark.circle.fill")
-                            .font(.subheadline).foregroundStyle(Theme.accent)
+                            .font(.subheadline).foregroundStyle(Theme.olive)
                             .accessibilityIdentifier("settingsFeedback")
                     }
                 }
 
                 Section {
-                    LabeledContent("版本", value: "0.4.3 奶蛙版")
+                    LabeledContent("版本", value: "0.5.0 黄油奶蛙版")
                     Text("描述日常份量或拍张照片，AI 会估算热量和营养。识别结果可通过自然语言或份量选项继续修正。")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
+            .scrollContentBackground(.hidden).background(Theme.background)
             .navigationTitle("通用设置")
             .toolbar {
                 if isPresented {

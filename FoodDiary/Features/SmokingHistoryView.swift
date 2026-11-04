@@ -21,10 +21,7 @@ struct SmokingHistoryView: View {
         NavigationStack {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 18) {
-                    Picker("查看内容", selection: $section) {
-                        Text("每日记录").tag(0)
-                        Text("我的烟包").tag(1)
-                    }.pickerStyle(.segmented)
+                    BrandSegments(options: [(0, "每日记录"), (1, "我的烟包")], selection: $section)
                     if section == 0 { dailyEvents }
                     else { packList }
                     if let errorMessage { ErrorNotice(message: errorMessage).contentCard() }
@@ -85,7 +82,7 @@ struct SmokingHistoryView: View {
                     }
                     HStack {
                         if pack.id == journal.activePackID {
-                            Label("正在使用", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(Theme.accent)
+                            Label("正在使用", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(Theme.olive)
                         } else {
                             Button("切换到这包") {
                                 do { try diary.activateSmokingPack(pack.id); errorMessage = nil }
@@ -129,6 +126,7 @@ struct SmokingCountView: View {
                 }
                 if let errorMessage { Section { ErrorNotice(message: errorMessage) } }
             }
+            .scrollContentBackground(.hidden).background(Theme.background)
             .navigationTitle(kind == .stockCheck ? "校准烟包余量" : "分给别人")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

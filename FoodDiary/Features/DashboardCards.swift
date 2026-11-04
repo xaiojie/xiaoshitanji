@@ -7,68 +7,92 @@ struct DailyIntakeCard: View {
     let goal: Double
     let mealCount: Int
     let foodCount: Int
+    let date: Date
+    let isToday: Bool
+    let onDate: () -> Void
+    let onPrevious: () -> Void
+    let onNext: () -> Void
     let onGoal: () -> Void
 
-    private var remaining: Double { max(0, goal - nutrition.calories) }
     private var progress: Double { goal > 0 ? min(nutrition.calories / goal, 1) : 0 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                Label("饮食摄入", systemImage: "flame").font(.headline)
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("小食痰记").font(.system(size: 25, weight: .heavy))
+                    Button(action: onDate) {
+                        Text(date.formatted(.dateTime.month().day().weekday(.wide)))
+                            .font(.system(size: 11, weight: .medium))
+                    }.buttonStyle(.plain).accessibilityIdentifier("chooseDate")
+                }
                 Spacer()
-                Text("千卡 kcal").font(.caption).foregroundStyle(.secondary)
+                Menu("日期与参考目标", systemImage: "calendar") {
+                    Button("前一天", systemImage: "chevron.left", action: onPrevious)
+                    Button("选择日期", systemImage: "calendar", action: onDate)
+                    Button("后一天", systemImage: "chevron.right", action: onNext).disabled(isToday)
+                    Button("设置热量参考", systemImage: "flag", action: onGoal)
+                }.labelStyle(.iconOnly).font(.title3).frame(width: 36, height: 36)
             }
-            HStack(spacing: 8) {
-                metric(goal > 0 ? "已摄入" : "已记录", value: goal > 0 ? Theme.number(nutrition.calories) : "\(mealCount)", unit: goal > 0 ? "千卡" : "餐")
-                Spacer(minLength: 0)
-                ZStack {
-                    Circle().stroke(Theme.accent.opacity(0.10), lineWidth: 12)
-                    Circle().trim(from: 0, to: progress)
-                        .stroke(Theme.accent, style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                    VStack(spacing: 7) {
-                        Text(goal > 0 ? "还可摄入" : "今日摄入").font(.caption).foregroundStyle(.secondary)
-                        Text(Theme.number(goal > 0 ? remaining : nutrition.calories))
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                            .monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
-                            .accessibilityIdentifier("dailyCalories")
-                        Text("千卡").font(.caption2).foregroundStyle(.secondary)
+            HStack(alignment: .bottom, spacing: 0) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(isToday ? "今日摄入" : "当日摄入").font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(Theme.surface.opacity(0.55), in: .capsule)
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Text(Theme.number(nutrition.calories)).font(.system(size: 38, weight: .heavy, design: .rounded))
+                            .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7).accessibilityIdentifier("dailyCalories")
+                        Text("千卡").font(.caption.weight(.semibold))
                     }
-                    .padding(.horizontal, 14)
-                }
-                .frame(width: 148, height: 148)
-                .accessibilityElement(children: .combine)
-                Spacer(minLength: 0)
-                metric("食物种类", value: "\(foodCount)", unit: "种")
-            }
-            HStack {
-                if goal > 0 {
-                    Text("参考目标 \(Theme.number(goal)) 千卡").font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    if nutrition.calories > goal {
-                        Text("已记录 \(mealCount) 餐").font(.caption).foregroundStyle(.secondary)
+                    if goal > 0 {
+                        Button("参考 \(Theme.number(goal)) 千卡", action: onGoal).font(.system(size: 11)).buttonStyle(.plain)
+                        ProgressView(value: progress).tint(Theme.gold).frame(maxWidth: 155)
+                        Text(nutrition.calories <= goal ? "还可摄入 \(Theme.number(goal - nutrition.calories)) 千卡" : "超过参考 \(Theme.number(nutrition.calories - goal)) 千卡")
+                            .font(.system(size: 12, weight: .semibold))
+                    } else {
+                        Text("已记录 \(mealCount) 餐 · \(foodCount) 种食物").font(.system(size: 11))
+                        Button("设置每日参考", action: onGoal).font(.caption.weight(.semibold)).buttonStyle(.plain)
                     }
-                    Button("调整", action: onGoal).font(.caption.weight(.medium))
-                } else {
-                    Text("记录你的饮食，慢慢了解自己").font(.caption).foregroundStyle(.secondary)
-                    Spacer(minLength: 4)
-                    Button("设置目标", action: onGoal).font(.caption.weight(.medium))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.bottom, 12)
+                Image("MilkFrogStanding").resizable().scaledToFit().frame(width: 126, height: 185)
+                    .accessibilityHidden(true)
+                    .overlay(alignment: .topLeading) {
+                        FrogSpeech(text: "吃都吃了，\n先记一笔。")
+                            .frame(width: 115).offset(x: -92, y: -9)
+                    }
             }
+            CompactNutritionStrip(nutrition: nutrition)
         }
-        .contentCard()
-        .animation(.snappy, value: progress)
+        .foregroundStyle(Theme.ink).padding(17)
+        .background(Theme.yellowGradient, in: .rect(cornerRadius: 30))
+        .animation(.snappy, value: nutrition.calories)
+    }
+}
+
+struct CompactNutritionStrip: View {
+    let nutrition: Nutrition
+
+    var body: some View {
+        HStack(spacing: 8) {
+            nutrient("蛋白质", value: nutrition.protein, symbol: "leaf.fill", color: Theme.olive)
+            Spacer(minLength: 0)
+            nutrient("碳水", value: nutrition.carbohydrates, symbol: "flame.fill", color: Theme.gold)
+            Spacer(minLength: 0)
+            nutrient("脂肪", value: nutrition.fat, symbol: "drop.fill", color: Theme.fat)
+        }
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .background(Theme.surface.opacity(0.88), in: .rect(cornerRadius: 18))
     }
 
-    private func metric(_ title: String, value: String, unit: String) -> some View {
-        VStack(spacing: 8) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
-            Text(value).font(.title3.bold()).monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
-            Text(unit).font(.caption2).foregroundStyle(.tertiary)
-        }
-        .frame(minWidth: 52)
-        .accessibilityElement(children: .combine)
+    private func nutrient(_ title: String, value: Double, symbol: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol).font(.system(size: 17)).foregroundStyle(color)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.system(size: 10)).foregroundStyle(Theme.mutedInk)
+                Text("\(Theme.number(value, decimals: 1)) g").font(.system(size: 15, weight: .bold)).monospacedDigit()
+            }
+        }.accessibilityElement(children: .combine)
     }
 }
 
@@ -76,60 +100,36 @@ struct NutritionDistributionCard: View {
     let nutrition: Nutrition
 
     private var entries: [MacroEntry] {
-        [MacroEntry(title: "碳水", grams: nutrition.carbohydrates, factor: 4, color: Theme.carbohydrate),
-         MacroEntry(title: "蛋白质", grams: nutrition.protein, factor: 4, color: Theme.accent),
+        [MacroEntry(title: "蛋白质", grams: nutrition.protein, factor: 4, color: Theme.olive),
+         MacroEntry(title: "碳水", grams: nutrition.carbohydrates, factor: 4, color: Theme.accent),
          MacroEntry(title: "脂肪", grams: nutrition.fat, factor: 9, color: Theme.fat)]
     }
     private var totalEnergy: Double { entries.reduce(0) { $0 + $1.energy } }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            Label("营养成分", systemImage: "chart.pie").font(.headline)
-            HStack(alignment: .top, spacing: 18) {
-                ForEach(entries) { entry in
-                    VStack(alignment: .leading, spacing: 9) {
-                        Text(entry.title).font(.caption).foregroundStyle(.secondary)
-                        Text("\(Theme.number(entry.grams, decimals: 1)) g")
-                            .font(.subheadline.bold()).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
-                        ProgressView(value: totalEnergy > 0 ? entry.energy / totalEnergy : 0)
-                            .tint(entry.color).accessibilityLabel("\(entry.title)供能占比")
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-            HStack(spacing: 28) {
-                VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 17) {
+            Text("营养摄入分布").font(.headline)
+            GeometryReader { geometry in
+                HStack(spacing: 0) {
                     ForEach(entries) { entry in
-                        HStack(spacing: 9) {
-                            Circle().fill(entry.color).frame(width: 7, height: 7)
-                            Text(entry.title).font(.caption)
-                            Spacer()
-                            Text(totalEnergy > 0 ? "\(Theme.number(entry.energy / totalEnergy * 100))%" : "—")
-                                .font(.caption).monospacedDigit().foregroundStyle(.secondary)
-                        }
-                        .accessibilityElement(children: .combine)
+                        Rectangle().fill(entry.color)
+                            .frame(width: totalEnergy > 0 ? geometry.size.width * entry.energy / totalEnergy : 0)
                     }
-                }
-                ZStack {
-                    if totalEnergy > 0 {
-                        Chart(entries) { entry in
-                            SectorMark(angle: .value("供能", entry.energy), innerRadius: .ratio(0.70), angularInset: 2)
-                                .foregroundStyle(entry.color)
-                                .accessibilityLabel(entry.title)
-                                .accessibilityValue("\(Theme.number(entry.energy / totalEnergy * 100))%")
-                        }
-                    } else {
-                        Circle().stroke(.quaternary, lineWidth: 14).padding(7)
-                    }
-                    Text(totalEnergy > 0 ? "供能占比" : "待记录")
-                        .font(.system(size: 10)).foregroundStyle(.secondary)
-                }
-                .frame(width: 90, height: 90)
+                }.background(Theme.softYellow).clipShape(.capsule)
+            }.frame(height: 15).accessibilityHidden(true)
+            ForEach(entries) { entry in
+                HStack(spacing: 9) {
+                    Circle().fill(entry.color).frame(width: 8, height: 8)
+                    Text(entry.title).font(.subheadline)
+                    Spacer()
+                    Text("\(Theme.number(entry.grams, decimals: 1)) g").font(.subheadline.bold()).monospacedDigit()
+                    Text(totalEnergy > 0 ? "占 \(Theme.number(entry.energy / totalEnergy * 100))%" : "—")
+                        .font(.caption).foregroundStyle(Theme.mutedInk).frame(width: 62, alignment: .trailing)
+                }.accessibilityElement(children: .combine)
             }
-            Text("供能占比由三大营养素估算，随饮食记录更新。")
-                .font(.caption2).foregroundStyle(.secondary)
-        }
-        .contentCard()
+            Text("供能占比由三大营养素估算，随已记录饮食更新。")
+                .font(.caption2).foregroundStyle(Theme.mutedInk)
+        }.foregroundStyle(Theme.ink).contentCard()
     }
 }
 
@@ -149,42 +149,25 @@ struct CoachCard: View {
     let onAction: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                Image(systemName: "sparkles").font(.title3)
-                    .foregroundStyle(Theme.accent).frame(width: 40, height: 40)
-                    .background(Theme.accent.opacity(0.10), in: .circle)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("AI 饮食教练").font(.headline)
-                    if let review {
-                        Text("基于已记录的 \(review.recordCount) 餐").font(.caption).foregroundStyle(.secondary)
-                    } else {
-                        Text("把记录变成下一餐的灵感").font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                Spacer(minLength: 0)
-                if let score = review?.score {
-                    VStack(spacing: 3) {
-                        Text("\(score)").font(.title2.bold()).foregroundStyle(Theme.accent)
-                        Text("AI 参考分").font(.caption2).foregroundStyle(.secondary)
-                    }
-                }
-            }
-            Text(review?.summary ?? (recordCount == 0
-                ? "先记下今天吃了什么，AI 帮你看看营养搭配，给下一餐一点建议。"
-                : "今天已记录 \(recordCount) 餐，让 AI 回顾食物搭配、营养分布和可以调整的地方。"))
-                .font(.subheadline).foregroundStyle(.secondary).lineSpacing(4).lineLimit(4)
-            Button(action: onAction) {
-                HStack(spacing: 8) {
-                    if busy { ProgressView() }
-                    Text(busy ? "正在回顾饮食…" : (review != nil ? "查看饮食回顾" : (recordCount == 0 ? "开始 AI 记餐" : "分析这一天的饮食")))
+        HStack(alignment: .bottom, spacing: 10) {
+            Image("MilkFrogPeek").resizable().scaledToFit().frame(width: 82, height: 115).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("蛙的饮食碎碎念").font(.headline)
                     Spacer()
-                    Image(systemName: "arrow.up.right")
+                    if let score = review?.score { Text("\(score) 分").font(.caption.bold()) }
                 }
-                .font(.subheadline.weight(.semibold))
-            }
-            .disabled(busy)
-        }
-        .contentCard()
+                Text(review?.summary ?? (recordCount == 0 ? "先记一餐，我再来碎碎念。" : "这顿我记下了，搭配怎么样，咱们一起看看。"))
+                    .font(.subheadline).foregroundStyle(Theme.mutedInk).lineLimit(3).lineSpacing(3)
+                Button(action: onAction) {
+                    HStack(spacing: 7) {
+                        if busy { ProgressView() }
+                        Text(busy ? "正在回顾…" : (review != nil ? "查看饮食回顾" : (recordCount == 0 ? "开始记餐" : "AI 回顾这一天")))
+                        Image(systemName: "arrow.up.right")
+                    }.font(.caption.weight(.semibold))
+                }.buttonStyle(.glass).disabled(busy)
+            }.padding(.vertical, 16)
+        }.padding(.horizontal, 16).foregroundStyle(Theme.ink)
+            .background(Theme.softGreen, in: .rect(cornerRadius: 24))
     }
 }

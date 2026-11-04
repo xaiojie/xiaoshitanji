@@ -7,37 +7,42 @@ struct MealResultView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
+            if let photo = record.photoJPEG { ScanPhotoPreview(data: photo, height: 260) }
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Label("这一餐的估算", systemImage: "sparkles").font(.subheadline).foregroundStyle(Theme.accent)
+                    Label("已识别 · 待你确认", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.bold()).foregroundStyle(Theme.olive)
                     Spacer()
-                    Text("\(record.foods.count) 种食物").font(.caption).foregroundStyle(.secondary)
+                    Image("MilkFrogPeek").resizable().scaledToFit().frame(width: 55, height: 53)
+                        .accessibilityHidden(true)
                 }
+                Text(record.foodNames).font(.headline).lineLimit(2)
                 HStack(alignment: .firstTextBaseline, spacing: 7) {
                     Text(Theme.number(record.nutrition.calories))
-                        .font(.system(size: 48, weight: .semibold, design: .rounded)).monospacedDigit()
+                        .font(.system(size: 46, weight: .heavy, design: .rounded)).monospacedDigit()
                         .contentTransition(.numericText())
-                    Text("千卡").foregroundStyle(.secondary)
+                    Text("千卡 · 估算").font(.caption).foregroundStyle(Theme.mutedInk)
                 }
                 NutritionRow(nutrition: record.nutrition)
             }
-            .contentCard()
+            .padding(20).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.softYellow, in: .rect(cornerRadius: 26))
 
             VStack(alignment: .leading, spacing: 14) {
                 Text("识别到这些食物").font(.headline)
                 ForEach(record.foods) { food in
                     Button { onFood(food) } label: {
                         HStack(spacing: 12) {
-                            Image(systemName: "fork.knife")
-                                .font(.body).foregroundStyle(Theme.accent)
+                            Image(systemName: food.nutritionLabel == nil ? "fork.knife" : "doc.text.viewfinder")
+                                .font(.body).foregroundStyle(Theme.olive)
                                 .frame(width: 42, height: 46)
-                                .background(Theme.accent.opacity(0.08), in: .rect(cornerRadius: 13))
+                                .background(Theme.softGreen, in: .rect(cornerRadius: 13))
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(food.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 Text(food.portionLabel).font(.caption).foregroundStyle(.secondary)
                                 if let label = food.nutritionLabel {
                                     Label(label.portionIsEstimated ? "营养标签 · 份量估算" : "按营养标签换算", systemImage: "doc.text.viewfinder")
-                                        .font(.caption2).foregroundStyle(Theme.accent)
+                                        .font(.caption2).foregroundStyle(Theme.olive)
                                 }
                             }
                             Spacer(minLength: 4)
@@ -80,8 +85,8 @@ struct MealCorrectionView: View {
                     }
                 }
             }
-            Button("重新分析这一餐", systemImage: "sparkles", action: onUpdate)
-                .font(.subheadline.weight(.medium)).buttonStyle(.borderedProminent)
+            Button("更新这餐的计算", systemImage: "sparkles", action: onUpdate)
+                .font(.subheadline.weight(.medium)).yellowAction()
                 .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .contentCard().disabled(busy)
@@ -103,10 +108,6 @@ struct EstimateExplanationView: View {
                 }
                 Text("照片与日常描述会有估算误差，你可以继续描述份量、做法和剩余食物来修正。")
                 if !record.originalText.isEmpty { Text("原始描述 \(record.originalText)") }
-                if let data = record.photoJPEG, let image = UIImage(data: data) {
-                    Image(uiImage: image).resizable().scaledToFit().frame(maxHeight: 220)
-                        .clipShape(.rect(cornerRadius: 14))
-                }
                 if let model = record.model { Text(model).font(.caption2) }
             }
             .font(.caption).foregroundStyle(.secondary).padding(.top, 12)
@@ -122,7 +123,7 @@ struct NutritionLabelCard: View {
         VStack(alignment: .leading, spacing: 14) {
             Label("营养标签依据", systemImage: "doc.text.viewfinder").font(.headline)
             Text("每 \(Theme.number(label.basisAmount, decimals: 2)) \(label.unit.title)")
-                .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
+                .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.olive)
             LabeledContent("能量", value: "\(Theme.number(label.energy, decimals: 2)) \(label.energyUnit.rawValue)")
             LabeledContent("蛋白质", value: "\(Theme.number(label.protein, decimals: 2)) 克")
             LabeledContent("碳水化合物", value: "\(Theme.number(label.carbohydrates, decimals: 2)) 克")

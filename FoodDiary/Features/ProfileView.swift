@@ -29,9 +29,7 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     profileHeader
-                    Picker("健康数据分区", selection: $section) {
-                        ForEach(ProfileSection.allCases) { Text($0.rawValue).tag($0) }
-                    }.pickerStyle(.segmented)
+                    BrandSegments(options: ProfileSection.allCases.map { ($0, $0.rawValue) }, selection: $section)
                     if let error = diary.loadError { ErrorNotice(message: error).contentCard() }
                     switch section {
                     case .today: todayOverview
@@ -39,17 +37,22 @@ struct ProfileView: View {
                     case .all: allData
                     }
                     healthConnection
+                    Button { sheet = .settings } label: {
+                        HStack(spacing: 13) {
+                            Image(systemName: "gearshape").font(.title2)
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("通用设置").font(.headline)
+                                Text("AI 配置与个人参考目标").font(.caption).foregroundStyle(Theme.mutedInk)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.caption)
+                        }.foregroundStyle(Theme.ink).contentCard()
+                    }.buttonStyle(.plain)
                 }
-                .padding(20)
+                .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 18)
             }
             .background(Theme.background)
-            .navigationTitle("我的")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("通用设置", systemImage: "gearshape") { sheet = .settings }
-                        .accessibilityIdentifier("generalSettings")
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $sheet) { destination in
                 switch destination {
                 case .editor: ProfileEditorView(profile: profile, effectiveHeight: height, weight: latestWeight, healthHeightDate: health.heightDate)
@@ -62,30 +65,34 @@ struct ProfileView: View {
     }
 
     private var profileHeader: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            Button { sheet = .editor } label: {
-                HStack(spacing: 16) {
-                    ProfileAvatar(data: profile.avatarJPEG, size: 72)
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text(profile.nickname.isEmpty ? "我的健康档案" : profile.nickname)
-                            .font(.title2.bold()).foregroundStyle(.primary).lineLimit(2)
-                        Text(profile.nickname.isEmpty ? "完善资料，开始了解自己" : "每一天，记录自己的变化")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "pencil").font(.subheadline).foregroundStyle(.secondary)
-                }
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .center, spacing: 12) {
+                Button { sheet = .editor } label: {
+                    HStack(spacing: 13) {
+                        ProfileAvatar(data: profile.avatarJPEG, size: 68)
+                            .overlay { Circle().strokeBorder(Theme.surface, lineWidth: 3) }
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(profile.nickname.isEmpty ? "蛙的搭子" : profile.nickname)
+                                .font(.system(size: 23, weight: .heavy)).lineLimit(2)
+                            Label("编辑个人资料", systemImage: "pencil").font(.system(size: 10, weight: .medium))
+                        }
+                    }.foregroundStyle(Theme.ink)
+                }.buttonStyle(.plain).accessibilityIdentifier("editProfile")
+                Spacer(minLength: 0)
+                Button("通用设置", systemImage: "gearshape") { sheet = .settings }
+                    .labelStyle(.iconOnly).buttonStyle(.glass).buttonBorderShape(.circle)
+                    .accessibilityIdentifier("generalSettings")
             }
-            .buttonStyle(.plain).accessibilityLabel("编辑个人资料").accessibilityIdentifier("editProfile")
-            Divider()
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: 8) {
                 headerMetric("身高", value: height, unit: "厘米")
                 headerMetric("体重", value: latestWeight?.kilograms, unit: "公斤")
                 headerMetric("BMI", value: bmi, unit: "自动计算")
                 headerMetric("目标", value: profile.targetWeightKG, unit: "公斤")
             }
+            .padding(.horizontal, 13).padding(.vertical, 12)
+            .background(Theme.surface.opacity(0.88), in: .rect(cornerRadius: 20))
         }
-        .contentCard()
+        .padding(18).background(Theme.yellowGradient, in: .rect(cornerRadius: 30))
     }
 
     private func headerMetric(_ title: String, value: Double?, unit: String) -> some View {
@@ -101,31 +108,31 @@ struct ProfileView: View {
     }
 
     private var todayOverview: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            sectionHeading("今天的健康足迹", subtitle: Date.now.formatted(.dateTime.month().day().weekday()))
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
-                NavigationLink { WeightHistoryView() } label: {
-                    HealthSummaryTile(title: "最近体重", symbol: "scalemass.fill", color: Theme.accent,
-                        value: latestWeight.map { Theme.number($0.kilograms, decimals: 1) } ?? "—", unit: "公斤",
-                        footnote: latestWeight.map { "\($0.date.formatted(.dateTime.month().day())) · \($0.source.title)" } ?? "记录一次真实测量")
-                }
-                NavigationLink { DietHealthDetailView() } label: {
-                    HealthSummaryTile(title: "饮食摄入", symbol: "fork.knife", color: .orange,
-                        value: diary.loadError == nil ? Theme.number(diary.document.total(on: .now).calories) : "—",
-                        unit: "千卡", footnote: "今日已记录 \(mealCount) 餐")
-                }
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(spacing: 0) {
                 ForEach(ActivityMetric.allCases) { metric in
                     NavigationLink { HealthMetricDetailView(metric: metric) } label: {
-                        HealthSummaryTile(title: metric.title, symbol: metric.symbol, color: metric.color,
-                            value: metric.formatted(metric.value(in: health.today)), unit: metric.unit,
-                            footnote: metric.value(in: health.today) == nil ? "暂无可读取数据" : "今天 · Apple 健康")
+                        dataRow(metric.title, symbol: metric.symbol, color: metric == .calories ? .orange : Theme.olive,
+                            value: metric.value(in: health.today).map { "\(metric.formatted($0)) \(metric.unit)" } ?? "暂无数据")
                     }
+                    Divider().padding(.leading, 45)
                 }
-            }.buttonStyle(.plain)
+                NavigationLink { WeightHistoryView() } label: {
+                    dataRow("最近体重", symbol: "scalemass.fill", color: Theme.olive,
+                        value: latestWeight.map { "\(Theme.number($0.kilograms, decimals: 1)) 公斤" } ?? "待记录")
+                }
+                Divider().padding(.leading, 45)
+                NavigationLink { DietHealthDetailView() } label: {
+                    dataRow("饮食摄入", symbol: "fork.knife", color: Theme.gold,
+                        value: diary.loadError == nil ? "\(Theme.number(diary.document.total(on: .now).calories)) 千卡" : "暂无数据")
+                }
+            }
+            .buttonStyle(.plain).padding(.horizontal, 15).padding(.vertical, 5)
+            .background(Theme.surface, in: .rect(cornerRadius: 24))
             Button("记录体重", systemImage: "plus") { sheet = .weight }
                 .buttonStyle(.glass).frame(maxWidth: .infinity)
-            Text("活动消耗包含运动与日常活动。饮食摄入按小食痰记中已保存的餐食汇总。")
-                .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 4)
+            Text("活动与饮食按今日记录汇总，体重采用最近一次测量。")
+                .font(.caption2).foregroundStyle(Theme.mutedInk).padding(.horizontal, 4)
         }
     }
 
@@ -140,7 +147,7 @@ struct ProfileView: View {
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(bmi.map { Theme.number($0, decimals: 1) } ?? "—")
-                        .font(.system(size: 42, weight: .bold, design: .rounded)).foregroundStyle(Theme.accent)
+                        .font(.system(size: 42, weight: .bold, design: .rounded)).foregroundStyle(Theme.olive)
                     Text("BMI").font(.subheadline).foregroundStyle(.secondary)
                     Spacer()
                 }
@@ -172,7 +179,7 @@ struct ProfileView: View {
             sectionHeading("我的全部数据", subtitle: "身体测量、活动和每日饮食")
             VStack(spacing: 0) {
                 NavigationLink { WeightHistoryView() } label: {
-                    dataRow("体重", symbol: "scalemass.fill", color: Theme.accent,
+                    dataRow("体重", symbol: "scalemass.fill", color: Theme.olive,
                         value: latestWeight.map { "\(Theme.number($0.kilograms, decimals: 1)) 公斤" } ?? "暂无数据")
                 }
                 Divider().padding(.leading, 48)
@@ -211,28 +218,30 @@ struct ProfileView: View {
     }
 
     private var healthConnection: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                Image(systemName: "heart.fill").font(.title3).foregroundStyle(.pink)
+                Image(systemName: "heart.fill").font(.title2).foregroundStyle(.pink)
+                    .frame(width: 42, height: 42).background(Theme.surface, in: .rect(cornerRadius: 12))
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Apple 健康").font(.headline)
-                    Text(health.accessRequested ? (health.hasData ? "汇集你的身体与活动记录" : "已请求访问，等待可读取的数据") : "连接步数、活动和身体测量")
-                        .font(.caption).foregroundStyle(.secondary)
+                    Text(health.accessRequested ? (health.hasData ? "数据来源 · 步数、活动与身体测量" : "已请求访问，等待可读取的数据") : "连接步数、活动和身体测量")
+                        .font(.caption).foregroundStyle(Theme.mutedInk)
                 }
                 Spacer(minLength: 0)
                 if health.isLoading { ProgressView() }
+                else { Image(systemName: "chevron.right").font(.caption).foregroundStyle(Theme.olive) }
             }
             if let refreshed = health.lastRefresh {
                 Text("最近刷新 \(refreshed.formatted(.dateTime.month().day().hour().minute()))")
-                    .font(.caption2).foregroundStyle(.secondary)
+                    .font(.caption2).foregroundStyle(Theme.mutedInk)
             }
             if let error = health.errorMessage { ErrorNotice(message: error) }
-            Button(health.accessRequested ? "健康连接与数据设置" : "连接 Apple 健康", systemImage: "arrow.up.right") {
+            Button(health.accessRequested ? "健康连接与数据设置" : "连接 Apple 健康") {
                 if health.accessRequested { sheet = .settings }
                 else { Task { await health.connect() } }
-            }
-            .font(.subheadline.weight(.semibold)).disabled(health.isLoading || !health.isAvailable)
-        }.contentCard()
+            }.font(.caption.weight(.semibold)).disabled(health.isLoading || !health.isAvailable)
+        }
+        .padding(16).background(Theme.softGreen, in: .rect(cornerRadius: 22))
     }
 
     private func sectionHeading(_ title: String, subtitle: String) -> some View {
@@ -247,37 +256,8 @@ struct ProfileView: View {
             Image(systemName: symbol).foregroundStyle(color).frame(width: 32, height: 38)
             Text(title).font(.subheadline).foregroundStyle(.primary)
             Spacer(minLength: 4)
-            Text(value).font(.subheadline).foregroundStyle(.secondary).monospacedDigit()
+            Text(value).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.ink).monospacedDigit()
             Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
         }.padding(.vertical, 9).frame(minHeight: 48)
-    }
-}
-
-private struct HealthSummaryTile: View {
-    let title: String
-    let symbol: String
-    let color: Color
-    let value: String
-    let unit: String
-    let footnote: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: symbol).foregroundStyle(color)
-                Text(title).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
-                Spacer(minLength: 0)
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                Text(value).font(.system(size: 31, weight: .bold, design: .rounded))
-                    .monospacedDigit().foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.6)
-                Text(unit).font(.caption).foregroundStyle(.secondary)
-            }
-            Text(footnote).font(.caption2).foregroundStyle(.secondary)
-                .lineLimit(2).frame(minHeight: 28, alignment: .topLeading)
-        }
-        .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: .rect(cornerRadius: 24))
-        .accessibilityElement(children: .combine)
     }
 }

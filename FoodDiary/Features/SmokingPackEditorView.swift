@@ -66,7 +66,7 @@ struct SmokingPackEditorView: View {
                         }
                     }
                     Button(original == nil ? "确认并保存烟包" : "保存资料", systemImage: "checkmark", action: save)
-                        .font(.headline).frame(maxWidth: .infinity, minHeight: 44).buttonStyle(.glassProminent)
+                        .font(.headline).frame(maxWidth: .infinity, minHeight: 44).yellowAction()
                         .disabled(busy || fields.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || diary.loadError != nil)
                         .accessibilityIdentifier("saveSmokingPack")
                 }.padding(.horizontal, 20).padding(.vertical, 12).background(.bar)
@@ -96,39 +96,52 @@ struct SmokingPackEditorView: View {
 
     private var photoInput: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label("扫描后，AI 自动读取", systemImage: "sparkles").font(.headline).foregroundStyle(Theme.accent)
-            Text("拍清烟盒正面、侧面标注和价签，名称、价格与尼古丁交给 AI 读取。可以分次补拍。")
-                .font(.subheadline).foregroundStyle(.secondary)
+            if let photoJPEG {
+                ScanPhotoPreview(data: photoJPEG, height: 250)
+                Button("移除照片", systemImage: "xmark.circle") { self.photoJPEG = nil; photoItem = nil }
+                    .font(.caption).foregroundStyle(Theme.mutedInk)
+            } else {
+                VStack(spacing: 15) {
+                    Image(systemName: "camera.viewfinder").font(.system(size: 50, weight: .light)).foregroundStyle(Theme.accent)
+                    Text("拍好，AI 自动识别").font(.title3.bold()).foregroundStyle(Theme.surface)
+                    Text("先拍正面，再补侧面标注和价签")
+                        .font(.caption).foregroundStyle(.white.opacity(0.75))
+                }
+                .frame(maxWidth: .infinity).frame(height: 210)
+                .background(Theme.darkGradient, in: .rect(cornerRadius: 26))
+            }
             Button(action: openCamera) {
                 Label(photoJPEG == nil ? "扫描烟盒" : "继续扫描烟盒", systemImage: "camera.viewfinder")
-                    .font(.headline).frame(maxWidth: .infinity, minHeight: 56)
+                    .font(.headline).frame(maxWidth: .infinity, minHeight: 46)
             }
-            .buttonStyle(.glassProminent).accessibilityIdentifier("analyzeSmokingPack")
-            if let photoJPEG, let image = UIImage(data: photoJPEG) {
-                Image(uiImage: image).resizable().scaledToFit().frame(maxHeight: 230).frame(maxWidth: .infinity)
-                    .clipShape(.rect(cornerRadius: 16))
-                Button("移除照片", systemImage: "xmark.circle") { self.photoJPEG = nil; photoItem = nil }
-                    .font(.caption).foregroundStyle(.secondary)
-            }
+            .yellowAction().accessibilityIdentifier("analyzeSmokingPack")
             HStack(spacing: 12) {
                 PhotosPicker(selection: $photoItem, matching: .images) { Label("相册导入", systemImage: "photo") }
+                Spacer()
                 if loadingID != nil { ProgressView() }
-            }.font(.subheadline).buttonStyle(.bordered)
-            TextField("补充一句，例如这包买了30元", text: $description, axis: .vertical)
-                .lineLimit(2...4).accessibilityIdentifier("cigaretteDescription")
-            if photoJPEG != nil || !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Button("更新识别结果", systemImage: "text.bubble", action: analyze)
-                    .font(.subheadline.weight(.semibold)).buttonStyle(.bordered)
-                    .accessibilityIdentifier("updateSmokingPackRecognition")
-            }
+            }.font(.subheadline).buttonStyle(.glass)
+            VStack(alignment: .leading, spacing: 13) {
+                Label("补充一句，AI 帮你改", systemImage: "text.bubble").font(.headline)
+                TextField("例如：这包买了30元，或清空错误的尼古丁值", text: $description, axis: .vertical)
+                    .lineLimit(2...4).font(.subheadline).accessibilityIdentifier("cigaretteDescription")
+                if photoJPEG != nil || !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button("更新识别结果", systemImage: "sparkles", action: analyze)
+                        .font(.subheadline.weight(.semibold)).buttonStyle(.bordered)
+                        .accessibilityIdentifier("updateSmokingPackRecognition")
+                }
+            }.contentCard()
             Text("扫描或导入图片后，AI 会自动读取。也可以说“这包买了30元”“价格改成25元”或“清空错误的尼古丁值”，再更新结果。识别时文字和照片会发送给 DeepSeek，费用记入你的 API 账户。")
                 .font(.caption2).foregroundStyle(.secondary)
-        }.contentCard()
+        }
     }
 
     private var recognitionResult: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Label("AI 识别结果", systemImage: "sparkles").font(.headline)
+            HStack {
+                Label("AI 识别结果", systemImage: "sparkles").font(.headline)
+                Spacer()
+                Image("MilkFrogPeek").resizable().scaledToFit().frame(width: 50, height: 48).accessibilityHidden(true)
+            }
             Text(fields.name.isEmpty ? "等待识别烟盒正面" : fields.name).font(.title3.bold())
             LabeledContent("每包价格") {
                 if let price = Double(fields.priceText) {
@@ -138,7 +151,8 @@ struct SmokingPackEditorView: View {
             LabeledContent("每根尼古丁标注", value: fields.nicotineText.isEmpty ? "待补拍侧面标注" : "\(fields.nicotineText) mg")
             Text("结果集中保存在这里。看不清的部分可补拍，或用上方的一句话说明来更新。")
                 .font(.caption).foregroundStyle(.secondary)
-        }.font(.subheadline).contentCard()
+        }.font(.subheadline).padding(20).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.softYellow, in: .rect(cornerRadius: 26))
     }
 
     private var packQuantity: some View {

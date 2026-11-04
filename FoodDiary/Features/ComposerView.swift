@@ -116,7 +116,7 @@ struct ComposerView: View {
                 Label(primaryTitle, systemImage: draft.reviewing && !hasCorrection ? "checkmark" : "sparkles")
                     .font(.headline).frame(maxWidth: .infinity, minHeight: 44)
             }
-            .buttonStyle(.glassProminent)
+            .yellowAction()
             .disabled(draft.busy || (draft.reviewing && draft.record.foods.isEmpty && !hasCorrection)
                 || (!draft.reviewing && draft.record.originalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     && draft.record.photoJPEG == nil))

@@ -21,7 +21,7 @@ struct SmokingPackPickerView: View {
                         packCountBeforeAdding = journal.packs.count
                         addingCigarette = true
                     }
-                    .buttonStyle(.glassProminent).frame(maxWidth: .infinity)
+                    .yellowAction().frame(maxWidth: .infinity)
                     .accessibilityIdentifier("recognizeNewCigarette")
                     Text("已开封的烟包保留各自余量。同款开新包时使用已有识别资料，初始为20根。")
                         .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 4)
@@ -50,7 +50,7 @@ struct SmokingPackPickerView: View {
                     }
                     Spacer(minLength: 0)
                     if pack.id == journal.activePackID {
-                        Text("当前").font(.caption).foregroundStyle(Theme.accent)
+                        Text("当前").font(.caption).foregroundStyle(Theme.olive)
                     } else {
                         Button("切换") { activate(pack) }.font(.caption.weight(.semibold)).buttonStyle(.glass)
                     }
@@ -88,7 +88,7 @@ struct SmokingPackPickerView: View {
             if let data = pack.photoJPEG, let image = UIImage(data: data) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
-                Image(systemName: "rectangle.stack.fill").font(.title2).foregroundStyle(Theme.accent)
+                Image(systemName: "rectangle.stack.fill").font(.title2).foregroundStyle(Theme.olive)
                     .frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.accent.opacity(0.08))
             }
         }.frame(width: 48, height: 58).clipShape(.rect(cornerRadius: 12)).accessibilityHidden(true)

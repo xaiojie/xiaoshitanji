@@ -11,11 +11,11 @@ struct DietReviewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 16) {
-                        Label("AI 饮食回顾", systemImage: "sparkles").font(.subheadline).foregroundStyle(Theme.accent)
+                        Label("AI 饮食回顾", systemImage: "sparkles").font(.subheadline).foregroundStyle(Theme.olive)
                         Text(review.date.formatted(.dateTime.month().day().weekday())).font(.title2.bold())
                         if let score = review.score {
                             HStack(alignment: .firstTextBaseline) {
-                                Text("\(score)").font(.system(size: 56, weight: .bold, design: .rounded)).foregroundStyle(Theme.accent)
+                                Text("\(score)").font(.system(size: 56, weight: .bold, design: .rounded)).foregroundStyle(Theme.olive)
                                 Text("AI 参考分").font(.subheadline).foregroundStyle(.secondary)
                             }
                         } else {
@@ -31,10 +31,10 @@ struct DietReviewView: View {
                     }
                     .contentCard()
                     if !review.highlights.isEmpty {
-                        ReviewAdviceCard(title: "今天的亮点", symbol: "checkmark.seal", items: review.highlights, color: Theme.accent)
+                        ReviewAdviceCard(title: "今天的亮点", symbol: "checkmark.seal", items: review.highlights, color: Theme.olive)
                     }
                     if !review.suggestions.isEmpty {
-                        ReviewAdviceCard(title: "下一餐可以试试", symbol: "leaf", items: review.suggestions, color: Theme.carbohydrate)
+                        ReviewAdviceCard(title: "下一餐可以试试", symbol: "leaf", items: review.suggestions, color: Theme.olive)
                     }
                     Text("回顾依据已保存的饮食和 AI 营养估算生成。补记或修改餐食后，可重新分析。")
                         .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 4)

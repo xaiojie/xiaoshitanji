@@ -88,6 +88,7 @@ struct ProfileEditorView: View {
                 }
                 if let errorMessage { Section { ErrorNotice(message: errorMessage) } }
             }
+            .scrollContentBackground(.hidden).background(Theme.background)
             .navigationTitle("编辑个人资料")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -158,9 +159,8 @@ struct ProfileAvatar: View {
             if let data, let image = UIImage(data: data) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
-                Image(systemName: "person.crop.circle.fill")
-                    .resizable().scaledToFit().foregroundStyle(Theme.accent.opacity(0.75))
-                    .padding(size * 0.12).background(Theme.accent.opacity(0.08))
+                Image("MilkFrogPortrait").resizable().scaledToFill()
+                    .background(Theme.accent)
             }
         }
         .frame(width: size, height: size).clipShape(.circle)
