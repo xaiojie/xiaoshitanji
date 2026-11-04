@@ -17,6 +17,7 @@ struct KeepGoingView: View {
                     FrogCallout(text: "青蛙的坚持", detail: "记录攒下来的东西，都在这儿。")
                     streakCard
                     summaryRow
+                    smokingCard
                     Text("里程碑").font(.headline).padding(.top, 4)
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(achievements) { achievement in
@@ -64,6 +65,27 @@ struct KeepGoingView: View {
             } else {
                 statTile(value: "—", label: "戒烟天数", symbol: "lungs")
             }
+        }
+    }
+
+    @ViewBuilder
+    private var smokingCard: some View {
+        let totals = SmokingStats.totals(for: diary.document)
+        if totals.hasData {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("抽烟累计", systemImage: "lungs").font(.headline)
+                HStack(spacing: 12) {
+                    statTile(value: "\(totals.smoked)", label: "自己抽的", symbol: "flame")
+                    statTile(value: "\(totals.shared)", label: "分出去的", symbol: "person.2")
+                    statTile(value: totals.costText(), label: "花费", symbol: "banknote")
+                }
+                if let first = totals.firstEventDate {
+                    Text("从 \(first.formatted(date: .abbreviated, time: .omitted)) 开始记录。")
+                        .font(.caption2).foregroundStyle(Theme.mutedInk)
+                }
+            }
+            .contentCard()
+            .accessibilityIdentifier("smokingTotals")
         }
     }
 
