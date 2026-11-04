@@ -11,13 +11,34 @@ struct TrendsView: View {
     private var days: [TrendDay] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: currentDate)
-        return (-(dayCount - 1)...0).compactMap { offset in
+        let span: Int
+        if dayCount == 0 {
+            let dates = diary.document.records.map(\.date)
+                + diary.document.weights.map(\.date)
+                + diary.document.workouts.map(\.date)
+                + diary.document.smoking.events.map(\.date)
+            let earliest = dates.min() ?? today
+            span = min(365, (calendar.dateComponents([.day], from: calendar.startOfDay(for: earliest), to: today).day ?? 0) + 1)
+        } else {
+            span = dayCount
+        }
+        return (-(max(span, 1) - 1)...0).compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: offset, to: today) else { return nil }
+            let weights = diary.document.weights.filter { calendar.isDate($0.date, inSameDayAs: date) }
             return TrendDay(date: date, nutrition: diary.document.total(on: date),
                             count: diary.document.records(on: date).count,
-                            score: diary.document.review(on: date)?.score)
+                            score: diary.document.review(on: date)?.score,
+                            workoutMinutes: diary.document.workouts(on: date).reduce(0) { $0 + $1.durationMinutes },
+                            smokeCount: diary.document.smoking.events
+                                .filter { $0.kind == .smoked && calendar.isDate($0.date, inSameDayAs: date) }
+                                .reduce(0) { $0 + $1.count },
+                            weight: weights.max { $0.date < $1.date }?.kilograms)
         }
     }
+
+    private var weightDays: [TrendDay] { days.filter { $0.weight != nil } }
+    private var workoutDays: [TrendDay] { days.filter { $0.workoutMinutes > 0 } }
+    private var smokeDays: [TrendDay] { days.filter { $0.smokeCount > 0 } }
     private var recordedDays: [TrendDay] { days.filter { $0.count > 0 } }
     private var scoredDays: [TrendDay] { days.filter { $0.score != nil } }
     private var average: Nutrition {
@@ -35,13 +56,16 @@ struct TrendsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 17) {
                     HStack {
-                        BrandPageTitle(title: "饮食趋势")
+                        BrandPageTitle(title: "趋势")
                         Spacer(minLength: 10)
-                        BrandSegments(options: [(7, "7天"), (30, "30天")], selection: $dayCount).frame(width: 138)
+                        BrandSegments(options: [(7, "7天"), (30, "30天"), (0, "全部")], selection: $dayCount).frame(width: 176)
                     }.padding(.horizontal, 3)
                     if let error = diary.loadError { ErrorNotice(message: error).contentCard() }
                     else {
                         calorieChart
+                        if !weightDays.isEmpty { weightChart }
+                        if !workoutDays.isEmpty { workoutChart }
+                        if !smokeDays.isEmpty { smokeChart }
                         if !recordedDays.isEmpty { NutritionDistributionCard(nutrition: average) }
                         FrogCallout(text: recordedDays.isEmpty ? "先记一餐，趋势慢慢来。" : "这周有认真记，我看见了。",
                             detail: "最近\(dayCount)天，记录了\(recordedDays.count)天饮食。均值只按有记录的日期计算。")
@@ -131,6 +155,62 @@ struct TrendsView: View {
         }.contentCard()
     }
 
+    private var weightChart: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("体重").font(.headline)
+                Spacer()
+                Text("\(weightDays.count) 次称重").font(.caption).foregroundStyle(Theme.mutedInk)
+            }
+            Chart(weightDays) { day in
+                if let weight = day.weight {
+                    LineMark(x: .value("日期", day.date), y: .value("体重", weight))
+                    PointMark(x: .value("日期", day.date), y: .value("体重", weight))
+                }
+            }
+            .chartYScale(domain: weightDomain)
+            .frame(height: 160)
+        }.contentCard()
+    }
+
+    private var weightDomain: ClosedRange<Double> {
+        let values = weightDays.compactMap(\.weight)
+        guard let low = values.min(), let high = values.max() else { return 40...100 }
+        return (low - 1)...(high + 1)
+    }
+
+    private var workoutChart: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("训练时长").font(.headline)
+                Spacer()
+                Text("\(workoutDays.reduce(0) { $0 + $1.workoutMinutes }) 分钟").font(.caption).foregroundStyle(Theme.mutedInk)
+            }
+            Chart(workoutDays) { day in
+                BarMark(x: .value("日期", day.date, unit: .day), y: .value("分钟", day.workoutMinutes))
+                    .foregroundStyle(Theme.olive.gradient)
+                    .cornerRadius(4)
+            }
+            .frame(height: 140)
+        }.contentCard()
+    }
+
+    private var smokeChart: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("抽烟").font(.headline)
+                Spacer()
+                Text("\(smokeDays.reduce(0) { $0 + $1.smokeCount }) 根").font(.caption).foregroundStyle(Theme.mutedInk)
+            }
+            Chart(smokeDays) { day in
+                BarMark(x: .value("日期", day.date, unit: .day), y: .value("根数", day.smokeCount))
+                    .foregroundStyle(Theme.gold.gradient)
+                    .cornerRadius(4)
+            }
+            .frame(height: 140)
+        }.contentCard()
+    }
+
     private var dayList: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -159,5 +239,8 @@ private struct TrendDay: Identifiable {
     let nutrition: Nutrition
     let count: Int
     let score: Int?
+    let workoutMinutes: Int
+    let smokeCount: Int
+    let weight: Double?
     var id: Date { date }
 }
