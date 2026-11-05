@@ -4,6 +4,7 @@ import NutritionCore
 struct TodayView: View {
     @Environment(DiaryModel.self) private var diary
     @Environment(HealthDataModel.self) private var health
+    @Environment(WidgetNavigation.self) private var widgetNavigation
     @Environment(\.scenePhase) private var scenePhase
     @State private var aiConsent = AIConsent()
     @AppStorage("dailyCalorieGoal") private var goal = 0.0
@@ -87,14 +88,18 @@ struct TodayView: View {
                 .padding(.horizontal, 24).padding(.vertical, 8)
                 .background(Theme.background.opacity(0.95))
             }
-            .sheet(item: $sheet, content: sheetContent)
+            .sheet(item: $sheet, onDismiss: consumePendingNavigation, content: sheetContent)
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     refreshSelectedDay()
-                    consumePendingMeal()
+                    consumePendingNavigation()
                 }
             }
-            .onAppear(perform: consumePendingMeal)
+            .onAppear(perform: consumePendingNavigation)
+            .onChange(of: widgetNavigation.pendingRoute) { _, _ in consumeWidgetRoute() }
+            .onChange(of: diary.loadError) { _, error in
+                if error == nil { consumePendingNavigation() }
+            }
             .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in refreshSelectedDay() }
             .onChange(of: selectedDate) { _, _ in cancelReview(); reviewError = nil }
             .onChange(of: goal) { _, _ in cancelReview(); reviewError = nil }
@@ -181,8 +186,23 @@ struct TodayView: View {
 
     /// 快捷指令留下的那句话：取一次就清掉，直接开记录页。
     private func consumePendingMeal() {
-        guard let text = PendingMeal.take() else { return }
+        guard sheet == nil, diary.loadError == nil, let text = PendingMeal.take() else { return }
         sheet = .record(PendingMeal.draft(from: text, now: selectedDate))
+    }
+
+    private func consumePendingNavigation() {
+        consumePendingMeal()
+        consumeWidgetRoute()
+    }
+
+    /// 组件“记一餐”直接打开编辑器，不经过餐次选择页，也不覆盖已有草稿。
+    private func consumeWidgetRoute() {
+        guard let route = widgetNavigation.takeRoute(canPresent: sheet == nil && diary.loadError == nil) else { return }
+        cancelReview()
+        let now = Date.now
+        selectedDate = now
+        lastActiveDate = now
+        if route == .newMeal { sheet = .record(MealRecord.draft(on: now, now: now)) }
     }
 
     private func openMeal(_ kind: MealKind) {

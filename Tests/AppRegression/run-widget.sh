@@ -8,7 +8,7 @@ xcrun swiftc -parse-as-library -swift-version 6 -module-name NutritionCore \
   -emit-library -static -emit-module \
   -emit-module-path "$regression_temp/NutritionCore.swiftmodule" \
   -o "$regression_temp/libNutritionCore.a" Sources/NutritionCore/*.swift
-regression_sources=(Shared/DiaryWidgetSnapshot.swift Tests/AppRegression/WidgetRegression.swift)
+regression_sources=(Shared/DiaryWidgetSnapshot.swift FoodDiary/App/DiaryModel.swift FoodDiary/Services/BackupService.swift Tests/AppRegression/WidgetRegression.swift)
 for file in FoodDiary/Services/WidgetSnapshotBuilder.swift FoodDiary/App/WidgetNavigation.swift; do
   if [[ -f "$file" ]]; then regression_sources+=("$file"); fi
 done

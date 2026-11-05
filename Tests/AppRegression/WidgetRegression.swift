@@ -79,5 +79,61 @@ import NutritionCore
             precondition(!navigation.receive(URL(string: text)!))
         }
         print("PASS — meal deep links wait behind existing drafts, coalesce repeated taps and consume once; unrelated URLs are ignored")
+
+        let directory = FileManager.default.temporaryDirectory.appending(path: "widget-model-\(UUID())")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let defaults = UserDefaults.standard
+        let previousGoal = defaults.object(forKey: "dailyCalorieGoal")
+        defer {
+            if let previousGoal { defaults.set(previousGoal, forKey: "dailyCalorieGoal") }
+            else { defaults.removeObject(forKey: "dailyCalorieGoal") }
+        }
+        defaults.set(1800.0, forKey: "dailyCalorieGoal")
+        let model = DiaryModel(fileURL: directory.appending(path: "diary.json"))
+        model.refreshWidgetSnapshot(healthWorkoutCalories: nil)
+        precondition(WidgetSnapshotWriter.latest?.targetCalories == 1800)
+        defaults.set(2100.0, forKey: "dailyCalorieGoal")
+        model.refreshWidgetSnapshot(healthWorkoutCalories: nil)
+        precondition(WidgetSnapshotWriter.latest?.targetCalories == 2100)
+        defaults.set(0.0, forKey: "dailyCalorieGoal")
+        model.refreshWidgetSnapshot(healthWorkoutCalories: nil)
+        precondition(WidgetSnapshotWriter.latest?.targetCalories == nil)
+        print("PASS — actual DiaryModel publishes reference-goal changes and clearing without inventing a default")
+
+        let modelDate = Date.now
+        let settings = EnergySettings(sex: .male, birthYear: 1990, activity: .light, goalMode: .maintain)
+        let workout = WorkoutRecord(date: modelDate, kind: .cardio, title: "手动训练", durationMinutes: 30,
+                                    caloriesBurned: 200, cardio: CardioDetail(activity: .walk))
+        let trainingDocument = DiaryDocument(profile: HealthProfile(heightCM: 170),
+            weights: [WeightRecord(date: modelDate, kilograms: 70)], workouts: [workout], energy: settings)
+        try model.replaceDocument(trainingDocument)
+        let budget = model.energyBudget(on: modelDate)!
+        model.refreshWidgetSnapshot(healthWorkoutCalories: 400, on: modelDate)
+        precondition(WidgetSnapshotWriter.latest?.targetCalories == budget.targetCalories + 400)
+        let meal = MealRecord(date: modelDate, kind: .lunch,
+                             foods: [FoodItem(name: "测试餐", per100g: Nutrition(calories: 100))])
+        try model.save(meal)
+        precondition(WidgetSnapshotWriter.latest?.targetCalories == budget.targetCalories + 400)
+        precondition(WidgetSnapshotWriter.latest?.calories == 100)
+        model.refreshWidgetSnapshot(healthWorkoutCalories: 400, on: modelDate.addingTimeInterval(-86_400))
+        try model.save(meal)
+        precondition(WidgetSnapshotWriter.latest?.targetCalories == budget.targetCalories + 200)
+        print("PASS — actual save retains today's Health workout priority, excludes double counting and expires yesterday's burn")
     }
+}
+
+// Replace only platform output boundaries; DiaryModel and the snapshot builder are production code.
+@MainActor enum WidgetSnapshotWriter {
+    static var latest: DiaryWidgetSnapshot?
+    static func write(document: DiaryDocument, targetCalories: Double?, on date: Date) {
+        latest = WidgetSnapshotBuilder.make(document: document, targetCalories: targetCalories, on: date)
+    }
+}
+
+@MainActor final class IntakeActivityManager {
+    static let shared = IntakeActivityManager()
+    let isRunning = false
+    static func state(for document: DiaryDocument, budget: EnergyBudget?, on date: Date) -> Int { 0 }
+    func update(state: Int) {}
 }

@@ -11,6 +11,8 @@ final class DiaryModel {
     @ObservationIgnored private(set) var revision = UUID()
     private(set) var loadError: String?
     @ObservationIgnored private let store: DiaryStore
+    @ObservationIgnored private var widgetHealthDate: Date?
+    @ObservationIgnored private var widgetHealthCalories: Double?
 
     var fileURL: URL { store.fileURL }
     var photosDirectory: URL { fileURL.deletingLastPathComponent().appending(path: PhotoArchive.directoryName) }
@@ -28,8 +30,8 @@ final class DiaryModel {
         return PhotoArchive.load(name: name, in: photosDirectory)
     }
 
-    init() {
-        store = DiaryStore(fileURL: URL.documentsDirectory.appending(path: "FoodDiary/diary.json"))
+    init(fileURL: URL = URL.documentsDirectory.appending(path: "FoodDiary/diary.json")) {
+        store = DiaryStore(fileURL: fileURL)
         reload()
     }
 
@@ -54,9 +56,23 @@ final class DiaryModel {
         publishWidgetSnapshot()
     }
 
+    func refreshWidgetSnapshot(healthWorkoutCalories: Double?, on date: Date = .now) {
+        guard loadError == nil else { return }
+        widgetHealthDate = date
+        widgetHealthCalories = healthWorkoutCalories
+        publishWidgetSnapshot(on: date)
+    }
+
     private func publishWidgetSnapshot(on date: Date = .now) {
         let budget = energyBudget(on: date)
-        WidgetSnapshotWriter.write(document: document, budget: budget, on: date)
+        let healthCalories = widgetHealthDate.flatMap {
+            Calendar.current.isDate($0, inSameDayAs: date) ? widgetHealthCalories : nil
+        }
+        let burned = ActivityBurn.resolve(manual: burnedCalories(on: date), health: healthCalories ?? 0)
+        let reference = UserDefaults.standard.double(forKey: "dailyCalorieGoal")
+        let target = DailyBalance.make(budget: budget, burned: burned, intake: document.total(on: date))?.target
+            ?? (reference.isFinite && reference > 0 ? reference : nil)
+        WidgetSnapshotWriter.write(document: document, targetCalories: target, on: date)
         if IntakeActivityManager.shared.isRunning {
             IntakeActivityManager.shared.update(
                 state: IntakeActivityManager.state(for: document, budget: budget, on: date))
