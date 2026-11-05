@@ -75,7 +75,7 @@ final class DiaryModel {
         WidgetSnapshotWriter.write(document: document, targetCalories: target, on: date)
         if IntakeActivityManager.shared.isRunning {
             IntakeActivityManager.shared.update(
-                state: IntakeActivityManager.state(for: document, budget: budget, on: date))
+                state: IntakeActivityManager.state(for: document, targetCalories: target, on: date))
         }
     }
 

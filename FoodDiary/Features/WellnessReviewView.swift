@@ -29,8 +29,6 @@ struct WellnessReviewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     FrogCallout(text: "把记录放在一起看看", detail: "吃的、抽的、动的，还有身体的变化。")
-                    BrandSegments(options: WellnessPeriod.allCases.map { ($0, $0.title) }, selection: $period)
-                        .disabled(requestID != nil)
                     healthSelection
                     if let error = diary.loadError ?? errorMessage {
                         ErrorNotice(message: error).contentCard()
@@ -56,11 +54,12 @@ struct WellnessReviewView: View {
                                 .font(.subheadline).foregroundStyle(Theme.mutedInk).contentCard()
                         }
                     }
-                    Text("生成前会确认发送范围。汇总数值与报告保存在本机，并随记录 JSON 导出。")
+                    Text("生成前会确认发送范围。汇总数值与报告只保存在本机和你的云同步服务器上。")
                         .font(.caption).foregroundStyle(Theme.mutedInk).lineSpacing(3).padding(.horizontal, 4)
                 }.padding(20)
             }
             .background(Theme.background)
+            .safeAreaInset(edge: .top, spacing: 0) { stickyHeader }
             .navigationTitle("汇总分析").navigationBarTitleDisplayMode(.inline)
             .toolbar(.visible, for: .navigationBar)
             .toolbar {
@@ -90,6 +89,30 @@ struct WellnessReviewView: View {
             .onDisappear { readToken = nil; cancelReview() }
         }
         .aiDataConsent(aiConsent)
+    }
+
+    /// 日期切换吸顶，并顺手把覆盖天数标出来，避免每段正文重复「记录太少」。
+    private var stickyHeader: some View {
+        VStack(spacing: 8) {
+            BrandSegments(options: WellnessPeriod.allCases.map { ($0, $0.title) }, selection: $period)
+                .disabled(requestID != nil)
+            HStack(spacing: 8) {
+                if let snapshot {
+                    Text("覆盖 \(snapshot.coverage.recordedDays)/\(snapshot.coverage.windowDays) 天")
+                    if report != nil {
+                        Text("·")
+                        Text("生成于 \(report?.generatedAt.formatted(.dateTime.month().day().hour().minute()) ?? "")")
+                    }
+                } else {
+                    Text(preparing ? "正在整理记录…" : "还没有可分析的记录")
+                }
+                Spacer(minLength: 0)
+            }
+            .font(.caption2).foregroundStyle(Theme.mutedInk)
+            .padding(.horizontal, 4)
+        }
+        .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 10)
+        .background(Theme.background)
     }
 
     private var healthSelection: some View {
@@ -144,7 +167,7 @@ struct WellnessReviewView: View {
             snapshot = try WellnessSummary.make(document: document, period: selectedPeriod, endDate: date,
                 activityDays: data.days, healthWeights: data.weights, healthHeightCM: data.heightCM,
                 healthHeightDate: data.heightDate, calorieGoal: calorieGoal > 0 ? calorieGoal : nil,
-                earliestHealthDate: data.earliestDate, includesHealth: useHealth)
+                earliestHealthDate: data.earliestDate, includesHealth: useHealth, energySettings: document.energy)
         } catch is CancellationError {
         } catch {
             guard readToken == token else { return }

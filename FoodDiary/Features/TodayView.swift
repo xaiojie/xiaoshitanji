@@ -182,7 +182,7 @@ struct TodayView: View {
             liveActivity.end()
             return
         }
-        liveActivity.start(state: IntakeActivityManager.state(for: diary.document, budget: budget))
+        liveActivity.start(state: IntakeActivityManager.state(for: diary.document, targetCalories: referenceGoal))
         liveActivityError = liveActivity.errorMessage
     }
 

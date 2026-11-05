@@ -75,50 +75,130 @@ struct WellnessSnapshotCards: View {
 
 struct WellnessReportCards: View {
     let report: WellnessReview
+    @State private var expandedAreas: Set<WellnessArea> = []
+    @State private var showingScope = false
+
+    private var snapshot: WellnessSummary { report.snapshot }
+    private var coverage: WellnessCoverage { snapshot.coverage }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 15) {
-                HStack {
-                    Label("综合观察", systemImage: "sparkles").font(.headline)
-                    Spacer()
-                    Text(report.snapshot.period.title).font(.caption).foregroundStyle(Theme.softYellow)
-                }
-                Text(report.summary).font(.body).lineSpacing(5).textSelection(.enabled)
-                Text("分析范围 \(report.snapshot.startDate.formatted(.dateTime.year().month().day())) — \(report.snapshot.endDate.formatted(.dateTime.year().month().day()))")
-                    .font(.caption).foregroundStyle(Theme.softYellow)
-                Text("生成于 \(report.generatedAt.formatted(.dateTime.year().month().day().hour().minute()))")
-                    .font(.caption2).foregroundStyle(Theme.surface.opacity(0.75))
-            }
-            .foregroundStyle(Theme.surface).padding(20).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.darkGradient, in: .rect(cornerRadius: 26))
-            BrandSection("接下来，先做这几件事", symbol: "checklist") {
-                ForEach(Array(report.actions.enumerated()), id: \.offset) { index, action in
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "\(index + 1).circle.fill").font(.title2).foregroundStyle(Theme.olive)
-                        VStack(alignment: .leading, spacing: 7) {
-                            Text(action.title).font(.headline)
-                            Text(action.detail).font(.subheadline).foregroundStyle(Theme.mutedInk).lineSpacing(4)
-                        }
-                    }
-                }
-            }
-            ForEach(report.observations) { observation in
-                BrandSection(observation.area.title, symbol: observation.area.symbol) {
-                    Text(observation.text).font(.subheadline).lineSpacing(4).textSelection(.enabled)
-                }
-            }
-            DisclosureGroup("这份报告的数据范围") {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("\(report.snapshot.startDate.formatted(.dateTime.year().month().day())) — \(report.snapshot.endDate.formatted(.dateTime.year().month().day().hour().minute()))")
-                    Text(report.snapshot.includesHealth ? "含当时可读取的 Apple 健康数据。" : "使用当时的本机记录。")
-                    ForEach(Array(report.limitations.enumerated()), id: \.offset) { _, item in
-                        Label(item, systemImage: "info.circle")
-                    }
-                    Text("数据更新后可重新分析，本报告对应生成时的记录快照。")
-                    Text(report.model).font(.caption2)
-                }.font(.caption).foregroundStyle(Theme.mutedInk).padding(.top, 12)
-            }.font(.subheadline.bold()).contentCard()
+        VStack(alignment: .leading, spacing: 14) {
+            conclusion
+            actions
+            details
+            scope
         }
+    }
+
+    /// 结论只有一个，数字放在 chip 里，覆盖度只出现一次。
+    private var conclusion: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("综合观察", systemImage: "sparkles").font(.headline)
+                Spacer()
+                Text(snapshot.period.title).font(.caption).foregroundStyle(Theme.softYellow)
+            }
+            Text(report.summary).font(.body).lineSpacing(5).textSelection(.enabled)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
+                      alignment: .leading, spacing: 8) {
+                chip("覆盖 \(coverage.recordedDays)/\(coverage.windowDays) 天")
+                if let average = snapshot.diet.average?.calories {
+                    chip("日均 \(Theme.number(average)) 千卡")
+                }
+                if coverage.smokingDays > 0 {
+                    chip("自抽 \(snapshot.smoking.smoked) 支 / \(coverage.smokingDays) 天")
+                }
+                if let steps = snapshot.activity.steps.average {
+                    chip("日均 \(Theme.number(steps)) 步")
+                }
+            }
+            Text("\(snapshot.startDate.formatted(.dateTime.year().month().day())) — \(snapshot.endDate.formatted(.dateTime.year().month().day())) · 生成于 \(report.generatedAt.formatted(.dateTime.month().day().hour().minute()))")
+                .font(.caption2).foregroundStyle(Theme.surface.opacity(0.75))
+        }
+        .foregroundStyle(Theme.surface).padding(20).frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.darkGradient, in: .rect(cornerRadius: 26))
+    }
+
+    private var actions: some View {
+        BrandSection("今天能做这几件事", symbol: "checklist") {
+            ForEach(Array(report.actions.enumerated()), id: \.offset) { index, action in
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "\(index + 1).circle.fill").font(.title2).foregroundStyle(Theme.olive)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(action.title).font(.headline)
+                        Text(action.detail).font(.subheadline).foregroundStyle(Theme.mutedInk).lineSpacing(4)
+                    }
+                }
+            }
+        }
+    }
+
+    /// 四类细节默认收起，先让人看到结论和行动。
+    private var details: some View {
+        BrandSection("四类细节", symbol: "list.bullet") {
+            ForEach(report.observations) { observation in
+                DisclosureGroup(isExpanded: expansion(for: observation.area)) {
+                    Text(observation.text).font(.subheadline).lineSpacing(4)
+                        .textSelection(.enabled).padding(.top, 8)
+                } label: {
+                    Label(observation.area.title, systemImage: observation.area.symbol).font(.subheadline.bold())
+                }
+                .tint(Theme.ink)
+                .padding(.vertical, 4)
+            }
+            Text(missingSummary).font(.caption).foregroundStyle(Theme.mutedInk).lineSpacing(3)
+        }
+    }
+
+    private var scope: some View {
+        DisclosureGroup(isExpanded: $showingScope) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("\(snapshot.startDate.formatted(.dateTime.year().month().day())) — \(snapshot.endDate.formatted(.dateTime.year().month().day().hour().minute()))")
+                Text("饮食 \(coverage.dietDays) 天 · 吸烟 \(coverage.smokingDays) 天 · 体重 \(coverage.weightDays) 天 · 活动 \(coverage.activityDays) 天（共 \(coverage.windowDays) 天）")
+                if let goal = snapshot.calorieGoal {
+                    Text("参考目标 \(Theme.number(goal)) 千卡（你自己设的）")
+                } else if let estimated = snapshot.suggestedTarget {
+                    Text("估算参考 \(Theme.number(estimated)) 千卡（按个人资料算的，不是你的设定）")
+                }
+                ForEach(Array(report.limitations.enumerated()), id: \.offset) { _, item in
+                    Label(item, systemImage: "info.circle")
+                }
+                Text(snapshot.includesHealth ? "含当时可读取的 Apple 健康数据。" : "使用当时的本机记录。")
+                Text("数据更新后可重新分析，本报告对应生成时的记录快照。")
+                Text(report.model).font(.caption2)
+            }.font(.caption).foregroundStyle(Theme.mutedInk).padding(.top, 12)
+        } label: {
+            Label("数据范围与缺口", systemImage: "calendar").font(.subheadline.bold())
+        }
+        .tint(Theme.ink).contentCard()
+    }
+
+    private func chip(_ text: String) -> some View {
+        Text(text).font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.ink)
+            .lineLimit(1).minimumScaleFactor(0.75)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.surface.opacity(0.94), in: .capsule)
+    }
+
+    private func expansion(for area: WellnessArea) -> Binding<Bool> {
+        Binding(get: { expandedAreas.contains(area) },
+                set: { expanded in
+                    if expanded { expandedAreas.insert(area) } else { expandedAreas.remove(area) }
+                })
+    }
+
+    /// 缺口只写一行，不再让每段正文重复免责声明。
+    private var missingSummary: String {
+        var items: [String] = []
+        if coverage.dietDays == 0 { items.append("饮食") }
+        if coverage.smokingDays == 0 { items.append("吸烟") }
+        if coverage.weightDays == 0 { items.append("体重") }
+        if snapshot.activity.steps.observedDays == 0 { items.append("活动") }
+        if snapshot.activity.sleepHours.observedDays == 0 { items.append("睡眠") }
+        if snapshot.activity.restingHeartRate.observedDays == 0 { items.append("静息心率") }
+        if snapshot.activity.heartRateVariability.observedDays == 0 { items.append("HRV") }
+        if snapshot.activity.vo2Max.observedDays == 0 { items.append("最大摄氧量") }
+        return items.isEmpty ? "这次各类数据都有记录。" : "这次没有：" + items.joined(separator: "、")
     }
 }

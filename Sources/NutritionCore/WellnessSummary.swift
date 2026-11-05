@@ -186,7 +186,22 @@ public struct WellnessTrend: Codable, Equatable, Sendable {
     public let calories: Double?
     public let smoked: Int?
     public let shared: Int?
+    /// 该日（或该月）最后一次体重，单位公斤。旧报告没有这个字段，解码为 nil。
+    public let weightKG: Double?
     public let activity: WellnessActivity
+}
+
+/// 记录覆盖度：窗口有多少天，其中饮食/吸烟/体重/活动各有几天有数据。
+/// 用来替代「数据太少」这类含糊说法，让「2/30 天」变成一个能显示的数字。
+public struct WellnessCoverage: Equatable, Sendable {
+    public let windowDays: Int
+    public let dietDays: Int
+    public let smokingDays: Int
+    public let weightDays: Int
+    public let activityDays: Int
+
+    /// 本机记录意义上的覆盖天数，不含只来自 Apple 健康的活动。
+    public var recordedDays: Int { max(dietDays, max(smokingDays, weightDays)) }
 }
 
 public struct WellnessSummary: Codable, Equatable, Sendable {
@@ -197,6 +212,8 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
     public let timeZone: String
     public let includesHealth: Bool
     public let calorieGoal: Double?
+    /// 没有设置参考目标时，本地按个人资料算出的建议摄入，只作为估算参考。
+    public let suggestedTarget: Double?
     public let diet: WellnessDiet
     public let smoking: WellnessSmoking
     public let body: WellnessBody
@@ -206,11 +223,18 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
 
     public var hasData: Bool { diet.recordCount > 0 || smoking.eventDays > 0 || body.hasData || activity.hasData }
 
+    public var coverage: WellnessCoverage {
+        WellnessCoverage(windowDays: dayCount, dietDays: diet.recordedDays, smokingDays: smoking.eventDays,
+                         weightDays: timeline.reduce(0) { $0 + ($1.weightKG == nil ? 0 : 1) },
+                         activityDays: activity.steps.observedDays)
+    }
+
     public static func make(document: DiaryDocument, period: WellnessPeriod, endDate: Date,
                             activityDays: [HealthActivityDay] = [], healthWeights: [WeightRecord] = [],
                             healthHeightCM: Double? = nil, healthHeightDate: Date? = nil,
                             calorieGoal: Double? = nil, earliestHealthDate: Date? = nil,
-                            includesHealth: Bool = false, calendar: Calendar = .current) throws -> Self {
+                            includesHealth: Bool = false, energySettings: EnergySettings? = nil,
+                            calendar: Calendar = .current) throws -> Self {
         try document.validate()
         guard endDate.timeIntervalSinceReferenceDate.isFinite,
               calorieGoal.map({ $0.isFinite && $0 > 0 }) ?? true else {
@@ -241,7 +265,10 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
         let mealGroups = Dictionary(grouping: records, by: { bucket($0.date) })
         let eventGroups = Dictionary(grouping: events, by: { bucket($0.date) })
         let activityGroups = Dictionary(grouping: days, by: { bucket($0.date) })
-        let dates = Set(mealGroups.keys).union(eventGroups.keys).union(activityGroups.keys).sorted()
+        let weightGroups = Dictionary(grouping: weights.filter { $0.date >= start && $0.date <= endDate },
+                                       by: { bucket($0.date) })
+        let dates = Set(mealGroups.keys).union(eventGroups.keys).union(activityGroups.keys)
+            .union(weightGroups.keys).sorted()
         let timeline = dates.map { date in
             let meals = mealGroups[date] ?? []
             let events = eventGroups[date] ?? []
@@ -249,16 +276,31 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
                 calories: meals.isEmpty ? nil : meals.reduce(0) { $0 + $1.nutrition.calories },
                 smoked: events.isEmpty ? nil : events.filter { $0.kind == .smoked }.reduce(0) { $0 + $1.count },
                 shared: events.isEmpty ? nil : events.filter { $0.kind == .shared }.reduce(0) { $0 + $1.count },
+                weightKG: WeightRecord.latest(in: weightGroups[date] ?? [])?.kilograms,
                 activity: WellnessActivity(days: activityGroups[date] ?? []))
         }
+        let suggestedTarget = calorieGoal == nil
+            ? Self.estimatedTarget(settings: energySettings, body: body, now: endDate, calendar: calendar) : nil
         let result = Self(period: period, startDate: start, endDate: endDate,
             dayCount: (calendar.dateComponents([.day], from: start, to: today).day ?? 0) + 1,
             timeZone: calendar.timeZone.identifier, includesHealth: includesHealth, calorieGoal: calorieGoal,
+            suggestedTarget: suggestedTarget,
             diet: WellnessDiet(records: records, calendar: calendar),
             smoking: WellnessSmoking(journal: document.smoking, start: start, until: localEnd, calendar: calendar),
             body: body, activity: WellnessActivity(days: days), timelineUnit: period == .all ? "month" : "day", timeline: timeline)
         try result.validate()
         return result
+    }
+
+    /// 只用于「没有设目标」时给模型一个可引用的估算区间中点，不替代用户的设置。
+    private static func estimatedTarget(settings: EnergySettings?, body: WellnessBody,
+                                        now: Date, calendar: Calendar) -> Double? {
+        guard let settings, let weight = body.latestWeight?.kilograms, let height = body.heightCM,
+              let budget = try? EnergyCalculator.budget(settings: settings, weightKG: weight, heightCM: height,
+                                                        now: now, calendar: calendar) else { return nil }
+        let rounded = (budget.targetCalories / 10).rounded() * 10
+        guard rounded.isFinite, rounded >= EnergyCalculator.minimumCalories else { return nil }
+        return rounded
     }
 
     public func validate() throws {
@@ -290,8 +332,12 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
         guard body.latestWeight.map({ $0.date <= endDate }) ?? true,
               body.firstWeightInRange.map({ $0.date >= startDate && $0.date <= endDate }) ?? true,
               body.bmi == HealthProfile(heightCM: body.heightCM).bmi(weightKG: body.latestWeight?.kilograms),
-              calorieGoal.map({ $0.isFinite && $0 > 0 }) ?? true else {
+              calorieGoal.map({ $0.isFinite && $0 > 0 }) ?? true,
+              suggestedTarget.map({ $0.isFinite && $0 >= EnergyCalculator.minimumCalories }) ?? true else {
             throw DiaryError.invalidInput("身体测量或参考目标无效，请重新读取记录。")
+        }
+        guard timeline.allSatisfy({ $0.weightKG.map({ $0.isFinite && (20...400).contains($0) }) ?? true }) else {
+            throw DiaryError.invalidInput("时间线体重无效，请重新读取记录。")
         }
     }
 }

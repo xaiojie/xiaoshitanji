@@ -3,55 +3,51 @@ import SwiftUI
 import WidgetKit
 
 struct IntakeLiveActivityWidget: Widget {
-    private let ink = Color(red: 0.18, green: 0.15, blue: 0.10)
-    private let accent = Color(red: 1.00, green: 0.79, blue: 0.14)
-    private let muted = Color(red: 0.48, green: 0.43, blue: 0.32)
-
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: IntakeActivityAttributes.self) { context in
-            lockScreen(context)
-                .activityBackgroundTint(accent)
-                .activitySystemActionForegroundColor(ink)
+            IntakeLiveActivityContent(state: context.state, isStale: context.isStale, surface: .lockScreen)
+                .activityBackgroundTint(IntakeActivitySurface.lockScreen.background)
+                .activitySystemActionForegroundColor(IntakeWidgetPalette.ink)
+                .widgetURL(DiaryWidgetRoute.today.url)
         } dynamicIsland: { context in
-            DynamicIsland {
+            let current = !context.isStale && context.state.isCurrent(on: .now)
+            return DynamicIsland {
+                // 相机两侧只放奶蛙和餐数；主要数据在 bottom，不覆盖硬件区域。
                 DynamicIslandExpandedRegion(.leading) {
-                    Label("今日", systemImage: "fork.knife").font(.caption2).foregroundStyle(muted)
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    Text("\(number(context.state.calories)) 千卡")
-                        .font(.caption.weight(.semibold)).foregroundStyle(ink)
-                }
-                DynamicIslandExpandedRegion(.center) {
-                    VStack(spacing: 2) {
-                        Text(context.state.remaining.map { $0 >= 0 ? "还可摄入 \(number($0))" : "超过 \(number(-$0))" } ?? "没设目标")
-                            .font(.caption2).foregroundStyle(muted)
-                        Text("\(context.state.mealCount) 餐").font(.caption2).foregroundStyle(muted)
+                    HStack(spacing: 5) {
+                        IntakeActivityFrog(state: context.state, isCurrent: current, size: 26)
+                        Text(current ? "今日" : "待更新")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white)
                     }
                 }
+                DynamicIslandExpandedRegion(.trailing) {
+                    Text(current ? "已记 \(context.state.mealCount) 餐" : "打开 App 更新")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(height: 26)
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    IntakeLiveActivityContent(state: context.state, isStale: context.isStale, surface: .island)
+                }
             } compactLeading: {
-                Image(systemName: "fork.knife").foregroundStyle(ink)
+                IntakeActivityFrog(state: context.state, isCurrent: current, size: 26)
             } compactTrailing: {
-                Text("\(number(context.state.calories))").font(.caption2.weight(.bold)).foregroundStyle(ink)
+                IntakeActivityCompactCalories(state: context.state, isCurrent: current)
             } minimal: {
-                Image(systemName: "fork.knife").foregroundStyle(ink)
+                ZStack(alignment: .topTrailing) {
+                    IntakeActivityFrog(state: context.state, isCurrent: current, size: 24)
+                    Circle().fill(current ? IntakeActivitySurface.accent : .gray)
+                        .frame(width: 4, height: 4)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(current ? "小食痰记，今日已记 \(context.state.mealCount) 餐" : "小食痰记，今日待更新")
             }
+            .widgetURL(DiaryWidgetRoute.today.url)
+            .keylineTint(IntakeActivitySurface.accent)
         }
     }
 
-    private func lockScreen(_ context: ActivityViewContext<IntakeActivityAttributes>) -> some View {
-        HStack(spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("今日摄入").font(.caption2.weight(.semibold)).foregroundStyle(muted)
-                Text("\(number(context.state.calories)) 千卡").font(.title3.bold()).foregroundStyle(ink)
-                Text(context.state.remaining.map {
-                    $0 >= 0 ? "还可摄入 \(number($0)) 千卡" : "超过 \(number(-$0)) 千卡"
-                } ?? "还没设置能量目标").font(.caption2).foregroundStyle(muted)
-            }
-            Spacer()
-            Text("\(context.state.mealCount) 餐").font(.caption.weight(.semibold)).foregroundStyle(ink)
-        }
-        .padding(14)
-    }
-
-    private func number(_ value: Double) -> String { String(format: "%.0f", value) }
 }

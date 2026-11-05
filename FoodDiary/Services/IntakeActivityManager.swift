@@ -12,7 +12,17 @@ final class IntakeActivityManager {
     private(set) var activity: Activity<IntakeActivityAttributes>?
     private(set) var errorMessage: String?
 
-    var isRunning: Bool { activity != nil }
+    private init() {
+        // App 重启后继续更新用户已开启的活动，不自动创建新的活动。
+        activity = Activity<IntakeActivityAttributes>.activities.first {
+            $0.activityState == .active || $0.activityState == .stale
+        }
+    }
+
+    var isRunning: Bool {
+        guard let activity else { return false }
+        return activity.activityState == .active || activity.activityState == .stale
+    }
 
     var activitiesEnabled: Bool { ActivityAuthorizationInfo().areActivitiesEnabled }
 
@@ -25,7 +35,7 @@ final class IntakeActivityManager {
         end()
         do {
             activity = try Activity.request(attributes: IntakeActivityAttributes(),
-                                            content: .init(state: state, staleDate: nil),
+                                            content: Self.content(for: state),
                                             pushType: nil)
         } catch {
             errorMessage = "实时活动没启动成功，稍后再试。"
@@ -33,8 +43,8 @@ final class IntakeActivityManager {
     }
 
     func update(state: IntakeActivityAttributes.ContentState) {
-        guard let activity else { return }
-        Task { await activity.update(.init(state: state, staleDate: nil)) }
+        guard isRunning, let activity else { return }
+        Task { await activity.update(Self.content(for: state)) }
     }
 
     func end() {
@@ -43,10 +53,13 @@ final class IntakeActivityManager {
         self.activity = nil
     }
 
-    /// 从本地文档里取今天的状态。
-    static func state(for document: DiaryDocument, budget: EnergyBudget?, on date: Date = .now) -> IntakeActivityAttributes.ContentState {
-        let nutrition = document.total(on: date)
-        return .init(calories: nutrition.calories, targetCalories: budget?.targetCalories,
-                     mealCount: document.records(on: date).count)
+    private static func content(for state: IntakeActivityAttributes.ContentState) -> ActivityContent<IntakeActivityAttributes.ContentState> {
+        // 系统在零点标记过期，锁屏和灵动岛不再把昨天的数字显示成今日摄入。
+        .init(state: state, staleDate: DiaryWidgetTimeline.nextMidnight(after: state.updatedAt))
+    }
+
+    /// 与桌面组件共用今日快照，目标由今日页面同一套能量计算结果传入。
+    static func state(for document: DiaryDocument, targetCalories: Double?, on date: Date = .now) -> IntakeActivityAttributes.ContentState {
+        .init(snapshot: WidgetSnapshotBuilder.make(document: document, targetCalories: targetCalories, on: date))
     }
 }

@@ -56,7 +56,7 @@ public enum WidgetMealKind: String, Codable, CaseIterable, Sendable {
     }
 }
 
-public struct DiaryWidgetMeal: Codable, Equatable, Sendable {
+public struct DiaryWidgetMeal: Codable, Hashable, Sendable {
     public var kind: WidgetMealKind
     public var calories: Double
     public var recordCount: Int
