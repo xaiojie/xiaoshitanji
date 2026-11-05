@@ -54,6 +54,9 @@ public enum WidgetMealKind: String, Codable, CaseIterable, Sendable {
         case .snack: "加餐"
         }
     }
+
+    /// 灵动岛上的三餐节点；加餐只出现在 App 和小组件里。
+    public static var islandKinds: [WidgetMealKind] { [.breakfast, .lunch, .dinner] }
 }
 
 public struct DiaryWidgetMeal: Codable, Hashable, Sendable {

@@ -36,8 +36,8 @@ struct IntakeActivityMeals: View {
     let meals: [DiaryWidgetMeal]?
     let surface: IntakeActivitySurface
     let animate: Bool
-
-    private var kinds: [WidgetMealKind] { WidgetMealKind.allCases }
+    /// 灵动岛只排早中晚三餐；锁屏卡片仍保留加餐。
+    var kinds: [WidgetMealKind] = WidgetMealKind.allCases
     private func meal(_ kind: WidgetMealKind) -> DiaryWidgetMeal? { meals?.first { $0.kind == kind } }
     private func isRecorded(_ kind: WidgetMealKind) -> Bool { (meal(kind)?.recordCount ?? 0) > 0 }
     private var transition: Animation? { animate ? .easeInOut(duration: 0.45) : nil }

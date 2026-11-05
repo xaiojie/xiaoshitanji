@@ -37,29 +37,80 @@ struct IntakeLiveActivityContent: View {
     }
 
     var body: some View {
-        VStack(spacing: 4) {
-            if surface == .lockScreen {
-                lockScreenHeading.frame(height: 54)
-            } else {
-                energyRow.frame(height: 34)
+        content
+            .foregroundStyle(surface.foreground)
+            .background {
+                if surface == .lockScreen {
+                    LinearGradient(colors: [Color(red: 1, green: 0.92, blue: 0.64), IntakeWidgetPalette.cream],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                }
             }
+            .environment(\.locale, Locale(identifier: "zh_CN"))
+            .dynamicTypeSize(.small ... .large)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if surface == .lockScreen {
+            lockScreenBody
+        } else {
+            islandBody
+        }
+    }
+
+    /// 灵动岛只放三餐：加餐写在 App 里，不占岛上的位置。
+    private var islandKinds: [WidgetMealKind] { WidgetMealKind.islandKinds }
+
+    /// 岛上的固定高度正好等于四行内容加行距，避免最后一行被裁掉。
+    private var islandBody: some View {
+        VStack(spacing: 3) {
+            energyRow.frame(height: 38)
+            energyProgress.frame(height: 7)
+            IntakeActivityMeals(meals: current ? state.meals : nil, surface: .island,
+                                animate: animation != nil, kinds: islandKinds)
+                .frame(height: 26)
+            islandFooter.frame(height: 24)
+        }
+        .frame(height: 104)
+    }
+
+    private var lockScreenBody: some View {
+        VStack(spacing: 4) {
+            lockScreenHeading.frame(height: 54)
             energyProgress.frame(height: 8)
-            IntakeActivityMeals(meals: current ? state.meals : nil, surface: surface, animate: animation != nil)
+            IntakeActivityMeals(meals: current ? state.meals : nil, surface: .lockScreen, animate: animation != nil)
                 .frame(height: 30)
             footer.frame(height: 28)
         }
-        .padding(.horizontal, surface == .lockScreen ? 14 : 0)
-        .padding(.vertical, surface == .lockScreen ? 12 : 0)
-        .frame(height: surface == .lockScreen ? 160 : 112)
-        .foregroundStyle(surface.foreground)
-        .background {
-            if surface == .lockScreen {
-                LinearGradient(colors: [Color(red: 1, green: 0.92, blue: 0.64), IntakeWidgetPalette.cream],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(height: 160)
+    }
+
+    private var islandFooter: some View {
+        HStack(spacing: 6) {
+            Text(nutrientsText)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(surface.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityLabel(nutrientsAccessibility)
+            Link(destination: DiaryWidgetRoute.newMeal.url) {
+                HStack(spacing: 3) {
+                    Image(systemName: "plus").font(.system(size: 9, weight: .bold))
+                    Text("记一餐").font(.system(size: 10, weight: .bold))
+                }
+                .padding(.horizontal, 10)
+                .frame(height: 24)
+                .foregroundStyle(IntakeWidgetPalette.ink)
+                .background(IntakeActivitySurface.accent, in: .capsule)
             }
+            .buttonStyle(.plain)
+            .fixedSize()
+            .accessibilityLabel("记一餐，直接打开餐食录入")
+            .accessibilityIdentifier("liveActivityNewMeal")
         }
-        .environment(\.locale, Locale(identifier: "zh_CN"))
-        .dynamicTypeSize(.small ... .large)
     }
 
     private var lockScreenHeading: some View {

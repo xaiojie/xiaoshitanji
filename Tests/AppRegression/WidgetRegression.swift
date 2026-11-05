@@ -32,6 +32,8 @@ import NutritionCore
         precondition(snapshot.meals?.map(\.kind) == [.breakfast, .lunch, .dinner, .snack])
         precondition(snapshot.meals?[0].calories == 208 && snapshot.meals?[1].calories == 358)
         precondition(snapshot.meals?[1].recordCount == 2 && snapshot.meals?[2].recordCount == 0)
+        precondition(WidgetMealKind.islandKinds == [.breakfast, .lunch, .dinner])
+        precondition(!WidgetMealKind.islandKinds.contains(.snack))
         precondition(snapshot.remaining == 1234 && abs(snapshot.progress! - 566.0 / 1800) < 0.00001)
         let reopened = try JSONDecoder().decode(DiaryWidgetSnapshot.self, from: JSONEncoder().encode(snapshot))
         precondition(reopened == snapshot)
@@ -164,6 +166,6 @@ import NutritionCore
 @MainActor final class IntakeActivityManager {
     static let shared = IntakeActivityManager()
     let isRunning = false
-    static func state(for document: DiaryDocument, budget: EnergyBudget?, on date: Date) -> Int { 0 }
+    static func state(for document: DiaryDocument, targetCalories: Double?, on date: Date) -> Int { 0 }
     func update(state: Int) {}
 }
