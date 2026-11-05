@@ -471,7 +471,7 @@ extension DiaryDocument {
         result.weights = Self.union(weights, remote.weights).sorted { $0.date < $1.date }
         result.workouts = Self.union(workouts, remote.workouts).sorted { $0.date < $1.date }
         result.plans = Self.union(plans, remote.plans).sorted { $0.lastUsedAt > $1.lastUsedAt }
-        result.wellnessReviews = Self.union(wellnessReviews, remote.wellnessReviews)
+        result.wellnessReviews = Self.oneReviewPerPeriod(Self.union(wellnessReviews, remote.wellnessReviews))
         result.templates = Self.union(templates, remote.templates)
             .sorted { $0.lastUsedAt > $1.lastUsedAt }
         result.observations = Self.union(observations, remote.observations)
@@ -496,6 +496,17 @@ extension DiaryDocument {
     }
 
     /// 同一天只留一条复盘，取生成时间较新的那份（`saveReview` 也是按天替换）。
+    /// 汇总分析在本地只保留每个周期一份（`saveWellnessReview` 按 period 覆盖），
+    /// 合并时也必须收敛，否则两台设备各自生成的「近7天」会同时留下。
+    private static func oneReviewPerPeriod(_ reviews: [WellnessReview]) -> [WellnessReview] {
+        var byPeriod: [WellnessPeriod: WellnessReview] = [:]
+        for review in reviews {
+            if let existing = byPeriod[review.snapshot.period], existing.generatedAt >= review.generatedAt { continue }
+            byPeriod[review.snapshot.period] = review
+        }
+        return byPeriod.values.sorted { $0.generatedAt < $1.generatedAt }
+    }
+
     private static func oneReviewPerDay(_ reviews: [DietReview], calendar: Calendar = .current) -> [DietReview] {
         var byDay: [Date: DietReview] = [:]
         for review in reviews {

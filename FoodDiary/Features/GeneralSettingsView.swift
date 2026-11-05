@@ -14,14 +14,6 @@ struct GeneralSettingsView: View {
     @State private var goalText = ""
     @State private var errorMessage: String?
     @State private var feedback: String?
-    @State private var csvText = ""
-    @State private var exportingCSV = false
-    @State private var exportingJSON = false
-    @State private var importingJSON = false
-    @State private var jsonData = Data()
-    @State private var pendingRestore: DiaryDocument?
-    @State private var confirmingRestore = false
-    @State private var dataBusy = false
     @AppStorage("autoBackupEnabled") private var autoBackup = true
     @State private var reminders = ReminderStore.load()
     @State private var notificationsDenied = false
@@ -60,7 +52,7 @@ struct GeneralSettingsView: View {
                         }
                         .foregroundStyle(Theme.ink).contentCard()
                     }
-                    .buttonStyle(.plain).disabled(dataBusy).accessibilityIdentifier("aboutApp")
+                    .buttonStyle(.plain).accessibilityIdentifier("aboutApp")
                 }.padding(20)
             }
             .background(Theme.background).scrollDismissesKeyboard(.interactively)
@@ -68,32 +60,9 @@ struct GeneralSettingsView: View {
             .toolbar(.visible, for: .navigationBar)
             .toolbar {
                 if isPresented {
-                    ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() }.disabled(dataBusy) }
+                    ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } }
                 }
             }
-            .fileExporter(isPresented: $exportingCSV,
-                          document: CSVFileDocument(text: csvText),
-                          contentType: .commaSeparatedText,
-                          defaultFilename: "小食痰记-记录") { result in
-                if case .failure(let error) = result {
-                    errorMessage = error.localizedDescription
-                }
-            }
-            .fileExporter(isPresented: $exportingJSON,
-                          document: JSONBackupDocument(data: jsonData), contentType: .json,
-                          defaultFilename: "小食痰记-完整备份") { result in
-                if case .failure(let error) = result { errorMessage = error.localizedDescription }
-            }
-            .fileImporter(isPresented: $importingJSON, allowedContentTypes: [.json]) { result in
-                importBackup(result)
-            }
-            .alert("恢复这份备份？", isPresented: $confirmingRestore, presenting: pendingRestore) { document in
-                Button("恢复备份", role: .destructive) { restoreBackup(document) }
-                Button("继续查看", role: .cancel) { pendingRestore = nil }
-            } message: { document in
-                Text("将恢复这份备份中的\(document.records.count)餐饮食与\(document.workouts.count)次训练，并替换当前记录。恢复前会完整保留当前数据及照片。")
-            }
-            .interactiveDismissDisabled(dataBusy)
             .task {
                 let result = await ReminderScheduler.reschedule(reminders)
                 notificationsDenied = result == .notificationsDenied && reminders.contains(where: \.isEnabled)
@@ -248,11 +217,7 @@ struct GeneralSettingsView: View {
     private var dataSettings: some View {
         BrandSection("本机数据", symbol: "externaldrive.fill") {
             LabeledContent("饮食记录", value: "\(diary.document.records.count) 餐")
-            Button("导出完整 JSON 备份", systemImage: "square.and.arrow.up", action: exportBackup)
-                .disabled(dataBusy || diary.loadError != nil).accessibilityIdentifier("exportDiary")
-            Button("从 JSON 备份恢复", systemImage: "arrow.counterclockwise") { importingJSON = true }
-                .disabled(dataBusy).accessibilityIdentifier("importDiary")
-            if dataBusy { ProgressView("正在处理记录和照片…").font(.caption) }
+            LabeledContent("照片", value: "记录目录内的 Photos 文件夹")
             Toggle(isOn: $autoBackup) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("每天自动备份")
@@ -266,76 +231,12 @@ struct GeneralSettingsView: View {
                     .font(.caption).foregroundStyle(Theme.mutedInk)
                     .accessibilityIdentifier("latestBackup")
             }
-            Button {
-                csvText = DiaryCSV.document(diary.document)
-                exportingCSV = true
-            } label: {
-                Label("导出 CSV（表格）", systemImage: "tablecells")
-            }
-            .disabled(diary.document.records.isEmpty)
-            .accessibilityIdentifier("exportCSV")
             if let error = diary.loadError {
                 ErrorNotice(message: error)
                 Button("重新读取记录", action: diary.reload)
             }
-            Text("导出包含饮食、照片、个人资料、手动体重、烟包、抽烟和分烟记录，以及已保存的汇总报告和分析数值。完整 JSON 包含照片内容，可在其他设备恢复。本机 FoodDiary/diary.json 使用外置 Photos 目录，需与照片一起保留。")
+            Text("记录只存在这台手机和你在云同步里配置的服务器上，不再通过文件导入导出。换机或重装前先在云同步里完成一次同步，删掉 App 会连本机备份一起删除。")
                 .font(.caption).foregroundStyle(Theme.mutedInk).lineSpacing(3)
-        }
-    }
-
-    private func exportBackup() {
-        dataBusy = true
-        errorMessage = nil
-        let document = diary.document
-        let photos = diary.photosDirectory
-        Task { @MainActor in
-            defer { dataBusy = false }
-            do {
-                jsonData = try await Task.detached { try DiaryBackup.data(for: document, photosDirectory: photos) }.value
-                exportingJSON = true
-            } catch { errorMessage = error.localizedDescription }
-        }
-    }
-
-    private func importBackup(_ result: Result<URL, any Error>) {
-        Task { @MainActor in
-            dataBusy = true
-            errorMessage = nil
-            defer { dataBusy = false }
-            do {
-                let url = try result.get()
-                let access = url.startAccessingSecurityScopedResource()
-                defer { if access { url.stopAccessingSecurityScopedResource() } }
-                let photos = diary.photosDirectory
-                pendingRestore = try await Task.detached { try DiaryBackup.restore(from: url, photosDirectory: photos) }.value
-                confirmingRestore = true
-            } catch { errorMessage = error.localizedDescription }
-        }
-    }
-
-    private func restoreBackup(_ document: DiaryDocument) {
-        dataBusy = true
-        errorMessage = nil
-        let original = diary.document
-        let revision = diary.revision
-        let photos = diary.photosDirectory
-        let directory = BackupService.directory
-        let canReadOriginal = diary.loadError == nil
-        pendingRestore = nil
-        Task { @MainActor in
-            defer { dataBusy = false }
-            do {
-                if canReadOriginal {
-                    _ = try await Task.detached {
-                        try DiaryBackup.makeRestorePoint(original, in: directory, photosDirectory: photos)
-                    }.value
-                }
-                guard diary.revision == revision else {
-                    throw DiaryError.invalidInput("本机记录刚刚发生变化，请重新选择备份并恢复。")
-                }
-                try diary.restoreBackup(document)
-                feedback = "备份已恢复，恢复前的数据保存在本机 Backups 目录。"
-            } catch { errorMessage = error.localizedDescription }
         }
     }
 

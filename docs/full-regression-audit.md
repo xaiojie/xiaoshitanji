@@ -57,15 +57,22 @@
 | 7 | AI 拒绝后静默无反馈 | `FoodDiary/Services/AIConsent.swift`、`AIConsentModifier.swift` | 拒绝后浮层提示「本次没有发送任何内容」，下次请求自动清除 |
 | 8 | 提醒被拒无引导 | `FoodDiary/Services/ReminderScheduler.swift`、`GeneralSettingsView.swift` | 通知被关闭时提醒区显示说明与「打开系统设置」按钮 |
 
-### P2（择机）
+### P2（2026-11-05 修掉 5 条）
 
-- `saveWellnessReview` 只按 `period` 去重，同 period 不同区间互相覆盖（`Models.swift:469`）。
-- `validate` 只对 `records` 查重复 id（`Models.swift:372-395`）。
-- `CloudSyncClient` 异步端点（`login/state/logout/deleteAccount/restore/parseEmpty`）零测试。
-- `DiaryCSV` 无导入路径（只有导出）。
-- 里程碑阈值边界、`HealthMeasurementInput.parse` 非法输入、`PhotoAttachment` 上限、`ReminderPlanner.next` 恰好当前分钟与 DST。
-- 服务端：409 `updatedAt` 断言、checksum 键序、改密 422/当前 token 存活、`needs_rehash`、照片 `Cache-Control`、413 文案硬编码「超过 8 MB」、`constant_time_equals` 死代码。
-- `TrendsView` 与多个二级页无 `accessibilityIdentifier`，回归脚本无法巡检入口。
+| # | 问题 | 现在的状态 |
+|---|---|---|
+| 1 | 汇总复盘同周期重复 | 合并时按 `period` 收敛到 `generatedAt` 最新的一条，与本机「每个范围只留一份」一致 |
+| 2 | `validate` 不查复盘 id 唯一性 | `reviews` 与 `wellnessReviews` 也查重，重复 id 直接判为不可读 |
+| 3 | 413 文案写死「8 MB」 | 跟着 `max_payload_bytes` 走，KB/MB 自适应（测试里 64 KB 会如实提示 64 KB） |
+| 4 | `constant_time_equals` 死代码 | 删除，连同不再使用的 `hmac` 导入 |
+| 5 | 改密边界没测 | 补三种非法新密码（过短/空/过长）422，以及改密后当前会话仍然可用 |
+
+仍然留着、按需处理：
+
+- `CloudSyncClient` 的 `login / state / logout / deleteAccount` 没有单测，只有 `SyncModel` 回归脚本间接覆盖。
+- 里程碑阈值、`HealthMeasurementInput.parse` 非法输入、`PhotoAttachment` 上限、`ReminderPlanner.next` 恰好当前分钟与 DST。
+- `TrendsView`、`HealthMetricView` 没有 `accessibilityIdentifier`，脚本巡检不到入口。
+- 文件式 CSV / JSON 导入导出已按用户决定移除（2026-11-05），CSV 导入不再需要补。
 
 ### 已知设计取舍（不是缺陷，回归时按此预期）
 

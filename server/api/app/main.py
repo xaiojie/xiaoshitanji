@@ -128,8 +128,17 @@ def validate_payload(payload: dict, limit: int) -> bytes:
         raise HTTPException(status_code=422, detail="不支持的日记版本。")
     raw = payload_bytes(payload)
     if len(raw) > limit:
-        raise HTTPException(status_code=413, detail="快照超过 8 MB，请先清理内嵌照片后再同步。")
+        raise HTTPException(status_code=413, detail=f"快照超过 {human_bytes(limit)}，请先清理内嵌照片后再同步。")
     return raw
+
+
+def human_bytes(size: int) -> str:
+    """把字节上限写成人能读的文案；上限可配置，提示不能写死 8 MB。"""
+    if size >= 1024 * 1024 and size % (1024 * 1024) == 0:
+        return f"{size // (1024 * 1024)} MB"
+    if size >= 1024:
+        return f"{size // 1024} KB"
+    return f"{size} 字节"
 
 
 async def lifespan(app: FastAPI):

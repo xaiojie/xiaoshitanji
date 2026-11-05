@@ -139,6 +139,38 @@
   `server/tests/test_ai.py` 新增五种「200 但结构不对」响应与 >256KB 响应映射 502。
 - **验证**：`server/api/.venv/bin/python -m pytest -q` → **82 passed**（原 68）。
 
+## 2026-11-05 · P2 清理
+
+### 14. 两台设备各自生成的「近7天」汇总会同时留下
+
+- **症状**：本机保存汇总时按周期覆盖（每个范围只留一份），云同步合并却按 id 取并集。
+  两台设备各自生成一份同周期报告，合并后同屏出现两份结论；下次在本机再存又变回一份。
+- **修复**：`Sources/NutritionCore/CloudSync.swift` 新增 `oneReviewPerPeriod`，
+  合并时按 `snapshot.period` 收敛到 `generatedAt` 最新的一条。
+- **验证**：`CloudSyncTests::mergesWellnessReviewsByPeriod`（两份同周期合并后只剩新的）。
+
+### 15. 重复 id 的复盘能通过校验
+
+- **修复**：`Sources/NutritionCore/Models.swift` 的 `validate()` 补上
+  `reviews` 与 `wellnessReviews` 的 id 唯一性检查，重复即 `unreadableDiary`。
+- **验证**：`CloudSyncTests::duplicateReviewIdentifiersAreRejected`。
+
+### 16. 服务端 413 提示写死「8 MB」，改配置后会说谎
+
+- **修复**：`server/api/app/main.py` 新增 `human_bytes(limit)`，提示文案跟随 `max_payload_bytes`；
+  顺手删掉 `server/api/app/security.py` 里零调用的 `constant_time_equals` 与 `hmac` 导入；
+  `test_auth.py` 补三种非法新密码 422 与「改密后当前会话仍可用」。
+- **验证**：`pytest` **85 passed**（82 → 85）。
+
+### 17. 下线文件式 CSV / JSON 导入导出
+
+- **决定**：用户拍板（m03002）「已经做了云端就没必要用文件传输」。
+- **改动**：删除 `Sources/NutritionCore/DiaryCSV.swift`、`FoodDiary/Features/CSVFileDocument.swift`、
+  `FoodDiary/Features/JSONBackupDocument.swift`、`Tests/NutritionCoreTests/DiaryCSVTests.swift`；
+  `GeneralSettingsView` 的「本机数据」只保留餐数、照片目录、每天自动备份与最近备份时间；
+  `DiaryModel.restoreBackup` 一并删除（唯一调用方是已移除的导入向导）。
+  **保留** 每天自动备份与恢复点（`DiaryBackup` + `BackupService`），那是本机防损坏的兜底，不属于文件传输。
+
 ## 更早版本（据提交记录整理，供追溯）
 
 这些修复发生在本轮之前，细节未逐条复述，回归时按标题排查：

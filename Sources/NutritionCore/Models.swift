@@ -375,6 +375,10 @@ public struct DiaryDocument: Codable, Sendable {
             throw DiaryError.unreadableDiary
         }
         for record in records { try record.validate() }
+        guard Set(reviews.map(\.id)).count == reviews.count,
+              Set(wellnessReviews.map(\.id)).count == wellnessReviews.count else {
+            throw DiaryError.unreadableDiary
+        }
         for review in reviews { try review.validate() }
         try profile.validate()
         guard Set(weights.map(\.id)).count == weights.count else { throw DiaryError.unreadableDiary }

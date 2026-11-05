@@ -243,6 +243,52 @@ struct CloudSyncTests {
         #expect(merged.reviews.first?.summary == "新的")
     }
 
+    @Test("同一周期两份汇总分析合并后只留较新的一份")
+    func mergesWellnessReviewsByPeriod() throws {
+        let day = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        var local = DiaryDocument(records: [
+            MealRecord(date: day, kind: .lunch, foods: [.manual(name: "饭", nutrition: Nutrition(calories: 300))])
+        ])
+        var remote = local
+        func report(_ text: String, generated: TimeInterval) throws -> WellnessReview {
+            let snapshot = try WellnessSummary.make(document: local, period: .week, endDate: day)
+            return WellnessReview(id: UUID(), snapshot: snapshot, summary: text,
+                                  observations: WellnessArea.allCases.map { WellnessObservation(area: $0, text: "看到一些变化") },
+                                  actions: [WellnessAction(title: "继续记录", detail: "按实际情况记录")],
+                                  limitations: [], model: "deepseek-flash",
+                                  generatedAt: day.addingTimeInterval(generated))
+        }
+        local.wellnessReviews = [try report("旧的", generated: 100)]
+        remote.wellnessReviews = [try report("新的", generated: 900)]
+
+        let merged = try local.merged(with: remote)
+        #expect(merged.wellnessReviews.count == 1)
+        #expect(merged.wellnessReviews.first?.summary == "新的")
+    }
+
+    @Test("重复 id 的复盘会被校验拦下")
+    func duplicateReviewIdentifiersAreRejected() throws {
+        var document = DiaryDocument(records: [
+            MealRecord(date: Date(timeIntervalSince1970: 1_700_000_000), foods: [
+                .manual(name: "饭", nutrition: Nutrition(calories: 300))
+            ])
+        ])
+        let day = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        let review = DietReview(date: day, recordCount: 1, summary: "一份复盘", score: 70,
+                                highlights: [], suggestions: [], model: "deepseek-flash", generatedAt: day)
+        document.reviews = [review, review]
+        #expect(throws: DiaryError.self) { try document.validate() }
+
+        document.reviews = []
+        let snapshot = try WellnessSummary.make(document: document, period: .week, endDate: day)
+        let report = WellnessReview(id: UUID(), snapshot: snapshot, summary: "一份汇总",
+                                    observations: WellnessArea.allCases.map { WellnessObservation(area: $0, text: "看到一些变化") },
+                                    actions: [WellnessAction(title: "继续记录", detail: "按实际情况记录")],
+                                    limitations: [], model: "deepseek-flash", generatedAt: day)
+        document.wellnessReviews = [report, report]
+        #expect(throws: DiaryError.self) { try document.validate() }
+    }
+
     @Test("合并两侧吸烟记录")
     func mergesSmoking() throws {
         var local = DiaryDocument()

@@ -84,11 +84,27 @@ async def test_change_password_requires_current_and_revokes_other_tokens(client,
     changed = await client.post("/v1/auth/password", headers={"Authorization": f"Bearer {account['token']}"},
                                 json={"currentPassword": "milk-tea-1", "newPassword": "new-password-2"})
     assert changed.status_code == 204
+    # 当前会话不该被自己改密码踢掉，只吊销其他设备。
+    assert (await client.get("/v1/me", headers={"Authorization": f"Bearer {account['token']}"})).status_code == 200
     assert (await client.get("/v1/me", headers=other)).status_code == 401
     old = await client.post("/v1/auth/login", json={"username": "frog", "password": "milk-tea-1"})
     assert old.status_code == 401
     fresh = await client.post("/v1/auth/login", json={"username": "frog", "password": "new-password-2"})
     assert fresh.status_code == 200
+
+
+@pytest.mark.parametrize("new_password", ["short", "", "x" * 129])
+async def test_change_password_rejects_an_invalid_new_password(client, account, new_password):
+    response = await client.post(
+        "/v1/auth/password",
+        headers={"Authorization": f"Bearer {account['token']}"},
+        json={"currentPassword": "milk-tea-1", "newPassword": new_password},
+    )
+    assert response.status_code == 422
+    # 拒绝之后旧密码与会话都必须原样可用。
+    assert (await client.get("/v1/me", headers={"Authorization": f"Bearer {account['token']}"})).status_code == 200
+    still_old = await client.post("/v1/auth/login", json={"username": "frog", "password": "milk-tea-1"})
+    assert still_old.status_code == 200
 
 
 async def test_delete_account_removes_access(client, auth):
