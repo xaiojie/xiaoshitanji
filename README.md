@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.2%20(38)-yellow" alt="version 1.0.2 (38)" />
+  <img src="https://img.shields.io/badge/version-1.0.2%20(38)-yellow" alt="version 1.0.2 (39)" />
   <img src="https://img.shields.io/badge/Swift%20tests-222%20total-brightgreen" alt="222 项 Swift 测试，含 1 项默认跳过" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
