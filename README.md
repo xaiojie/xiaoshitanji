@@ -20,7 +20,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.2%20(38)-yellow" alt="version 1.0.2 (38)" />
-  <img src="https://img.shields.io/badge/Swift%20tests-219%20total-brightgreen" alt="219 项 Swift 测试，含 1 项默认跳过" />
+  <img src="https://img.shields.io/badge/Swift%20tests-223%20total-brightgreen" alt="223 项 Swift 测试，含 1 项默认跳过" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -413,7 +413,7 @@ flowchart LR
 
 ```sh
 swift test
-# 2026-11-05：219 tests in 29 suites，含 1 项默认跳过的演示工具
+# 2026-11-05：223 tests in 30 suites，含 1 项默认跳过的演示工具
 Tests/AppRegression/run-widget.sh
 # 旧快照、分餐、目标、日期与时区、路由，以及真实 DiaryModel 的发布行为，9 组 PASS
 Tests/AppRegression/run-ai-consent.sh
@@ -423,7 +423,7 @@ Tests/AppRegression/run-sync-model.sh
 python3 Tests/AppRegression/check-profile-artwork.py
 # 11 项健康指标分类、15 个图片资源及入口标识核验
 cd server && api/.venv/bin/python -m pytest -q
-# 2026-11-05：63 passed
+# 2026-11-05：82 passed
 ```
 
 Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列出主要测试组，照片传输测试通过 URLSession 实际客户端验证请求顺序与失败保护。
@@ -491,11 +491,11 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | ✅ 已实现 | 「蛙的观察」：五种本地模式识别（蛋白、抽烟时段、断档、体重停滞、热量超标）+ 只发聚合数值的追问，回答标注依据与「基于旧数据」 |
 | ✅ 已实现 | 「我的」跨饮食、抽烟、运动与身体的 AI 汇总分析。默认近7天，可切换30天和全部记录，预览并确认后发送，按范围保留最新报告 |
 | ✅ 已实现 | 健康全景：睡眠、心率 / 静息心率 / HRV、有氧适能、耳机音量与 Apple 健康体能训练接入趋势与 AI 分析，缺失数据明确标为缺口 |
-| ✅ 已核验 | 云端同步与自包含备份恢复；2026-11-05 Swift 套件共 219 项（含 1 项默认跳过），AI 授权与同步编排回归通过，后端 63 项通过 |
+| ✅ 已核验 | 云端同步与自包含备份恢复；2026-11-05 Swift 套件共 223 项（含 1 项默认跳过），AI 授权与同步编排回归通过，后端 82 项通过 |
 | ✅ 线上验证 | 2026-11-05 已部署兼容修复，公共 HTTPS 照片往返、账号隔离、并发冲突、去重与历史恢复通过，临时账号已清理 |
 | ✅ 用户真机测试 | 1.0.1（37）已安装并回读版本，用户报告测试完成。此项为用户验收记录，不表示自动化覆盖所有界面 |
 | ✅ 历史真机记录核验 | 1.0.1（32）已安装。iPhone Use 实查昨天 5 餐、两包香烟及历史记录恢复显示，今日新增早餐正常保存。原记录与 5 张照片已逐项核对，完整相机、键盘与两设备交互验收继续由用户测试 |
-| ✅ 已实现，待用户真机验收 | 1.0.2（38）奶蛙组件与直接记餐；219 项 Swift 套件（含 1 项跳过）及 9 组组件行为回归通过 |
+| ✅ 已实现，待用户真机验收 | 1.0.2（38）奶蛙组件与直接记餐；223 项 Swift 套件（含 1 项跳过）及 9 组组件行为回归通过 |
 | ✅ 已实现 | 七条主线的首版能力见 [`docs/backlog.md`](docs/backlog.md) 的进度，扩展需求保留在后续规划表 |
 | 🧪 TestFlight 核验 | 2026-11-05，1.0.1（37）上传成功，Apple 处理为 VALID，并已关联内部测试组；不代表 App Store 审核通过 |
 | ⏳ 后续待完成 | 首次引导、可不透露的性别与年龄、个人目标、吸烟模块开关、统一 AI 个性化与独立健身入口，建议排入 1.1.0 |
