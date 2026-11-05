@@ -58,8 +58,8 @@ struct IntakeLiveActivityContent: View {
         }
     }
 
-    /// 灵动岛只放三餐：加餐写在 App 里，不占岛上的位置。
-    private var islandKinds: [WidgetMealKind] { WidgetMealKind.islandKinds }
+    /// 实时活动只放三餐：加餐写在 App 和桌面小组件里。
+    private var liveActivityKinds: [WidgetMealKind] { WidgetMealKind.liveActivityKinds }
 
     /// 岛上的固定高度正好等于四行内容加行距，避免最后一行被裁掉。
     private var islandBody: some View {
@@ -67,7 +67,7 @@ struct IntakeLiveActivityContent: View {
             energyRow.frame(height: 38)
             energyProgress.frame(height: 7)
             IntakeActivityMeals(meals: current ? state.meals : nil, surface: .island,
-                                animate: animation != nil, kinds: islandKinds)
+                                animate: animation != nil, kinds: liveActivityKinds)
                 .frame(height: 26)
             islandFooter.frame(height: 24)
         }
@@ -78,7 +78,8 @@ struct IntakeLiveActivityContent: View {
         VStack(spacing: 4) {
             lockScreenHeading.frame(height: 54)
             energyProgress.frame(height: 8)
-            IntakeActivityMeals(meals: current ? state.meals : nil, surface: .lockScreen, animate: animation != nil)
+            IntakeActivityMeals(meals: current ? state.meals : nil, surface: .lockScreen,
+                                animate: animation != nil, kinds: liveActivityKinds)
                 .frame(height: 30)
             footer.frame(height: 28)
         }
