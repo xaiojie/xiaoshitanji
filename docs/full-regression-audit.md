@@ -44,18 +44,18 @@
 
 - ✅ 限流零覆盖、并发 500、转发头伪造、`/healthz` 契约无测试。
 
-### P1（下一轮）
+### P1（已修复，2026-11-05）
 
-| # | 缺口 | 位置 | 风险 |
+| # | 缺口 | 位置 | 现在的回归 |
 |---|---|---|---|
-| 1 | 客户端照片同步零覆盖 | `Sources/NutritionCore/CloudSync.swift:429-470`；`Tests/AppRegression/run-sync-model.sh` fixture 对 `/v1/sync/photos/*` 直接抛错 | 服务端「先传照片再发快照 / 缺照片 422」在客户端从未被验证 |
-| 2 | `DiaryStore.restore` 无测试 | `Sources/NutritionCore/DiaryStore.swift:32-45` | 恢复流程失败时现场与备份双失 |
-| 3 | `limit_body` 中间件 413 分支从未触发 | `server/api/app/main.py:153-159` | 8MB 上限退化为逐字节累积 |
-| 4 | 快照内嵌照片兼容分支未测 | `server/api/app/main.py:74-80` | 老客户端内嵌 JPEG 的快照被误判 422 |
-| 5 | AI 上游「200 但结构不对」未测 | `server/api/app/ai.py:148-155` | 上游降级不可见 |
-| 6 | `restore` / `versions` 跨用户隔离未测 | `server/api/app/main.py:385-413` | 越权写 |
-| 7 | AI 拒绝后静默无反馈 | `FoodDiary/Services/AIConsent.swift:40` | 用户点了「暂不使用」像是没反应 |
-| 8 | 提醒被拒无引导 | `FoodDiary/Services/ReminderScheduler.swift:51-62` | 开关显示开着但永远不会响 |
+| 1 | 客户端照片同步零覆盖 | `Sources/NutritionCore/CloudPhotoSync.swift`；`Tests/AppRegression/SyncModelRegression.swift` | fixture 支持 `/v1/sync/photos/missing`、`PUT/GET /v1/sync/photos/{name}`，断言一张上传、一张下载、名字与引用都还在 |
+| 2 | `DiaryStore.restore` 无测试 | `Sources/NutritionCore/DiaryStore.swift:32-45` | 已有 `SyncIntegrityTests.explicitRecoveryPreservesUnreadableOriginalAndItsPhotos` 覆盖（原审计遗漏） |
+| 3 | `limit_body` 中间件 413 分支从未触发 | `server/api/app/main.py:153-159` | `test_sync.py::test_body_over_the_hard_limit_is_rejected_before_parsing` |
+| 4 | 快照内嵌照片兼容分支未测 | `server/api/app/main.py:74-80` | 内嵌 JPEG 可上传、外部照片必须先传、四种非法照片名一律 422 |
+| 5 | AI 上游「200 但结构不对」未测 | `server/api/app/ai.py:148-155` | 五种坏 200 响应与 >256KB 响应都映射为 502 |
+| 6 | `restore` / `versions` 跨用户隔离未测 | `server/api/app/main.py:385-413` | B 用户 versions 为空、restore A 的版本 404，且双方状态不变 |
+| 7 | AI 拒绝后静默无反馈 | `FoodDiary/Services/AIConsent.swift`、`AIConsentModifier.swift` | 拒绝后浮层提示「本次没有发送任何内容」，下次请求自动清除 |
+| 8 | 提醒被拒无引导 | `FoodDiary/Services/ReminderScheduler.swift`、`GeneralSettingsView.swift` | 通知被关闭时提醒区显示说明与「打开系统设置」按钮 |
 
 ### P2（择机）
 
@@ -120,7 +120,6 @@
 
 ## 七、建议执行顺序
 
-1. 补齐 P1 #1 客户端照片同步回归（收益最大：跨端闭环的唯一空白）。
-2. P1 #7/#8 两处静默失败给用户可见反馈（低成本、高感知）。
-3. 按 1.1.0 的 P1 → P4 推进；每阶段一个提交、一次全量回归。
-4. P2 清单按「改到该文件时顺手补」处理，不单独排期。
+1. P1 八项已全部补齐（见上表），下一轮从 1.1.0 的 P1「首次引导与个人档案」开始。
+2. 每个阶段一个提交、一次全量回归（`swift test` + `pytest` + 三个 App 回归脚本 + Release 构建）。
+3. P2 清单按「改到该文件时顺手补」处理，不单独排期。

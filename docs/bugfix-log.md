@@ -99,6 +99,46 @@
   提交 `bdd951f`。
 - **验证**：真机点击卡片直接进相机；重构后仍能走相册与手输兜底。
 
+## 2026-11-05 · 回归缺口补齐
+
+### 10. 客户端照片同步从来没有真正跑过
+
+- **症状**：同步回归脚本对 `/v1/sync/photos/*` 一律抛 `URLError(.unsupportedURL)`，
+  照片实际上传（`Sources/NutritionCore/CloudPhotoSync.swift:11`）与下载（`:39`）从未被执行。
+  服务端「先传照片再发快照、缺照片 422」的约束在客户端是纸面约定。
+- **修复**：`Tests/AppRegression/SyncModelRegression.swift` 的 fixture 现在实现
+  `/v1/sync/photos/missing`、`PUT/GET /v1/sync/photos/{name}`（校验 Bearer、`image/jpeg`、
+  文件名与内容哈希一致），`DiaryModel` fixture 改用真实临时 `Photos/` 目录；
+  主流程断言本机照片上传且服务端只收一次、云端照片落到本机 `Photos/`、合并后两条引用都还在。
+- **验证**：`bash Tests/AppRegression/run-sync-model.sh` 两种模式均输出
+  `PASS — photos travelled both ways (1 uploaded, 1 downloaded) and stayed referenced`。
+
+### 11. AI 拒绝授权后像「点了没反应」
+
+- **症状**：点「暂不使用 AI」后弹窗消失，调用方 `catch is CancellationError {}` 静默吞掉，
+  页面无任何反馈，用户会以为按钮坏了或分析正在后台悄悄进行。
+- **修复**：`FoodDiary/Services/AIConsent.swift` 新增 `declinedNotice`（拒绝时写入、再次请求时清空）；
+  `FoodDiary/Features/AIConsentModifier.swift` 在顶部浮层显示「已取消，本次没有发送任何内容」，
+  4 秒后自动消失。视图消失（`cancelPending`）不算拒绝，保持安静。
+- **验证**：`Tests/AppRegression/run-ai-consent.sh` 新增两条断言（拒绝有提示、取消不提示）。
+
+### 12. 通知权限被关闭时提醒开关「看似开着，永远不响」
+
+- **症状**：`ReminderScheduler.reschedule` 在权限被拒时 `return` 得无声无息，
+  设置页开关仍是打开状态，用户不知道要去系统里允许通知。
+- **修复**：新增 `ReminderScheduling`（`.scheduled` / `.notificationsDenied`），
+  `reschedule` 返回结果；`FoodDiary/Features/GeneralSettingsView.swift` 在有提醒开启且返回
+  `.notificationsDenied` 时，于提醒区显示说明与「打开系统设置」按钮
+  （id `notificationDeniedNotice` / `openNotificationSettings`）。
+- **验证**：`xcodebuild` DEBUG 构建通过；真机在系统通知关闭状态下进入设置页可见提示。
+
+### 13. 服务端四条边界没有测试（413 / 内嵌照片 / 坏 200 / 越权恢复）
+
+- **修复**：`server/tests/test_sync.py` 新增 body 超限 413、内嵌 JPEG 快照可通过、
+  外部照片必须先上传、四种非法照片名 422、B 用户 versions 为空且 restore 404；
+  `server/tests/test_ai.py` 新增五种「200 但结构不对」响应与 >256KB 响应映射 502。
+- **验证**：`server/api/.venv/bin/python -m pytest -q` → **82 passed**（原 68）。
+
 ## 更早版本（据提交记录整理，供追溯）
 
 这些修复发生在本轮之前，细节未逐条复述，回归时按标题排查：

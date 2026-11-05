@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import NutritionCore
 
@@ -15,8 +16,11 @@ import NutritionCore
 }
 @MainActor final class DiaryModel {
     var document: DiaryDocument
-    let photosDirectory = FileManager.default.temporaryDirectory.appending(path: "unused-sync-fixture")
-    init(_ document: DiaryDocument) { self.document = document }
+    let photosDirectory: URL
+    init(_ document: DiaryDocument, photosDirectory: URL) {
+        self.document = document
+        self.photosDirectory = photosDirectory
+    }
     func replaceDocument(_ document: DiaryDocument) throws { try document.validate(); self.document = document }
 }
 final class SyncFixture: @unchecked Sendable {
@@ -28,7 +32,32 @@ final class SyncFixture: @unchecked Sendable {
     var forceConflict = true
     var failDeletion = true
     var deletionRequests = 0
+    /// 服务端已存照片：名字 → 字节。照片同步的两个方向都靠它验证。
+    var storedPhotos: [String: Data] = [:]
+    var photoMissingLookups = 0
+    var photoUploads = 0
+    var photoDownloads = 0
     init(original: DiaryDocument, current: DiaryDocument) { self.original = original; self.current = current }
+
+    static func checksum(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func requestBody(_ request: URLRequest) -> Data {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return Data() }
+        stream.open()
+        defer { stream.close() }
+        var bytes = [UInt8](repeating: 0, count: 4096)
+        var body = Data()
+        while stream.hasBytesAvailable {
+            let count = stream.read(&bytes, maxLength: bytes.count)
+            if count <= 0 { break }
+            body.append(contentsOf: bytes.prefix(count))
+        }
+        return body
+    }
+
     func handle(_ request: URLRequest) throws -> (Int, Data) {
         try lock.withLock {
             let encoder = JSONEncoder()
@@ -38,6 +67,43 @@ final class SyncFixture: @unchecked Sendable {
             let path = request.url!.path
             var status = 200
             var object: Any = [:]
+            if path == "/v1/sync/photos/missing" {
+                guard request.httpMethod == "POST",
+                      request.value(forHTTPHeaderField: "Authorization") == "Bearer fixture" else {
+                    throw URLError(.badServerResponse)
+                }
+                photoMissingLookups += 1
+                let names = (try JSONSerialization.jsonObject(with: requestBody(request)) as? [String: Any])?["names"] as? [String] ?? []
+                return (200, try JSONSerialization.data(withJSONObject: ["missing": names.filter { storedPhotos[$0] == nil }]))
+            }
+            if path.hasPrefix("/v1/sync/photos/") {
+                guard request.value(forHTTPHeaderField: "Authorization") == "Bearer fixture" else {
+                    throw URLError(.badServerResponse)
+                }
+                let name = String(path.dropFirst("/v1/sync/photos/".count))
+                guard PhotoArchive.isTransferName(name) else {
+                    return (422, Data(#"{"detail":"照片名无效"}"#.utf8))
+                }
+                switch request.httpMethod {
+                case "PUT":
+                    let data = requestBody(request)
+                    guard !data.isEmpty, request.value(forHTTPHeaderField: "Content-Type") == "image/jpeg",
+                          PhotoArchive.transferName(for: data) == name else {
+                        return (422, Data(#"{"detail":"照片校验失败"}"#.utf8))
+                    }
+                    storedPhotos[name] = data
+                    photoUploads += 1
+                    return (200, try JSONSerialization.data(withJSONObject: ["name": name, "checksum": Self.checksum(data)]))
+                case "GET":
+                    guard let data = storedPhotos[name] else {
+                        return (404, Data(#"{"detail":"照片不存在"}"#.utf8))
+                    }
+                    photoDownloads += 1
+                    return (200, data)
+                default:
+                    throw URLError(.unsupportedURL)
+                }
+            }
             if path == "/v1/account" {
                 guard request.httpMethod == "DELETE",
                       request.value(forHTTPHeaderField: "Authorization") == "Bearer fixture" else {
@@ -108,16 +174,31 @@ final class SyncFixtureProtocol: URLProtocol, @unchecked Sendable {
         let first = MealRecord(foods: [.manual(name: "历史", nutrition: Nutrition(calories: 100))])
         let second = MealRecord(foods: [.manual(name: "本机新增", nutrition: Nutrition(calories: 200))])
         let third = MealRecord(foods: [.manual(name: "云端新增", nutrition: Nutrition(calories: 300))])
-        let original = DiaryDocument(records: [first])
-        let local = DiaryDocument(records: [first, second])
-        let cloud = DiaryDocument(records: [first, third])
+        // 照片同步是跨端闭环的唯一空白：本机有一张待上传的，云端有一张待下载的。
+        let photosDirectory = FileManager.default.temporaryDirectory
+            .appending(path: "sync-regression-photos-\(UUID().uuidString)")
+        try PhotoArchive.ensureDirectory(photosDirectory)
+        let localPhoto = Data("local-photo-payload".utf8)
+        let localPhotoName = PhotoArchive.transferName(for: localPhoto)
+        try PhotoArchive.save(localPhoto, name: localPhotoName, in: photosDirectory)
+        let cloudPhoto = Data("cloud-photo-payload".utf8)
+        let cloudPhotoName = PhotoArchive.transferName(for: cloudPhoto)
+        let localPhotoRecord = MealRecord(foods: [.manual(name: "带照片", nutrition: Nutrition(calories: 150))],
+                                          photoFileName: localPhotoName)
+        let cloudPhotoRecord = MealRecord(foods: [.manual(name: "云端旧照片", nutrition: Nutrition(calories: 80))],
+                                          photoFileName: cloudPhotoName)
+        let original = DiaryDocument(records: [first, cloudPhotoRecord])
+        let local = DiaryDocument(records: [first, second, localPhotoRecord])
+        let cloud = DiaryDocument(records: [first, third, cloudPhotoRecord])
         let fixture = SyncFixture(original: original, current: cloud)
+        fixture.storedPhotos[cloudPhotoName] = cloudPhoto
         SyncFixtureProtocol.fixture = fixture
         URLProtocol.registerClass(SyncFixtureProtocol.self)
         let defaults = UserDefaults.standard
         defer {
             ["sync.server", "sync.knownVersion", "sync.lastSyncedAt", "sync.baselineOwner"].forEach(defaults.removeObject)
             URLProtocol.unregisterClass(SyncFixtureProtocol.self)
+            try? FileManager.default.removeItem(at: photosDirectory)
         }
         defaults.set("https://sync.fixture", forKey: "sync.server")
         defaults.set(2, forKey: "sync.knownVersion")
@@ -125,16 +206,30 @@ final class SyncFixtureProtocol: URLProtocol, @unchecked Sendable {
         let legacyOwner = CommandLine.arguments.contains("-legacy-owner")
         defaults.removeObject(forKey: "sync.baselineOwner")
         if legacyOwner { fixture.forceConflict = false }
-        let diary = DiaryModel(local)
+        let diary = DiaryModel(local, photosDirectory: photosDirectory)
         let sync = SyncModel()
         if legacyOwner { await sync.syncNow(diary: diary) }
         else { await sync.restore(version: 1, diary: diary) }
         guard sync.errorText == nil else { fatalError(sync.errorText!) }
         guard Set(fixture.current.records.map(\.id)) == Set(diary.document.records.map(\.id)),
-              fixture.current.records.count == 3, fixture.uploads == 1,
+              fixture.current.records.count == 5, fixture.uploads == 1,
               sync.lastKnownVersion == fixture.version, !fixture.forceConflict else {
             fatalError("Restore marked synchronized before publishing the complete local/cloud union")
         }
+        guard PhotoArchive.verifiedPhoto(name: cloudPhotoName, in: photosDirectory) else {
+            fatalError("Cloud photo was never downloaded into the local Photos directory")
+        }
+        guard fixture.storedPhotos[localPhotoName] == localPhoto, fixture.photoUploads == 1 else {
+            fatalError("Local photo was never uploaded to the cloud exactly once")
+        }
+        guard fixture.photoMissingLookups >= 1, fixture.photoDownloads == 1 else {
+            fatalError("Photo transfer skipped the missing lookup or downloaded a photo twice")
+        }
+        guard diary.document.referencedPhotoNames.contains(cloudPhotoName),
+              diary.document.referencedPhotoNames.contains(localPhotoName) else {
+            fatalError("Merged document lost one of the photo references")
+        }
+        print("PASS — photos travelled both ways (1 uploaded, 1 downloaded) and stayed referenced")
         guard defaults.string(forKey: "sync.baselineOwner") == "https://sync.fixture\nfixture" else {
             fatalError("Successful baseline did not retain its server/account owner")
         }
@@ -153,7 +248,7 @@ final class SyncFixtureProtocol: URLProtocol, @unchecked Sendable {
               defaults.object(forKey: "sync.baselineOwner") == nil,
               defaults.object(forKey: "sync.knownVersion") == nil,
               SyncCredentialStore.clearCount == 1, fixture.deletionRequests == 2,
-              diary.document.records.count == 3 else {
+              diary.document.records.count == 5 else {
             fatalError("Successful account deletion did not clear credentials and baseline while retaining local entries")
         }
         print("PASS — account deletion preserves state on failure and clears credentials/baseline only after success")

@@ -150,3 +150,32 @@ def test_deployment_overwrites_untrusted_forwarding_header():
     template = (Path(__file__).parents[1] / "deploy/nginx-xiaoshitanji.conf").read_text()
     assert "proxy_set_header X-Forwarded-For $remote_addr;" in template
     assert "$proxy_add_x_forwarded_for" not in template
+
+
+@pytest.mark.parametrize("content", [
+    b"<html>gateway error</html>",
+    b'{"choices": "not-a-list"}',
+    b'{"model": "deepseek-flash"}',
+    b"[]",
+    b"",
+])
+async def test_upstream_200_without_completion_contract_is_a_bad_gateway(client, app, ai, content):
+    async def broken(request):
+        return httpx.Response(200, content=content)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(broken)) as upstream:
+        app.state.ai_client = upstream
+        response = await client.post("/v1/ai/completions", json=body())
+    assert response.status_code == 502
+    assert "分析结果" in response.json()["detail"]
+
+
+async def test_oversized_upstream_body_is_a_bad_gateway(client, app, ai):
+    oversized = b'{"choices": [], "pad": "' + b"x" * 300_000 + b'"}'
+
+    async def huge(request):
+        return httpx.Response(200, content=oversized)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(huge)) as upstream:
+        app.state.ai_client = upstream
+        response = await client.post("/v1/ai/completions", json=body())
+    assert response.status_code == 502
+    assert "过长" in response.json()["detail"]
