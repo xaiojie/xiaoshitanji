@@ -31,6 +31,7 @@ final class SyncModel {
         static let server = "sync.server"
         static let version = "sync.knownVersion"
         static let lastSynced = "sync.lastSyncedAt"
+        static let owner = "sync.baselineOwner"
     }
 
     private var deviceName: String {
@@ -45,6 +46,9 @@ final class SyncModel {
         self.serverText = defaults.string(forKey: Key.server) ?? CloudSyncClient.defaultServerURL.absoluteString
         self.lastKnownVersion = defaults.integer(forKey: Key.version)
         self.lastSyncedAt = defaults.object(forKey: Key.lastSynced) as? Date
+        if defaults.string(forKey: Key.owner) != baselineOwner {
+            clearBaseline()
+        }
     }
 
     var isLoggedIn: Bool { session != nil }
@@ -57,10 +61,28 @@ final class SyncModel {
     }
 
     private func persist(session: CloudSyncSession) {
+        let server = (try? CloudSyncClient.normalizedBaseURL(serverText).absoluteString) ?? serverText
+        if defaults.string(forKey: Key.owner) != "\(server)\n\(session.username)" {
+            clearBaseline()
+        }
         self.session = session
         try? SyncCredentialStore.save(session)
-        defaults.set(serverText, forKey: Key.server)
-        setKnownVersion(session.version)
+        serverText = server
+        defaults.set(server, forKey: Key.server)
+    }
+
+    private var baselineOwner: String? {
+        guard let session, let server = try? CloudSyncClient.normalizedBaseURL(serverText) else { return nil }
+        return "\(server.absoluteString)\n\(session.username)"
+    }
+
+    private func clearBaseline() {
+        defaults.removeObject(forKey: Key.version)
+        defaults.removeObject(forKey: Key.lastSynced)
+        defaults.removeObject(forKey: Key.owner)
+        lastKnownVersion = 0
+        lastSyncedAt = nil
+        versions = []
     }
 
     private func setKnownVersion(_ version: Int) {
@@ -71,6 +93,7 @@ final class SyncModel {
     private func markSynced() {
         lastSyncedAt = .now
         defaults.set(lastSyncedAt, forKey: Key.lastSynced)
+        defaults.set(baselineOwner, forKey: Key.owner)
     }
 
     private func run(_ label: String, _ work: () async throws -> Void) async {
@@ -123,36 +146,41 @@ final class SyncModel {
             return
         }
         await run("正在同步…") {
-            let client = try client()
-            let state = try await client.state(token: token)
-            var base = max(lastKnownVersion, 0)
-            // 第一次同步：以云端当前版本为基线，避免老的本地基线直接 409。
-            if defaults.object(forKey: Key.version) == nil { base = state.version }
+            try await synchronize(client: client(), token: token, diary: diary)
+        }
+    }
+
+    private func synchronize(client: CloudSyncClient, token: String, diary: DiaryModel) async throws {
+        let state = try await client.state(token: token)
+        var base = state.version
+        let hasSynced = lastSyncedAt != nil && defaults.string(forKey: Key.owner) == baselineOwner
+        if state.needsDownload(knownVersion: defaults.object(forKey: Key.version) as? Int, hasSynced: hasSynced) {
+            let snapshot = try await client.download(token: token, photosDirectory: diary.photosDirectory)
+            try diary.replaceDocument(try diary.document.merged(with: snapshot.document))
+            base = snapshot.version
+        }
+        for attempt in 0..<3 {
             do {
-                try await upload(client: client, token: token, baseVersion: base, document: diary.document)
+                try await upload(client: client, token: token, baseVersion: base, document: diary.document,
+                                 photosDirectory: diary.photosDirectory)
+                versions = (try? await client.versions(token: token)) ?? []
+                markSynced()
+                return
             } catch SyncConflictError.conflict {
-                let snapshot = try await client.download(token: token)
-                let merged = try diary.document.merged(with: snapshot.document)
-                try diary.replaceDocument(merged)
-                try await upload(client: client, token: token, baseVersion: snapshot.version,
-                                 document: merged)
-                noticeText = "云端和本机都已合并，共 \(merged.records.count) 餐。"
+                guard attempt < 2 else { throw CloudSyncError.server("云端记录仍在变化，本机记录已保存，请稍后同步。") }
+                let snapshot = try await client.download(token: token, photosDirectory: diary.photosDirectory)
+                try diary.replaceDocument(try diary.document.merged(with: snapshot.document))
+                base = snapshot.version
             }
-            do {
-                versions = try await client.versions(token: token)
-            } catch {
-                versions = []
-            }
-            markSynced()
         }
     }
 
     private enum SyncConflictError: Error { case conflict }
 
     private func upload(client: CloudSyncClient, token: String, baseVersion: Int,
-                        document: DiaryDocument) async throws {
+                        document: DiaryDocument, photosDirectory: URL) async throws {
         let result = try await client.upload(token: token, baseVersion: baseVersion,
-                                             document: document, deviceName: deviceName)
+                                             document: document, deviceName: deviceName, photosDirectory: photosDirectory)
         switch result {
         case .created(let version, _, _), .unchanged(let version):
             setKnownVersion(version)
@@ -161,7 +189,7 @@ final class SyncModel {
             } else {
                 noticeText = "已上传到云端第 \(version) 版。"
             }
-        case .conflict(let serverVersion, _):
+        case .conflict:
             // 把服务器版本带出去，交给 syncNow 合并后重试。
             throw SyncConflictError.conflict
         }
@@ -178,13 +206,10 @@ final class SyncModel {
         guard let token = session?.token else { return }
         await run("正在恢复第 \(version) 版…") {
             let client = try client()
-            try await client.restore(token: token, version: version)
-            let snapshot = try await client.download(token: token)
+            let snapshot = try await client.download(token: token, version: version, photosDirectory: diary.photosDirectory)
             try diary.replaceDocument(try diary.document.merged(with: snapshot.document))
-            setKnownVersion(snapshot.version)
-            versions = try await client.versions(token: token)
-            markSynced()
-            noticeText = "已恢复第 \(version) 版，并合并进本机。"
+            try await synchronize(client: client, token: token, diary: diary)
+            noticeText = "已将第 \(version) 版合并进本机，并同步到云端第 \(lastKnownVersion) 版。"
         }
     }
 

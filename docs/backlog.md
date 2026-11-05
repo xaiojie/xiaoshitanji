@@ -1,7 +1,7 @@
 # 小食痰记 · 后续开发清单
 
-> 记录于 2026-11-04。当前版本 0.5.0，等待 wellness review（`docs/superpowers/plans/2026-11-04-wellness-review.md`）落地后开工。
-> 本文件只描述「接下来要做什么」，不代表已实现。
+> 更新于 2026-11-05。当前源码版本 1.0.1（31），分支 feature/backlog-v1。
+> 「进度」记录已落地范围，后文保留原始规划。真机交互与发布状态以 README 的实际核验记录为准。
 
 ## 两条原则
 
@@ -46,10 +46,11 @@
   - 认证：用户名 + 密码（Argon2id），登录发 30 天 Bearer 令牌（库里只存 SHA-256），改密吊销其他设备，登录失败按「IP|用户名」限流。
   - 数据：整份日记作快照，`baseVersion` 乐观锁，内容相同不升版，保留最近 20 版；`/v1/sync/restore/{version}` 复制成新的 head。
   - 客户端：`CloudSyncClient` 只做请求构造与解析（可单测），令牌存 Keychain；冲突时下载 → 按 id 并集合并（本机优先）→ 再上传；8 MB 快照上限。
-  - 测试：`server/` 24 个 pytest；Swift 侧 `CloudSyncTests` 12 个用例。线上冒烟（注册/上传/下载/409/删号）已过。
-  - 4.2 本机备份：每天首启写 `FoodDiary/Backups/diary-YYYY-MM-DD.json`，保留 14 份，设置里可关。
+  - 测试覆盖 schema 1–5、照片先传后发布、哈希校验、重试、账号隔离、并发上传和历史恢复，服务端 42 项通过。Swift 完整套件 205 项通过、1 项演示工具跳过。
+  - 4.2 本机备份与导出恢复采用自包含 JSON，内嵌餐食与烟盒照片，支持旧日期格式。恢复前保存保护副本，日备份与恢复点共保留 14 份。
   - 4.4 CSV 导出：餐次/体重/抽烟三张表，逗号引号换行转义，`fileExporter` 交给系统。
-  - 4.1 照片外置（schema v4）：`MealRecord.photoFileName` / `CigarettePack.photoFileName`，文件写 `FoodDiary/Photos/record-<id>.jpg`、`pack-<id>.jpg`；`DiaryDocument.externalizePhotos(in:)` 在启动与整体替换时把旧 base64 迁出并清空；保存单条记录/烟包时也先落盘再写文档。
+  - 4.1 照片外置保留 `photoFileName`，新图写入 `FoodDiary/Photos/photo-<SHA256>.jpg`，旧命名仍可读取。云端独立传输照片，引用校验通过后发布快照，下载照片校验通过后替换本机文档。schema 保持 v5。
+  - 同步首次先拉取，冲突最多重试 3 次，训练记录与训练计划一起合并。同 id 使用本机值，条目按并集合并。
 - [x] **主线 5 · 系统集成**（5.1–5.6 全部落地）
   - 5.6 健康数据全景：`HealthActivityDay` 增加睡眠、平均/静息心率、HRV、有氧适能、耳机音量、体能训练（次数/分钟/消耗）；`HealthDataModel` 授权读取 `sleepAnalysis`、`heartRate`、`restingHeartRate`、`heartRateVariabilitySDNN`、`vo2Max`、`headphoneAudioExposure` 与 `HKWorkout`，训练按 `HKWorkoutActivityType` 映射为力量/有氧；体检、趋势图、AI 上下文（`WellnessActivity` / `ObservationFacts`）共用同一份日数据；缺失项进入 `gaps`，提示词明确「只按数值解读、不做医学判断」。
   - 5.5 快捷指令：`LogMealIntent` + `PendingMeal`，Siri/快捷指令记餐后进 App 补全；语音输入走 `SpeechTranscriber`。
@@ -188,4 +189,4 @@ AI 在此只做两件事：生成/调整计划、解读进步与平台期。1RM�
 3. 手动录入：**内置常吃 + 历史搜索 + 自由填写**，不做全量食物库。
 4. AI 追问成本：**不设每日次数**，靠本地模式识别与指纹缓存控制，提示词只发聚合 JSON。
 
-七条主线已全部落地（见「进度」），后续新增需求另开文档。
+七条主线的首版能力已登记于「进度」，AI 训练计划生成与其他扩展项保留在规划表中，后续新增需求另开文档。

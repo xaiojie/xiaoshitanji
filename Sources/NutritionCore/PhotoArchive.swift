@@ -13,16 +13,19 @@ public enum PhotoArchive {
 
     @discardableResult
     public static func save(_ data: Data, name: String, in directory: URL) throws -> String {
+        guard validName(name) else { throw DiaryError.invalidInput("照片文件名无效。") }
         try ensureDirectory(directory)
         try data.write(to: directory.appending(path: name), options: .atomic)
         return name
     }
 
     public static func load(name: String, in directory: URL) -> Data? {
-        try? Data(contentsOf: directory.appending(path: name))
+        guard validName(name) else { return nil }
+        return try? Data(contentsOf: directory.appending(path: name))
     }
 
     public static func remove(name: String, in directory: URL) {
+        guard validName(name) else { return }
         try? FileManager.default.removeItem(at: directory.appending(path: name))
     }
 
@@ -37,7 +40,7 @@ public extension DiaryDocument {
         var changed = false
         for index in records.indices where records[index].photoJPEG != nil {
             guard let data = records[index].photoJPEG else { continue }
-            let name = try PhotoArchive.save(data, name: PhotoArchive.recordName(records[index].id), in: directory)
+            let name = try PhotoArchive.save(data, name: PhotoArchive.transferName(for: data), in: directory)
             records[index].photoFileName = name
             records[index].photoJPEG = nil
             changed = true

@@ -94,9 +94,7 @@ public enum Milestones {
 
     public static func achievements(for document: DiaryDocument, now: Date = .now,
                                     calendar: Calendar = .current) -> [Achievement] {
-        let stats = stats(for: document, now: now, calendar: calendar)
         let days = Set(document.records.map { calendar.startOfDay(for: $0.date) }).sorted()
-        let first = days.first
 
         func firstDay(reaching count: Int) -> Date? {
             var best: Date?

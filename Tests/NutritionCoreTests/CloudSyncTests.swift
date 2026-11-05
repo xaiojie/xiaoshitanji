@@ -4,6 +4,12 @@ import Testing
 
 @Suite("云端同步")
 struct CloudSyncTests {
+    @Test func historicalSnapshotUsesAQueryParameter() throws {
+        let request = CloudSyncClient().makeSnapshotRequest(token: "fixture", version: 7)
+        let url = try #require(request.url)
+        #expect(url.path == "/v1/sync/snapshot")
+        #expect(URLComponents(url: url, resolvingAgainstBaseURL: true)?.queryItems == [URLQueryItem(name: "version", value: "7")])
+    }
     private func server() -> URL { URL(string: "https://sync.example.com")! }
 
     private func sessionJSON(token: String = "abc", expires: String = "2026-12-01T08:30:00.123456Z") -> Data {

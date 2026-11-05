@@ -4,8 +4,8 @@
 
 - 一个用户一份「当前快照」+ 最近 20 个历史版本，版本号单调递增；
 - 上传带 `baseVersion`，服务器版本变了就返回 `409`，由 App 决定合并或拉取；
-- 快照内容就是 `diary.json` 本身，服务器不解析食物、照片以外的业务字段；
-- 单快照上限 8 MB，登录 token 默认 30 天，可在设置里退出登录吊销。
+- 快照保存日记元数据，餐食与烟盒照片使用账号隔离的不可变内容名独立存储；
+- 单快照上限 8 MiB，单张照片上限 5,000,000 字节，登录 token 默认 30 天，可在设置里退出登录吊销。
 
 ## 技术栈
 
@@ -33,6 +33,9 @@
 | `PUT` | `/v1/sync/snapshot` | `{baseVersion,payload,deviceName}`；版本冲突 409，重复内容 200 `unchanged` |
 | `GET` | `/v1/sync/versions` | 最近 20 个版本摘要 |
 | `POST` | `/v1/sync/restore/{version}` | 把旧版本复制成新版本，不丢历史 |
+| `POST` | `/v1/sync/photos/missing` | `{names}`，每批最多 250 个，返回当前账号缺失的照片名 |
+| `PUT` | `/v1/sync/photos/{name}` | 原始图片字节，文件名 `photo-<SHA256>.jpg`，新建 201、重复 200 |
+| `GET` | `/v1/sync/photos/{name}` | 当前账号的图片字节，缺失或其他账号的照片返回 404 |
 
 用户名 3–32 位小写字母/数字/`_`/`.`/`-`，密码 8–128 位。注册默认上限 `MAX_USERS=50`。
 
@@ -69,7 +72,11 @@ nginx -t && systemctl reload nginx
 docker compose exec -T db pg_dump -U diary diary | gzip > /opt/sub2api-backups/xiaoshitanji-$(date +%F).sql.gz
 ```
 
-用户删除账号后，`users`、`tokens`、`snapshots` 会级联删除。
+用户删除账号后，`users`、`tokens`、`snapshots`、`photos` 会级联删除。照片保留至账号删除，历史版本可继续读取原图。
+
+升级会自动创建 `photos` 表。先保存部署源码、`.env` 与数据库备份，再运行 `docker compose up -d --build api`。健康检查应返回 `schemaVersion=5` 与 `photoTransferVersion=1`。
+
+2026-11-05 已部署 API 1.0.1，并通过公共 HTTPS 验证照片往返、账号隔离、两设备令牌并发上传、版本冲突、去重和历史恢复。验证使用的临时账号已删除，升级前源码、配置与数据库备份保存在服务器 `xiaoshitanji-repair-20261105T013451Z` 备份目录。
 
 ## 本地开发与测试
 
@@ -78,7 +85,7 @@ cd server/api
 uv venv --python 3.12 .venv
 uv pip install -e ".[dev]" --python .venv/bin/python
 cd ..
-api/.venv/bin/python -m pytest -q       # 24 个用例，SQLite 内存库，不依赖 Docker
+api/.venv/bin/python -m pytest -q       # 42 个用例，SQLite 内存库
 api/.venv/bin/uvicorn app.main:app --reload --app-dir api
 ```
 
@@ -86,7 +93,9 @@ api/.venv/bin/uvicorn app.main:app --reload --app-dir api
 
 ## 安全边界
 
-- 只接受 `schemaVersion` 为 1–3 的对象，超过 8 MB 直接 413；
+- 接受 `schemaVersion` 为整数 1–5 的对象，超过 8 MiB 返回 413；
+- 照片校验大小、内容哈希与账号归属，快照引用的外置照片必须已上传；
+- PostgreSQL 为快照上传和版本恢复锁定当前用户行，串行更新版本号；
 - 登录失败按「IP + 用户名」限流（默认每分钟 10 次）；
 - token 哈希入库，数据库泄露也拿不到可用会话；
 - nginx 只暴露 443，容器端口只绑 `127.0.0.1`；

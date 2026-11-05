@@ -14,7 +14,7 @@ struct CloudSyncView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    FrogCallout(text: "数据放在你自己的服务器", detail: "登录后整份日记会以快照形式上传，照片内嵌在快照里。")
+                    FrogCallout(text: "数据放在你自己的服务器", detail: "日记以快照保存，餐食与烟盒照片独立同步并校验完整性。")
                     if sync.isLoggedIn { accountCard } else { loginForm }
                     if let error = sync.errorText ?? diary.loadError {
                         ErrorNotice(message: error).contentCard()
@@ -26,7 +26,7 @@ struct CloudSyncView: View {
                             .padding(16).background(Theme.softGreen, in: .rect(cornerRadius: 20))
                     }
                     if sync.isLoggedIn { versionsSection }
-                    Text("同步只与 xiaoshitanji.papaclaoud.top 通信；密码只用来换取令牌，令牌存在钥匙串。")
+                    Text("同步连接上方配置的服务器。密码用于登录，令牌保存在钥匙串。")
                         .font(.caption).foregroundStyle(Theme.mutedInk).lineSpacing(3).padding(.horizontal, 4)
                 }.padding(20)
             }
@@ -51,7 +51,7 @@ struct CloudSyncView: View {
                 }
                 Button("取消", role: .cancel) { confirmRestore = nil }
             } message: {
-                Text("这一步会把那一版的内容并进本机，不会删掉本机独有的记录。")
+                Text("历史内容、本机记录与云端最新记录会合并并上传。同一条记录使用本机值，恢复后的完整结果会同步到云端。")
             }
         }
     }
@@ -142,7 +142,7 @@ struct CloudSyncView: View {
             .buttonStyle(.borderedProminent).tint(Theme.accent).foregroundStyle(Theme.ink)
             .disabled(sync.phase != .idle)
             .accessibilityIdentifier("syncNow")
-            Text("冲突不会覆盖：云端有更新版本时会先合并两边记录，再上传。")
+            Text("云端有更新版本时先合并两边记录，再上传。同一条记录使用本机值，独有条目全部保留。")
                 .font(.caption).foregroundStyle(Theme.mutedInk).lineSpacing(3)
         }.contentCard()
     }

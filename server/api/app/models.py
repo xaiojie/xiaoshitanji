@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -29,6 +29,7 @@ class User(Base):
 
     tokens: Mapped[list["Token"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     snapshots: Mapped[list["Snapshot"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    photos: Mapped[list["Photo"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class Token(Base):
@@ -59,3 +60,15 @@ class Snapshot(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     user: Mapped[User] = relationship(back_populates="snapshots")
+
+
+class Photo(Base):
+    __tablename__ = "photos"
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_photo_owner_name"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(80))
+    checksum: Mapped[str] = mapped_column(String(64))
+    content: Mapped[bytes] = mapped_column(LargeBinary)
+    user: Mapped[User] = relationship(back_populates="photos")

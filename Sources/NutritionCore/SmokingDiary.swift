@@ -65,6 +65,9 @@ public struct CigarettePack: Identifiable, Codable, Equatable, Sendable {
 
     public func validate() throws {
         try product.validate()
+        if let photoFileName, !PhotoArchive.validName(photoFileName) {
+            throw DiaryError.invalidInput("烟包照片文件名无效。")
+        }
         guard openedAt.timeIntervalSinceReferenceDate.isFinite, (0...Self.capacity).contains(openingCount),
               (photoJPEG?.count ?? 0) <= 5_000_000 else {
             throw DiaryError.invalidInput("烟包余量需在0至20根之间，请检查照片和开包时间。")
@@ -135,12 +138,20 @@ public struct SmokingDiary: Codable, Equatable, Sendable {
         var changed = false
         for index in packs.indices where packs[index].photoJPEG != nil {
             guard let data = packs[index].photoJPEG else { continue }
-            let name = try PhotoArchive.save(data, name: PhotoArchive.packName(packs[index].id), in: directory)
+            let name = try PhotoArchive.save(data, name: PhotoArchive.transferName(for: data), in: directory)
             packs[index].photoFileName = name
             packs[index].photoJPEG = nil
             changed = true
         }
         return changed
+    }
+
+    mutating func transformPhotos(_ transform: (Data?, String?) throws -> (Data?, String?)) throws {
+        for index in packs.indices {
+            let photo = try transform(packs[index].photoJPEG, packs[index].photoFileName)
+            packs[index].photoJPEG = photo.0
+            packs[index].photoFileName = photo.1
+        }
     }
 
     public mutating func openPack(_ pack: CigarettePack) throws {

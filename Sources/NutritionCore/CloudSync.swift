@@ -24,6 +24,10 @@ public struct CloudSyncState: Codable, Sendable, Equatable {
         self.updatedAt = updatedAt
         self.checksum = checksum
     }
+
+    public func needsDownload(knownVersion: Int?, hasSynced: Bool) -> Bool {
+        version > 0 && (!hasSynced || knownVersion != version)
+    }
 }
 
 public struct CloudSyncSnapshot: Sendable {
@@ -114,7 +118,7 @@ public struct CloudSyncClient: Sendable {
 
     // MARK: - 请求构造
 
-    private func request(_ path: String, method: String, token: String? = nil) -> URLRequest {
+    func request(_ path: String, method: String, token: String? = nil) -> URLRequest {
         var request = URLRequest(url: baseURL.appending(path: path))
         request.httpMethod = method
         request.timeoutInterval = 30
@@ -125,7 +129,7 @@ public struct CloudSyncClient: Sendable {
         return request
     }
 
-    private func jsonRequest<T: Encodable>(_ path: String, method: String, token: String? = nil,
+    func jsonRequest<T: Encodable>(_ path: String, method: String, token: String? = nil,
                                            body: T) throws -> URLRequest {
         var request = request(path, method: method, token: token)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -191,8 +195,13 @@ public struct CloudSyncClient: Sendable {
     }
 
     public func makeSnapshotRequest(token: String, version: Int? = nil) -> URLRequest {
-        let path = version.map { "/v1/sync/snapshot?version=\($0)" } ?? "/v1/sync/snapshot"
-        return request(path, method: "GET", token: token)
+        var request = request("/v1/sync/snapshot", method: "GET", token: token)
+        if let version, let url = request.url,
+           var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
+            components.queryItems = [URLQueryItem(name: "version", value: String(version))]
+            request.url = components.url
+        }
+        return request
     }
 
     public func makeVersionsRequest(token: String) -> URLRequest {
@@ -218,13 +227,13 @@ public struct CloudSyncClient: Sendable {
 
     // MARK: - 解析
 
-    nonisolated(unsafe) static let encoder: JSONEncoder = {
+    static let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         return encoder
     }()
 
-    nonisolated(unsafe) static let decoder: JSONDecoder = {
+    static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
@@ -314,6 +323,7 @@ public struct CloudSyncClient: Sendable {
         try check(statusCode, data)
         do {
             let envelope = try decoder.decode(SnapshotEnvelope.self, from: data)
+            try envelope.payload.validate()
             return CloudSyncSnapshot(version: envelope.version, updatedAt: envelope.updatedAt,
                                      checksum: envelope.checksum, document: envelope.payload)
         } catch {
@@ -362,13 +372,18 @@ public struct CloudSyncClient: Sendable {
 
     // MARK: - 网络调用
 
-    private func send(_ request: URLRequest) async throws -> (Data, Int) {
+    func send(_ request: URLRequest) async throws -> (Data, Int) {
         do {
             let (data, response) = try await session.data(for: request)
+            try Task.checkCancellation()
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             return (data, status)
         } catch let error as CloudSyncError {
             throw error
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError()
         } catch {
             throw CloudSyncError.server("连不上同步服务器：\(error.localizedDescription)")
         }
@@ -398,15 +413,22 @@ public struct CloudSyncClient: Sendable {
         return try Self.parseState(data: data, statusCode: status)
     }
 
-    public func download(token: String, version: Int? = nil) async throws -> CloudSyncSnapshot {
+    public func download(token: String, version: Int? = nil, photosDirectory: URL? = nil) async throws -> CloudSyncSnapshot {
         let (data, status) = try await send(makeSnapshotRequest(token: token, version: version))
-        return try Self.parseSnapshot(data: data, statusCode: status)
+        let snapshot = try Self.parseSnapshot(data: data, statusCode: status)
+        if let photosDirectory {
+            try await downloadPhotos(for: snapshot.document, token: token, into: photosDirectory)
+        }
+        return snapshot
     }
 
     public func upload(token: String, baseVersion: Int, document: DiaryDocument,
-                       deviceName: String) async throws -> CloudSyncUploadResult {
+                       deviceName: String, photosDirectory: URL? = nil) async throws -> CloudSyncUploadResult {
+        let transfer = try await Task.detached { try document.photoTransfer(from: photosDirectory) }.value
+        try Task.checkCancellation()
+        try await uploadPhotos(transfer.photos, token: token)
         let request = try makeUploadRequest(token: token, baseVersion: baseVersion,
-                                            document: document, deviceName: deviceName)
+                                            document: transfer.document, deviceName: deviceName)
         let (data, status) = try await send(request)
         return try Self.parseUpload(data: data, statusCode: status)
     }
@@ -427,13 +449,17 @@ public struct CloudSyncClient: Sendable {
 extension DiaryDocument {
     /// 把云端文档并进本机文档：按 id 取并集，重复时保留本机那份。
     ///
-    /// 只做保守合并：本机偏好（profile、energy）优先，其余条目取并集后按时间排序。
+    /// 本机已有偏好优先，初始空档案从云端继承，其余条目取并集后按时间排序。
     public func merged(with remote: DiaryDocument) throws -> DiaryDocument {
+        try validate()
+        try remote.validate()
         var result = self
         result.schemaVersion = DiaryDocument.currentSchemaVersion
         result.records = Self.union(records, remote.records).sorted { $0.date < $1.date }
         result.reviews = Self.union(reviews, remote.reviews)
         result.weights = Self.union(weights, remote.weights).sorted { $0.date < $1.date }
+        result.workouts = Self.union(workouts, remote.workouts).sorted { $0.date < $1.date }
+        result.plans = Self.union(plans, remote.plans).sorted { $0.lastUsedAt > $1.lastUsedAt }
         result.wellnessReviews = Self.union(wellnessReviews, remote.wellnessReviews)
         result.templates = Self.union(templates, remote.templates)
             .sorted { $0.lastUsedAt > $1.lastUsedAt }
@@ -442,6 +468,7 @@ extension DiaryDocument {
         var smoking = self.smoking
         smoking.merge(remote.smoking)
         result.smoking = smoking
+        if result.profile == HealthProfile() { result.profile = remote.profile }
         if result.energy == nil { result.energy = remote.energy }
         try result.validate()
         return result

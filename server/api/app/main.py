@@ -2,17 +2,19 @@
 
 import hashlib
 import json
+import re
 from datetime import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from .config import Settings, settings as default_settings
 from .db import Database, get_session
-from .models import Snapshot, Token, User, utcnow
+from .models import Photo, Snapshot, Token, User, utcnow
 from .security import (
     AttemptLimiter,
     client_key,
@@ -43,6 +45,38 @@ class SnapshotUpload(BaseModel):
     baseVersion: int = Field(ge=0)
     payload: dict
     deviceName: str = Field(default="", max_length=64)
+
+
+class PhotoLookup(BaseModel):
+    names: list[str] = Field(max_length=250)
+
+
+PHOTO_LIMIT = 5_000_000
+PHOTO_NAME = re.compile(r"photo-([0-9a-f]{64})\.jpg")
+
+
+def photo_checksum(name: str) -> str:
+    match = PHOTO_NAME.fullmatch(name)
+    if match is None:
+        raise HTTPException(status_code=422, detail="照片文件名无效，请更新 App 后重试。")
+    return match.group(1)
+
+
+def referenced_photos(payload: dict) -> set[str]:
+    records = payload.get("records", [])
+    smoking = payload.get("smoking", {})
+    packs = smoking.get("packs", []) if isinstance(smoking, dict) else []
+    names = set()
+    for item in (records if isinstance(records, list) else []) + (packs if isinstance(packs, list) else []):
+        if not isinstance(item, dict) or item.get("photoJPEG") is not None:
+            continue
+        name = item.get("photoFileName")
+        if name is not None:
+            if not isinstance(name, str):
+                raise HTTPException(status_code=422, detail="照片文件名无效。")
+            photo_checksum(name)
+            names.add(name)
+    return names
 
 
 class UserOut(BaseModel):
@@ -87,7 +121,7 @@ def validate_payload(payload: dict, limit: int) -> bytes:
     if not isinstance(payload, dict) or "schemaVersion" not in payload:
         raise HTTPException(status_code=422, detail="快照必须是包含 schemaVersion 的日记对象。")
     schema_version = payload.get("schemaVersion")
-    if not isinstance(schema_version, int) or not 1 <= schema_version <= 3:
+    if type(schema_version) is not int or not 1 <= schema_version <= 5:
         raise HTTPException(status_code=422, detail="不支持的日记版本。")
     raw = payload_bytes(payload)
     if len(raw) > limit:
@@ -103,7 +137,7 @@ async def lifespan(app: FastAPI):
 
 def create_app(app_settings: Settings | None = None) -> FastAPI:
     config = app_settings or default_settings
-    app = FastAPI(title="小食痰记同步服务", version="1.0.0", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app = FastAPI(title="小食痰记同步服务", version="1.0.1", docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.settings = config
     app.state.database = Database(config.database_url)
     app.state.limiter = AttemptLimiter(config.auth_attempts_per_minute)
@@ -118,7 +152,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
 
     @app.get("/healthz")
     async def healthz() -> dict:
-        return {"status": "ok"}
+        return {"status": "ok", "schemaVersion": 5, "photoTransferVersion": 1}
 
     async def issue_token(session: AsyncSession, user: User, device_name: str) -> tuple[str, Token]:
         raw = new_token()
@@ -206,6 +240,52 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
             return SyncState(version=user.current_version, updatedAt=user.updated_at, checksum=None)
         return SyncState(version=latest.version, updatedAt=latest.created_at, checksum=latest.checksum)
 
+    @app.post("/v1/sync/photos/missing")
+    async def missing_photos(body: PhotoLookup, user: User = Depends(current_user),
+                             session: AsyncSession = Depends(get_session)) -> dict:
+        names = list(dict.fromkeys(body.names))
+        for name in names:
+            photo_checksum(name)
+        found = set((await session.scalars(select(Photo.name).where(
+            Photo.user_id == user.id, Photo.name.in_(names)
+        ))).all())
+        return {"missing": [name for name in names if name not in found]}
+
+    @app.put("/v1/sync/photos/{name}")
+    async def put_photo(name: str, request: Request, user: User = Depends(current_user),
+                        session: AsyncSession = Depends(get_session)) -> JSONResponse:
+        owner_id = user.id
+        digest = photo_checksum(name)
+        content = bytearray()
+        async for chunk in request.stream():
+            content.extend(chunk)
+            if len(content) > PHOTO_LIMIT:
+                raise HTTPException(status_code=413, detail="单张照片不能超过5 MB。")
+        if not content or hashlib.sha256(content).hexdigest() != digest:
+            raise HTTPException(status_code=422, detail="照片校验失败，请重新上传。")
+        existing = await session.scalar(select(Photo.id).where(Photo.user_id == owner_id, Photo.name == name))
+        if existing is not None:
+            return JSONResponse(status_code=200, content={"name": name, "checksum": digest})
+        session.add(Photo(user_id=owner_id, name=name, checksum=digest, content=bytes(content)))
+        try:
+            await session.commit()
+        except IntegrityError:
+            await session.rollback()
+            existing = await session.scalar(select(Photo.id).where(Photo.user_id == owner_id, Photo.name == name))
+            if existing is None:
+                raise
+            return JSONResponse(status_code=200, content={"name": name, "checksum": digest})
+        return JSONResponse(status_code=201, content={"name": name, "checksum": digest})
+
+    @app.get("/v1/sync/photos/{name}")
+    async def get_photo(name: str, user: User = Depends(current_user),
+                        session: AsyncSession = Depends(get_session)) -> Response:
+        photo_checksum(name)
+        photo = await session.scalar(select(Photo).where(Photo.user_id == user.id, Photo.name == name))
+        if photo is None:
+            raise HTTPException(status_code=404, detail="找不到这张照片。")
+        return Response(content=photo.content, media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
+
     @app.get("/v1/sync/state", response_model=SyncState)
     async def sync_state(
         user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
@@ -240,6 +320,15 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
         session: AsyncSession = Depends(get_session),
     ) -> JSONResponse:
         raw = validate_payload(body.payload, config.max_payload_bytes)
+        names = referenced_photos(body.payload)
+        if names:
+            found = set((await session.scalars(select(Photo.name).where(
+                Photo.user_id == user.id, Photo.name.in_(names)
+            ))).all())
+            if found != names:
+                raise HTTPException(status_code=422, detail="快照引用的照片尚未上传，请重新同步。")
+        user = await session.scalar(select(User).where(User.id == user.id).with_for_update()
+                                    .execution_options(populate_existing=True))
         current = user.current_version
         if body.baseVersion != current:
             latest = await state_of(session, user)
@@ -307,6 +396,8 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
         user: User = Depends(current_user),
         session: AsyncSession = Depends(get_session),
     ) -> JSONResponse:
+        user = await session.scalar(select(User).where(User.id == user.id).with_for_update()
+                                    .execution_options(populate_existing=True))
         source = await session.scalar(
             select(Snapshot).where(Snapshot.user_id == user.id, Snapshot.version == version)
         )

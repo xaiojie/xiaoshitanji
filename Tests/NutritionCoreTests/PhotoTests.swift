@@ -40,7 +40,7 @@ struct PhotoTests {
         #expect(try document.externalizePhotos(in: dir) == true)
         let record = document.records[0]
         #expect(record.photoJPEG == nil)
-        #expect(record.photoFileName == PhotoArchive.recordName(record.id))
+        #expect(record.photoFileName == PhotoArchive.transferName(for: photo))
         #expect(PhotoArchive.load(name: record.photoFileName!, in: dir) == photo)
         #expect(try document.externalizePhotos(in: dir) == false)
     }
@@ -56,7 +56,7 @@ struct PhotoTests {
         #expect(try document.externalizePhotos(in: dir) == true)
         let migrated = document.smoking.packs[0]
         #expect(migrated.photoJPEG == nil)
-        #expect(migrated.photoFileName == PhotoArchive.packName(pack.id))
+        #expect(migrated.photoFileName == PhotoArchive.transferName(for: Data(repeating: 9, count: 32)))
         #expect(PhotoArchive.load(name: migrated.photoFileName!, in: dir)?.count == 32)
     }
 

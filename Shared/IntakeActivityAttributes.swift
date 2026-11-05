@@ -1,8 +1,8 @@
 import ActivityKit
 import Foundation
 
-public struct IntakeActivityAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
+public struct IntakeActivityAttributes: ActivityAttributes, Sendable {
+    public struct ContentState: Codable, Hashable, Sendable {
         public var calories: Double
         public var targetCalories: Double?
         public var mealCount: Int

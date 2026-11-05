@@ -24,14 +24,26 @@ struct FoodDiaryApp: App {
             .environment(diary)
             .environment(health)
             .environment(\.locale, Locale(identifier: "zh_CN"))
+            .onAppear {
+                #if DEBUG
+                // 真机截图与演示时可显式指定起始页面。
+                let arguments = ProcessInfo.processInfo.arguments
+                if let index = arguments.firstIndex(of: "-tab"), index + 1 < arguments.count,
+                   let tab = AppTab(rawValue: arguments[index + 1]) {
+                    selectedTab = tab
+                }
+                #endif
+            }
             .task {
                 await health.refresh()
-                if autoBackup { BackupService.backupIfNeeded(diary.document) }
+                if autoBackup { await BackupService.backupIfNeeded(diary.document) }
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
-                    Task { await health.refresh() }
-                    if autoBackup { BackupService.backupIfNeeded(diary.document) }
+                    Task {
+                        await health.refresh()
+                        if autoBackup { await BackupService.backupIfNeeded(diary.document) }
+                    }
                 }
             }
         }

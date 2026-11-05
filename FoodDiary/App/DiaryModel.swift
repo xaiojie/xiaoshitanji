@@ -5,7 +5,10 @@ import NutritionCore
 @MainActor
 @Observable
 final class DiaryModel {
-    private(set) var document = DiaryDocument()
+    private(set) var document = DiaryDocument() {
+        didSet { revision = UUID() }
+    }
+    @ObservationIgnored private(set) var revision = UUID()
     private(set) var loadError: String?
     @ObservationIgnored private let store: DiaryStore
 
@@ -64,7 +67,7 @@ final class DiaryModel {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var record = record
         if let data = record.photoJPEG {
-            record.photoFileName = try PhotoArchive.save(data, name: PhotoArchive.recordName(record.id),
+            record.photoFileName = try PhotoArchive.save(data, name: PhotoArchive.transferName(for: data),
                                                          in: photosDirectory)
             record.photoJPEG = nil
         }
@@ -216,6 +219,22 @@ final class DiaryModel {
         try commit(next)
     }
 
+    func restoreBackup(_ document: DiaryDocument) throws {
+        var next = document
+        next.schemaVersion = DiaryDocument.currentSchemaVersion
+        _ = try next.externalizePhotos(in: photosDirectory)
+        try next.validate()
+        if loadError != nil {
+            let recovery = BackupService.directory.appending(path: "Recovery-\(UUID())")
+            try store.restore(next, preservingExistingIn: recovery)
+            self.document = next
+            loadError = nil
+            publishWidgetSnapshot()
+        } else {
+            try commit(next)
+        }
+    }
+
     func saveWeight(_ weight: WeightRecord) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
@@ -233,7 +252,7 @@ final class DiaryModel {
     func openSmokingPack(_ pack: CigarettePack) throws {
         var pack = pack
         if let data = pack.photoJPEG {
-            pack.photoFileName = try PhotoArchive.save(data, name: PhotoArchive.packName(pack.id),
+            pack.photoFileName = try PhotoArchive.save(data, name: PhotoArchive.transferName(for: data),
                                                        in: photosDirectory)
             pack.photoJPEG = nil
         }
@@ -251,7 +270,7 @@ final class DiaryModel {
     func updateSmokingPack(_ pack: CigarettePack) throws {
         var pack = pack
         if let data = pack.photoJPEG {
-            pack.photoFileName = try PhotoArchive.save(data, name: PhotoArchive.packName(pack.id),
+            pack.photoFileName = try PhotoArchive.save(data, name: PhotoArchive.transferName(for: data),
                                                        in: photosDirectory)
             pack.photoJPEG = nil
         }

@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.16.0-yellow" alt="version" />
-  <img src="https://img.shields.io/badge/tests-181%20passed-brightgreen" alt="tests" />
+  <img src="https://img.shields.io/badge/version-1.0.1%20(31)-yellow" alt="version" />
+  <img src="https://img.shields.io/badge/tests-205%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -57,7 +57,7 @@
 - **戒烟**：烟包库存、抽一根/分烟/余量校准、尼古丁与花费的按日汇总，烟盒也能拍照识别；
 - **身体**：昵称、头像、身高、体重、BMI，以及只读的 Apple 健康数据（活动、睡眠、心率、有氧适能、耳机音量、体能训练、体重、身高）。
 
-它不联网同步、没有账号体系、不接第三方统计，所有记录就是本地一个 JSON 文件。
+应用以本机 JSON 与 Photos 目录保存记录，支持可选的账号登录、云端同步和完整备份导出。
 
 | 维度 | 说明 |
 | --- | --- |
@@ -65,7 +65,7 @@
 | 语言 | 简体中文界面 |
 | 视觉 | 浅色黄色主题 + 原生 Liquid Glass，奶蛙吉祥物 |
 | 依赖 | 零第三方依赖，仅系统框架 |
-| 网络 | 仅在你点击分析时直连 `api.deepseek.com` |
+| 网络 | AI 分析直连 DeepSeek，启用云同步后连接所配置的同步服务器 |
 
 ---
 
@@ -141,9 +141,10 @@
 ### 云端同步
 
 - **自己的服务器**：默认连 `https://xiaoshitanji.papaclaoud.top`（作者自建，域名可在界面里改成你自己的），FastAPI + PostgreSQL，密码用 Argon2id 存哈希，令牌存本机钥匙串；
-- **整份快照**：登录后把整份日记作为一版快照上传，服务端保留最近 20 版，可列出、可恢复任意一版（恢复会合并进本机，不删本机独有记录）；
-- **冲突自动合并**：上传带基线版本；云端有更新版本时先下载，按 id 取并集（本地重复项优先），合并后再上传，不会用旧数据覆盖新数据；
-- **大小护栏**：单次快照上限 8 MB，超过会提示先清理内嵌照片；
+- **整份快照**：日记元数据作为一版快照上传，服务端支持 schema 1–5、保留最近 20 版，可列出和恢复历史版本；
+- **独立照片**：餐食与烟盒照片先按 SHA-256 内容名上传，同一账号去重，快照只引用已上传照片。下载并校验全部照片后才合并本机记录，失败时可重试；
+- **冲突自动合并**：首次同步及旧账号基线升级先拉取云端已有记录，初始空白资料继承云端档案，版本冲突最多重试 3 次。餐食、体重、抽烟、训练与计划按 id 取并集，同 id 保留本机值。恢复历史版本也使用该合并规则，本机删除的条目可能从云端重新出现；
+- **大小护栏**：元数据快照上限 8 MiB，单张照片上限 5,000,000 字节，照片分批查询、逐张传输；
 - **密码与账号**：用户名 3–32 位小写字母/数字/`_`/`.`/`-`，密码 8–128 位；同一账号可登录多台设备，改密码会吊销其他设备的令牌。
 
 ### 训练记录
@@ -189,9 +190,9 @@
 
 ### 本机备份与导出
 
-- **每天一份备份**：每天第一次打开 App 时把当前日记写到 `FoodDiary/Backups/diary-YYYY-MM-DD.json`，保留最近 14 份，可在通用设置里关掉；
+- **每天一份备份**：每天首次打开时把日记及餐食、烟盒照片写入自包含 JSON，后台执行。日备份和恢复前保护副本共保留 14 份，可在通用设置里关闭自动备份；
 - **CSV 导出**：餐次、体重、抽烟三张表一次导出（UTF-8、逗号转义、CRLF），直接丢进 Excel 或 Numbers；
-- **JSON 导出**：整份日记原样导出，用于迁移或排查。
+- **JSON 导出与恢复**：通用设置可导出包含照片的完整 JSON，也可导入备份。确认恢复后替换本机记录，恢复前保存当前数据及照片，旧版数字日期与外置照片备份在原照片仍存在时可读取。
 
 ## 快速开始
 
@@ -276,7 +277,7 @@ Shared/                         App 与扩展共用：小组件快照、实时�
 
 FoodDiary.xcodeproj/            iPhone 原生工程（自动签名、HealthKit + App Group）
 Sources/NutritionCore/          纯逻辑 Swift Package，无 UIKit 依赖
-Tests/NutritionCoreTests/       174 个 Swift Testing 用例
+Tests/NutritionCoreTests/       Swift Testing 回归测试与可选演示数据工具
 docs/superpowers/               设计规格（specs）与实施计划（plans）
 work/                           本地构建与验证记录（Git 忽略）
 ```
@@ -334,7 +335,7 @@ flowchart LR
 
 ## 数据与隐私
 
-所有记录在 App Documents 下的**一个文件**里：`FoodDiary/diary.json`；照片单独放在 `FoodDiary/Photos/`，文档里只存文件名（`record-<id>.jpg` / `pack-<id>.jpg`），旧文件里的 base64 首次启动会自动迁移成文件。
+记录元数据保存在 App Documents 的 `FoodDiary/diary.json`，照片放在 `FoodDiary/Photos/`。新照片采用 `photo-<SHA256>.jpg` 内容名，替换图片会生成新文件，历史快照保留原图。旧 `record-<id>.jpg`、`pack-<id>.jpg` 引用仍可读取，内嵌 base64 会自动迁出。
 
 | 字段 | 内容 |
 | --- | --- |
@@ -351,7 +352,7 @@ flowchart LR
 | `templates` | 常吃组合（整餐食物、使用次数、最近使用时间） |
 | `energy` | 能量目标设置（性别、出生年、活动水平、减脂/维持/增肌、每周速度、校准值） |
 
-本机备份写在 `FoodDiary/Backups/`，每天一份、保留 14 份，格式与主文件一致；CSV 导出只含餐次、体重和抽烟三类记录，不带照片。
+本机备份写在 `FoodDiary/Backups/`，完整 JSON 内嵌餐食与烟盒照片，可脱离原 Photos 目录恢复。原始 `diary.json` 需与 Photos 一起保存。旧备份缺失的原照片需从原设备补回。CSV 导出包含餐次、体重和抽烟三类记录。
 
 同步令牌与账号信息**不在**这个文件里，存在 Keychain（服务 `com.jay.fooddiary.sync`）。
 
@@ -374,10 +375,14 @@ flowchart LR
 
 ```sh
 swift test
-# Test run with 103 tests in 11 suites passed
+# 206 tests in 26 suites，205 passed，1 skipped
+Tests/AppRegression/run-sync-model.sh
+# 恢复合并与冲突重试、旧账号基线迁移，两项 PASS
+cd server && api/.venv/bin/python -m pytest -q
+# 42 passed
 ```
 
-覆盖 12 个 suite，跑在 macOS 上（不需要模拟器）：
+Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列出主要测试组，照片传输测试通过 URLSession 实际客户端验证请求顺序与失败保护。
 
 | Suite | 覆盖内容 |
 | --- | --- |
@@ -401,6 +406,8 @@ swift test
 | `MilestoneTests` | 连续/最长天数、断档归零、昨天宽限、里程碑阈值解锁、戒烟天数与空文档 |
 | `BackupTests` | 同一天只写一份、按保留数量裁剪、还原往返、坏文件拒绝 |
 | `CloudSyncTests` | 服务器地址规范化、账号密码本地校验、请求构造与 Bearer 头、登录/状态/快照/上传/版本解析、409 与 413 分支、8 MB 上限、冲突合并的并集与本机优先、吸烟合并 |
+| `SyncIntegrityTests` | 训练与计划合并、照片内容名与去重、完整备份、旧数字日期、同日旧备份升级、恢复点保留、损坏原文件保护 |
+| `CloudPhotoSyncTests` | 先照片后快照、重试去重、上传失败阻止快照发布、下载哈希校验与重试、拒绝无关照片清单 |
 
 界面布局、相机、键盘、健康授权和真实联网调用依赖真机，不在自动化测试范围内。
 
@@ -414,16 +421,16 @@ swift test
 | Deployment Target | iOS 26.0 |
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
-| Capabilities | HealthKit（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 0.16.0，构建号 27 |
+| Capabilities | HealthKit、App Group（`FoodDiary/FoodDiary.entitlements`） |
+| 版本 | 1.0.1，构建号 31，App 与小组件一致 |
 
-Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完成授权弹窗。
+2026-11-05 已验证 Debug / Release iPhone 签名构建通过，最终日志无编译警告。主程序与内嵌小组件均通过严格签名校验，App Group 与主程序 HealthKit 权限有效。使用 Apple 健康需要在真机上完成授权。
 
 ---
 
 ## 项目状态与路线图
 
-**当前版本 0.16.1「健康全景版」**，已经完成：MVP → AI 优先改版 → 营养标签与戒烟 → 个人健康主页 → 黄色奶蛙视觉 → 子页面统一与汇总分析 → 手动录入与常吃组合 → 能量目标与今日剩余 → 本地模式识别与带依据的自由追问 → 自建服务器云端同步与版本恢复 → 本机备份、CSV 导出与成果里程碑 → 每日提醒与训练记录 → 照片外置、抽烟累计、统一趋势与训练消耗联动 → 睡眠、心率、有氧适能、耳机音量与体能训练接入。
+**当前源码版本 1.0.1（31）**，本轮修复 schema 5 服务端兼容、独立照片同步、完整备份恢复、训练与计划合并、首次拉取与冲突重试，并整理编译警告与截图工具。
 
 | 状态 | 事项 |
 | --- | --- |
@@ -432,10 +439,11 @@ Debug / Release 均可构建并签名；使用 Apple 健康需要在真机上完
 | ✅ 已实现 | 「蛙的观察」：五种本地模式识别（蛋白、抽烟时段、断档、体重停滞、热量超标）+ 只发聚合数值的追问，回答标注依据与「基于旧数据」 |
 | ✅ 已实现 | 「我的」跨饮食、抽烟、运动与身体的 AI 汇总分析。默认近7天，可切换30天和全部记录，预览并确认后发送，按范围保留最新报告 |
 | ✅ 已实现 | 健康全景：睡眠、心率 / 静息心率 / HRV、有氧适能、耳机音量与 Apple 健康体能训练接入趋势与 AI 分析，缺失数据明确标为缺口 |
-| ✅ 已实现 | 云端同步：登录自建服务、整份快照上传/下载、版本历史与恢复、冲突并集合并、8 MB 上限；服务端 24 个接口测试全绿 |
-| ⏳ 用户自测 | 0.7.0 待安装；子页面、相机、键盘和实际 AI 效果按用户选择由其真机测试，视觉验收记录待补 |
-| ✅ 已实现 | 七条主线全部落地（见 [`docs/backlog.md`](docs/backlog.md)）：记录闭环、能量闭环、AI 分析层、云同步、系统集成、运动模块、成果感 |
-| 🧪 测试版 | 0.16.1 已上 TestFlight：小组件、灵动岛、健康全景 |
+| ✅ 已实现 | 云端同步与自包含备份恢复，205 项 Swift 测试通过、1 项演示工具跳过，42 项服务端测试通过 |
+| ✅ 线上验证 | 2026-11-05 已部署兼容修复，公共 HTTPS 照片往返、账号隔离、并发冲突、去重与历史恢复通过，临时账号已清理 |
+| ⏳ 真机验收 | 本轮已完成 iPhone 签名构建。当前设备不可用，安装、相机、键盘与两台实体设备同步验收等待连接 |
+| ✅ 已实现 | 七条主线的首版能力见 [`docs/backlog.md`](docs/backlog.md) 的进度，扩展需求保留在后续规划表 |
+| 🧪 TestFlight 核验 | 2026-11-05 查询 App Store Connect，1.0（29）与 0.16.0（27）均处理为 VALID，内部状态 READY_FOR_BETA_TESTING，外部状态 READY_FOR_BETA_SUBMISSION。本轮 1.0.1（31）尚未上传，测试组实际分发状态待确认 |
 
 > 设计验收记录见 [`design-qa.md`](design-qa.md)，后续开发清单见 [`docs/backlog.md`](docs/backlog.md)。
 
