@@ -14,24 +14,36 @@ public struct DeepSeekClient: Sendable {
 
     public init(session: URLSession = .shared) { self.session = session }
 
+    /// 一次最多几张照片：包装正面、营养成分表、剩下的食物。
+    public static let maxPhotos = 3
+
     public static func makeRequest(text: String, imageJPEG: Data?, mode: FoodAnalysisMode = .automatic) throws -> URLRequest {
+        try makeRequest(text: text, images: imageJPEG.map { [$0] } ?? [], mode: mode)
+    }
+
+    /// 多张照片一起送：正面看净含量、背面看营养表，模型自己合并。
+    public static func makeRequest(text: String, images: [Data], mode: FoodAnalysisMode = .automatic) throws -> URLRequest {
         let description = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !description.isEmpty || imageJPEG?.isEmpty == false else {
+        let photos = images.filter { !$0.isEmpty }
+        guard !description.isEmpty || !photos.isEmpty else {
             throw DiaryError.invalidInput("请描述吃了什么，或选择一张食物照片。")
         }
         guard description.count <= 10_000 else {
             throw DiaryError.invalidInput("请将这一餐的描述控制在 10,000 字以内。")
         }
-        guard (imageJPEG?.count ?? 0) <= 5_000_000 else {
+        guard photos.count <= maxPhotos else {
+            throw DiaryError.invalidInput("一次最多 \(maxPhotos) 张照片，请去掉多余的再分析。")
+        }
+        guard photos.allSatisfy({ $0.count <= 5_000_000 }) else {
             throw DiaryError.invalidInput("照片较大，请重新选择或拍摄一张照片。")
         }
         var parts: [[String: Any]] = [
             ["type": "text", "text": description.isEmpty ? "请估算照片中实际可食用的食物和份量。" : description]
         ]
-        if let imageJPEG, !imageJPEG.isEmpty {
+        for photo in photos {
             parts.append([
                 "type": "image_url",
-                "image_url": ["url": "data:image/jpeg;base64,\(imageJPEG.base64EncodedString())", "detail": "auto"]
+                "image_url": ["url": "data:image/jpeg;base64,\(photo.base64EncodedString())", "detail": "auto"]
             ])
         }
         return try buildRequest(parts: parts, prompt: systemPrompt + "\n" + mode.instruction)
@@ -89,10 +101,14 @@ public struct DeepSeekClient: Sendable {
         return request
     }
 
-    public func analyze(text: String, imageJPEG: Data?, mode: FoodAnalysisMode = .automatic) async throws -> FoodEstimate {
-        let request = try Self.makeRequest(text: text, imageJPEG: imageJPEG, mode: mode)
+    public func analyze(text: String, images: [Data], mode: FoodAnalysisMode = .automatic) async throws -> FoodEstimate {
+        let request = try Self.makeRequest(text: text, images: images, mode: mode)
         let (data, status) = try await complete(request)
         return try Self.parseResponse(data: data, statusCode: status)
+    }
+
+    public func analyze(text: String, imageJPEG: Data?, mode: FoodAnalysisMode = .automatic) async throws -> FoodEstimate {
+        try await analyze(text: text, images: imageJPEG.map { [$0] } ?? [], mode: mode)
     }
 
     public func refine(record: MealRecord, instruction: String) async throws -> FoodEstimate {
@@ -225,7 +241,11 @@ public struct DeepSeekClient: Sendable {
     标签完整可读时返回 nutritionLabel，包含 basisAmount、unit(g/mL/serving/package)、energy、energyUnit(kJ/kcal)、protein、carbohydrates、fat、consumedAmount、portionIsEstimated。
     能量保留原标注单位，由本地计算 kJ ÷ 4.184 为千卡。标签基准是每100克、每100毫升或每份/每包，consumedAmount必须与unit一致。
     用户吃半包但标签每100克时，根据可见净含量换算吃下的克数。每份/每包标签则可以使用份/包为单位。
-    净含量或食用量缺失时按自然描述估算，portionIsEstimated为true并说明依据。默认未说明时按一份，说明假设。
+    净含量或食用量缺失时按自然描述估算，portionIsEstimated为true并说明依据。
+    份量默认按「整份」算：用户没有说吃剩、照片也没显示剩一半时，按整碗/整包/整瓶全部吃完估算，不要默认半份或小份。
+    汤类、汤面和带汤的粉默认「固体吃完、汤不喝或只喝一点」，能量按整份的约90%计，在 assumptions 第一条写明「汤没喝完，按约90%计」。
+    标签只标每100克、图片里又看不到净含量时，按该品类常见包装净含量估算整份（例如桶装方便面100–140克、瓶装饮料500–600毫升、小盒牛奶200–250毫升），在 assumptions 写明用的是常见包装量，portionIsEstimated为true。
+    用户一次给多张照片（包装正面、营养成分表、剩下的食物）时合并读取：净含量和每100克营养都要用上，consumedAmount用整份净含量；几张图互相矛盾时以营养成分表为准并在 assumptions 说明。
     读不清、缺少必要营养项、无法判断单位时nutritionLabel为null，说明缺失并提示补拍，只有普通估算可使用per100g。
     标签仅为AI读取，可能误读。不得虚构已准确识别。保留用户确认的标签数值，修正未涉及的食物时保留其nutritionLabel。
     不要求用户称重，不让用户提供每100克的营养数据。

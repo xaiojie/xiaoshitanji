@@ -70,6 +70,25 @@ async def test_invalid_or_unbounded_contract_never_reaches_provider(client, ai, 
     assert not ai
 
 
+def photos(count):
+    parts = [{"type": "text", "text": "整桶都吃了"}]
+    for _ in range(count):
+        parts.append({"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9j/2Q=="}})
+    return {"messages": [{"role": "system", "content": "分析食物，输出 JSON"},
+                         {"role": "user", "content": parts}], "response_format": {"type": "json_object"}}
+
+
+@pytest.mark.parametrize("count", [1, 2, 3])
+async def test_up_to_three_photos_reach_the_provider(client, app, ai, count):
+    assert (await client.post("/v1/ai/completions", json=photos(count))).status_code == 200
+    assert len(json.loads(ai[-1].content)["messages"][1]["content"]) == count + 1
+
+
+async def test_a_fourth_photo_is_rejected_before_the_provider(client, ai):
+    assert (await client.post("/v1/ai/completions", json=photos(4))).status_code == 422
+    assert not ai
+
+
 async def test_daily_quota_is_persistent_and_atomic(client, app, ai):
     responses = await asyncio.gather(*(client.post("/v1/ai/completions", json=body()) for _ in range(5)))
     assert sorted(r.status_code for r in responses) == [200, 200, 429, 429, 429]

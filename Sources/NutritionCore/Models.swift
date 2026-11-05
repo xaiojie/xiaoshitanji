@@ -274,6 +274,16 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
         }
     }
 
+    /// 加了或删了照片之后，旧的识别结果就作废：清掉食物但保留输入文字。
+    public mutating func clearEstimate() {
+        foods = []
+        source = .manual
+        model = nil
+        summary = ""
+        assumptions = []
+        adjustments = nil
+    }
+
     public mutating func addFood(_ food: FoodItem) throws {
         guard foods.count < 50 else { throw DiaryError.invalidInput("每餐最多记录 50 种食物。") }
         guard !foods.contains(where: { $0.id == food.id }) else {

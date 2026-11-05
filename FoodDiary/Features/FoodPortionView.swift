@@ -30,6 +30,36 @@ struct FoodPortionView: View {
 
                     if let label = food.nutritionLabel { NutritionLabelCard(label: label) }
 
+                    if !sizeSuggestions.isEmpty || PackagedSizes.isSoupy(food.name) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            Label("按整包记更准", systemImage: "shippingbox").font(.headline)
+                            Text("标签只写每 \(Theme.number(labelBasis, decimals: 2)) \(labelUnit) 的营养时，整包的量要自己选。选完热量会一起重算。")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            if !sizeSuggestions.isEmpty {
+                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                                    ForEach(sizeSuggestions) { size in
+                                        Button(size.title) { apply(size) }
+                                            .font(.subheadline.weight(.medium))
+                                            .buttonStyle(.glass)
+                                            .accessibilityIdentifier("packageSize\(Int(size.amount))")
+                                    }
+                                }
+                            }
+                            if PackagedSizes.isSoupy(food.name) {
+                                Button("汤没喝，按 90% 算", systemImage: "drop.triangle") {
+                                    do {
+                                        onUpdate(try food.scaledPortion(by: PackagedSizes.withoutSoupRatio, description: "汤没喝，按 90% 计"))
+                                        dismiss()
+                                    } catch { errorMessage = error.localizedDescription }
+                                }
+                                .font(.subheadline.weight(.medium))
+                                .buttonStyle(.glass)
+                                .accessibilityIdentifier("withoutSoup")
+                            }
+                        }
+                        .contentCard()
+                    }
+
                     VStack(alignment: .leading, spacing: 14) {
                         Text("实际吃了多少？").font(.headline)
                         Text("按上方当前份量调整，热量与营养会一起重算。")
@@ -94,6 +124,24 @@ struct FoodPortionView: View {
                 }
             }
         }
+    }
+
+    private var labelBasis: Double { food.nutritionLabel?.basisAmount ?? 100 }
+    private var labelUnit: String { food.nutritionLabel?.unit.title ?? "克" }
+
+    /// 只提供和标签计量单位一致的候选（克对克、毫升对毫升）。
+    private var sizeSuggestions: [PackageSizeSuggestion] {
+        guard let label = food.nutritionLabel else { return [] }
+        return PackagedSizes.suggestions(for: food.name).filter { $0.unit == label.unit }
+    }
+
+    private func apply(_ size: PackageSizeSuggestion) {
+        guard let label = food.nutritionLabel else { return }
+        var updated = food
+        updated.nutritionLabel = label.withConsumedAmount(size.amount)
+        if size.unit == .grams { updated.grams = size.amount }
+        onUpdate(updated)
+        dismiss()
     }
 
     private func portionButton(_ title: String, multiplier: Double, label: String) -> some View {

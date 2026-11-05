@@ -39,6 +39,32 @@ struct DeepSeekTests {
         }
     }
 
+    @Test func multiplePhotosTravelTogetherAndAreCappedAtThree() throws {
+        let request = try DeepSeekClient.makeRequest(text: "整桶都吃完了", images: [Data([1]), Data([2]), Data([3])])
+        let bodyData = try #require(request.httpBody)
+        let body = try #require(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
+        let messages = try #require(body["messages"] as? [[String: Any]])
+        let parts = try #require(messages.last?["content"] as? [[String: Any]])
+        #expect(parts.count == 4)
+        #expect(parts[0]["text"] as? String == "整桶都吃完了")
+        for (index, expected) in ["AQ==", "Ag==", "Aw=="].enumerated() {
+            let image = try #require(parts[index + 1]["image_url"] as? [String: String])
+            #expect(image["url"] == "data:image/jpeg;base64,\(expected)")
+        }
+        #expect(throws: DiaryError.self) {
+            try DeepSeekClient.makeRequest(text: "", images: [Data([1]), Data([2]), Data([3]), Data([4])])
+        }
+    }
+
+    @Test func promptDefaultsToTheWholePortionAndDiscountsSoup() throws {
+        let request = try DeepSeekClient.makeRequest(text: "", images: [Data([1])], mode: .label)
+        let text = String(decoding: try #require(request.httpBody), as: UTF8.self)
+        #expect(text.contains("整份"))
+        #expect(text.contains("90%"))
+        #expect(text.contains("常见包装净含量"))
+        #expect(text.contains("多张照片"))
+    }
+
     @Test func structuredEstimateBecomesEditableFood() throws {
         let result = try DeepSeekClient.parseResponse(data: envelope(validResult), statusCode: 200)
         #expect(result.foods.count == 1)

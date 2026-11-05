@@ -41,7 +41,8 @@ def validated_body(raw: bytes) -> dict:
         if set(user) != {"role", "content"} or user["role"] != "user":
             raise ValueError()
         parts = user["content"]
-        if not isinstance(parts, list) or not 1 <= len(parts) <= 2:
+        # 最多 3 张照片 + 1 段文字：包装正面、营养成分表、剩下的食物。
+        if not isinstance(parts, list) or not 1 <= len(parts) <= 4:
             raise ValueError()
         images = 0
         for part in parts:
@@ -66,7 +67,7 @@ def validated_body(raw: bytes) -> dict:
                     raise ValueError()
             else:
                 raise ValueError()
-        if images > 1:
+        if images > 3:
             raise ValueError()
         return body
     except (ValueError, TypeError, KeyError, AttributeError, binascii.Error):

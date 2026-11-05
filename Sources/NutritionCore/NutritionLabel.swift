@@ -14,7 +14,7 @@ public enum FoodAnalysisMode: String, Codable, CaseIterable, Sendable, Identifia
         switch self {
         case .automatic: "自动判断照片是营养成分表还是实际餐食，可读营养标签优先。"
         case .meal: "本次重点分析碗装餐食，根据具体食物、碗形与盛装程度估算实际吃下的份量。"
-        case .label: "本次优先读取商品营养标签，明确标签基准与食用量，无法读清时说明并提示补拍。"
+        case .label: "本次优先读取商品营养标签，明确标签基准与食用量；如果标签只有每100克，就同时找包装上的净含量，读不到净含量时按该品类常见包装量估算整份并说明；无法读清时说明并提示补拍。"
         }
     }
 }
@@ -63,6 +63,14 @@ public struct NutritionLabel: Codable, Equatable, Sendable {
         let calories = energyUnit == .kilojoules ? energy / 4.184 : energy
         return Nutrition(calories: calories, protein: protein, carbohydrates: carbohydrates, fat: fat)
             .scaled(by: consumedAmount / basisAmount)
+    }
+
+    /// 用户手动指定「整包 / 整桶」的食用量：份量不再是估的。
+    public func withConsumedAmount(_ amount: Double) -> NutritionLabel {
+        var copy = self
+        copy.consumedAmount = amount
+        copy.portionIsEstimated = false
+        return copy
     }
 
     public func validate() throws {

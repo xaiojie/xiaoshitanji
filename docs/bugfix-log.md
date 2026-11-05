@@ -237,6 +237,19 @@
 - **验证**：按用户要求先提交、暂未跑 `swift test` / `xcodebuild`（只做了 `swiftc -parse` 语法检查），
   与另一批灵动岛改动一起进入 `34e044c`；构建与全量回归待统一执行。
 
+### 21. 一桶 140 克的方便面只算出 467 千卡，而且看不到「份量是估的」
+
+- **症状**：拍营养成分表记一桶香辣牛肉面，App 给 467 千卡（= 1955 kJ ÷ 4.184 的每 100 克值），实际整桶 140 克是 654 千卡，少算 187；界面也没提示份量是推算的。
+- **根因**：标签只标每 100 克，照片里没有净含量时，模型静默按「整包 = 100 克」算；`portionIsEstimated` 只当成一行小字，没有可操作的修正入口；一餐只能带一张照片，营养表和包装正面没法一起拍。
+- **修复**：
+  - `DeepSeekClient.makeRequest(text:images:mode:)` 支持最多 `maxPhotos = 3` 张照片，单图重载保留；服务端 `validated_body` 从「最多 2 段、1 张图」放宽到「最多 4 段、3 张图」。
+  - `MealDraft.photos` 成为照片真源（首张仍写进 `record.photoJPEG`），`MealInputView` 改成横向缩略图 + 每张可移除，加删照片会 `MealRecord.clearEstimate()` 让旧结果作废。
+  - 提示词新增四条硬规则：默认按整份（没吃剩就整碗/整包）、汤类按 90%、无净含量时按品类常见包装量估算、多张照片合并读取；`FoodAnalysisMode.label` 的说明同步要求找净含量。
+  - 新增 `Sources/NutritionCore/PackagedSizes.swift`：按食物名给「整桶 120/140 克」「整袋 105 克」等候选、识别汤汤水水；`FoodPortionView` 加「按整包记更准」卡片（整包 chip + 「汤没喝，按 90% 算」），`NutritionLabel.withConsumedAmount(_:)` 选完整包后把 `portionIsEstimated` 置为 false。
+  - 结果页把「营养标签 · 份量估算」改成「份量是估的，可改成整包」。
+- **验证**：`swift test` **229 tests / 30 suites passed**（新增多图上限、提示词规则、`PackagedSizes`、整包换算 4 组）；`server/api/.venv/bin/python -m pytest ../tests -q` 从 `server/api` 目录运行 **89 passed**（新增 1/2/3 张图放行、4 张图 422）；Debug `xcodebuild` BUILD SUCCEEDED。真实端点复测（单图 + 「整桶都吃了，汤没喝完」）：模型给出 99 克（按常见 110 克 × 0.9）、假设写「汤没喝完，按整桶约90%计」「图片未显示净含量，按常见桶装方便面约110克估算」，整桶 140 克的修正在 UI 里一键可选。
+- **注意**：多图要服务端也更新到这次改动才生效，旧部署会把 2 张以上判成 422；代码已改，部署另行进行。
+
 ## 更早版本（据提交记录整理，供追溯）
 
 这些修复发生在本轮之前，细节未逐条复述，回归时按标题排查：

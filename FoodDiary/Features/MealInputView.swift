@@ -41,20 +41,23 @@ struct MealInputView: View {
     @Binding var text: String
     @Binding var mode: FoodAnalysisMode
     @Binding var photoItem: PhotosPickerItem?
-    let photoJPEG: Data?
+    let photos: [Data]
     let loadingPhoto: Bool
     let onCamera: () -> Void
-    let onRemovePhoto: () -> Void
+    let onRemovePhoto: (Int) -> Void
     @State private var transcriber = SpeechTranscriber()
+
+    private var full: Bool { photos.count >= DeepSeekClient.maxPhotos }
+
+    private var photoHint: String {
+        if photos.count == 1 { return "再拍一张包装正面或营养成分表，能量会更准。" }
+        return "已选 \(photos.count) 张，最多 \(DeepSeekClient.maxPhotos) 张：正面、营养表、剩下的食物。"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             BrandSegments(options: FoodAnalysisMode.allCases.map { ($0, $0.title) }, selection: $mode)
-            if let photoJPEG {
-                ScanPhotoPreview(data: photoJPEG, height: 290)
-                Button("移除照片", systemImage: "xmark.circle", action: onRemovePhoto)
-                    .font(.caption).foregroundStyle(Theme.mutedInk)
-            } else {
+            if photos.isEmpty {
                 Button(action: onCamera) {
                     VStack(spacing: 15) {
                         Image(systemName: "viewfinder").font(.system(size: 54, weight: .light)).foregroundStyle(Theme.accent)
@@ -71,17 +74,47 @@ struct MealInputView: View {
                 .accessibilityLabel(mode == .label ? "拍照识别营养成分表" : "拍照记录这一餐")
                 .accessibilityHint("打开相机")
                 .accessibilityIdentifier("takePhotoCard")
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(Array(photos.enumerated()), id: \.offset) { index, data in
+                            ZStack(alignment: .topTrailing) {
+                                ScanPhotoPreview(data: data, height: 170)
+                                    .frame(width: 150)
+                                Button {
+                                    onRemovePhoto(index)
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.title3)
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(Theme.surface, Theme.ink.opacity(0.55))
+                                }
+                                .buttonStyle(.plain)
+                                .padding(6)
+                                .accessibilityLabel("移除第 \(index + 1) 张照片")
+                                .accessibilityIdentifier("removePhoto\(index)")
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                Text(photoHint)
+                    .font(.caption).foregroundStyle(Theme.mutedInk)
             }
 
             HStack(spacing: 12) {
                 Button(action: onCamera) {
-                    Label(photoJPEG == nil ? "拍照" : "重新拍照", systemImage: "camera.viewfinder")
+                    Label(photos.isEmpty ? "拍照" : (full ? "已满 3 张" : "再加一张"), systemImage: "camera.viewfinder")
                         .frame(maxWidth: .infinity, minHeight: 42)
-                }.yellowAction().accessibilityIdentifier("takePhoto")
+                }.yellowAction()
+                .disabled(full)
+                .accessibilityIdentifier("takePhoto")
                 PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
                     Label("相册选图", systemImage: "photo.on.rectangle")
                         .frame(maxWidth: .infinity, minHeight: 42)
-                }.buttonStyle(.glass).accessibilityIdentifier("pickPhoto")
+                }.buttonStyle(.glass)
+                .disabled(full)
+                .accessibilityIdentifier("pickPhoto")
             }.font(.subheadline.bold())
             if loadingPhoto { ProgressView("正在处理照片…").font(.caption) }
 

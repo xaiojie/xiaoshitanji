@@ -42,7 +42,8 @@ struct MealResultView: View {
                                 Text(food.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 Text(food.portionLabel).font(.caption).foregroundStyle(.secondary)
                                 if let label = food.nutritionLabel {
-                                    Label(label.portionIsEstimated ? "营养标签 · 份量估算" : "按营养标签换算", systemImage: "doc.text.viewfinder")
+                                    Label(label.portionIsEstimated ? "营养标签 · 份量是估的，可改成整包" : "按营养标签换算",
+                                          systemImage: "doc.text.viewfinder")
                                         .font(.caption2).foregroundStyle(Theme.olive)
                                 }
                                 if food.isManual {

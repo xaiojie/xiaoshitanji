@@ -56,10 +56,10 @@ struct ComposerView: View {
                         MealInputView(
                             text: Binding(get: { draft.record.originalText }, set: draft.updateText),
                             mode: Binding(get: { draft.record.analysisMode ?? .automatic }, set: draft.updateMode),
-                            photoItem: $photoItem, photoJPEG: draft.record.photoJPEG,
+                            photoItem: $photoItem, photos: draft.photos,
                             loadingPhoto: draft.photoLoadID != nil,
                             onCamera: openCamera,
-                            onRemovePhoto: { draft.removePhoto(); photoItem = nil }
+                            onRemovePhoto: { index in draft.removePhoto(at: index); photoItem = nil }
                         )
                         .disabled(draft.busy)
                         Button("手动填写 / 常吃 / 最近吃过", systemImage: "square.and.pencil") { sheet = .quickAdd }
@@ -133,7 +133,7 @@ struct ComposerView: View {
             .yellowAction()
             .disabled(draft.busy || (draft.reviewing && draft.record.foods.isEmpty && !hasCorrection)
                 || (!draft.reviewing && draft.record.originalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    && draft.record.photoJPEG == nil))
+                    && draft.photos.isEmpty))
             .accessibilityIdentifier(draft.reviewing && !hasCorrection ? "saveMeal" : "analyzeMeal")
         }
         .padding(.horizontal, 20).padding(.vertical, 12)

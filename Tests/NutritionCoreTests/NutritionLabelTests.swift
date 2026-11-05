@@ -69,6 +69,15 @@ struct NutritionLabelTests {
         #expect(abs(result.foods[0].nutrition.calories - 125) < 0.00001)
     }
 
+    @Test func choosingAWholePackageClearsTheEstimatedFlag() throws {
+        let label = NutritionLabel(basisAmount: 100, unit: .grams, energy: 1955, energyUnit: .kilojoules,
+            protein: 7.6, carbohydrates: 55.8, fat: 23.7, consumedAmount: 100, portionIsEstimated: true)
+        let whole = label.withConsumedAmount(140)
+        #expect(whole.portionIsEstimated == false)
+        #expect(whole.consumedAmount == 140)
+        #expect(abs(whole.nutrition.calories - 654.1) < 0.5)
+    }
+
     private func response(_ content: String) throws -> Data {
         try JSONSerialization.data(withJSONObject: ["choices": [["finish_reason": "stop", "message": ["content": content]]]])
     }

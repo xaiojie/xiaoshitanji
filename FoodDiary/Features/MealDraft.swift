@@ -14,6 +14,9 @@ final class MealDraft {
     var reviewing: Bool
     var correction = ""
     var errorMessage: String?
+    /// 这一餐附带的照片，最多 `DeepSeekClient.maxPhotos` 张：正面、营养表、剩下的食物。
+    /// 只把第一张存进记录（历史数据是单图），其余只参与这次分析。
+    private(set) var photos: [Data] = []
     private(set) var isAnalyzing = false
     private(set) var isRefining = false
     private(set) var photoLoadID: UUID?
@@ -29,13 +32,30 @@ final class MealDraft {
         self.record = record
         self.isEditing = isEditing
         reviewing = isEditing
+        photos = record.photoJPEG.map { [$0] } ?? []
     }
 
-    func updateText(_ text: String) { record.updateInput(text: text, photoJPEG: record.photoJPEG) }
+    func updateText(_ text: String) { record.updateInput(text: text, photoJPEG: photos.first) }
     func updateMode(_ mode: FoodAnalysisMode) {
-        record.updateInput(text: record.originalText, photoJPEG: record.photoJPEG, analysisMode: mode)
+        record.updateInput(text: record.originalText, photoJPEG: photos.first, analysisMode: mode)
     }
-    func removePhoto() { record.updateInput(text: record.originalText, photoJPEG: nil) }
+    func removePhoto() {
+        photos = []
+        record.updateInput(text: record.originalText, photoJPEG: nil)
+    }
+    func removePhoto(at index: Int) {
+        guard photos.indices.contains(index) else { return }
+        photos.remove(at: index)
+        record.updateInput(text: record.originalText, photoJPEG: photos.first)
+        invalidateEstimateIfNeeded()
+    }
+
+    private func invalidateEstimateIfNeeded() {
+        guard !record.foods.isEmpty else { return }
+        record.clearEstimate()
+        reviewing = false
+        errorMessage = nil
+    }
     func analyze() { performAnalysis(instruction: nil) }
 
     func refine(_ instruction: String) {
@@ -73,6 +93,7 @@ final class MealDraft {
         record.originalText = ""
         record.photoJPEG = nil
         record.photoFileName = nil
+        photos = []
         record.adjustments = (record.adjustments ?? []) + [note]
         reviewing = true
         errorMessage = nil
@@ -140,7 +161,7 @@ final class MealDraft {
                 if let instruction {
                     estimate = try await client.refine(record: snapshot, instruction: instruction)
                 } else {
-                    estimate = try await client.analyze(text: snapshot.originalText, imageJPEG: snapshot.photoJPEG, mode: snapshot.analysisMode ?? .automatic)
+                    estimate = try await client.analyze(text: snapshot.originalText, images: photos, mode: snapshot.analysisMode ?? .automatic)
                 }
                 try Task.checkCancellation()
                 guard requestID == id else { return }
@@ -169,7 +190,12 @@ final class MealDraft {
                 let jpeg = try await Task.detached(priority: .userInitiated) { try PhotoInput.prepareJPEG(data) }.value
                 try Task.checkCancellation()
                 guard photoLoadID == id else { return }
-                record.updateInput(text: record.originalText, photoJPEG: jpeg)
+                if photos.count >= DeepSeekClient.maxPhotos {
+                    photos.removeLast()
+                }
+                photos.append(jpeg)
+                record.updateInput(text: record.originalText, photoJPEG: photos.first)
+                invalidateEstimateIfNeeded()
             } catch is CancellationError {
                 // A newer selection owns the loading state and image preview.
             } catch {
