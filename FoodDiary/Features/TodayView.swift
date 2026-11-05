@@ -88,7 +88,11 @@ struct TodayView: View {
                 .disabled(diary.loadError != nil)
                 .accessibilityIdentifier("addMeal")
                 .padding(.horizontal, 24).padding(.vertical, 8)
-                .background(Theme.background.opacity(0.95))
+                .background {
+                    // 内容会从按钮底下滚过去，用一段渐变把文字压掉，别挡住玻璃。
+                    LinearGradient(colors: [Theme.background.opacity(0), Theme.background.opacity(0.9), Theme.background],
+                                   startPoint: .top, endPoint: .bottom)
+                }
             }
             .sheet(item: $sheet, onDismiss: finishSheetNavigation, content: sheetContent)
             .onChange(of: scenePhase) { _, phase in
