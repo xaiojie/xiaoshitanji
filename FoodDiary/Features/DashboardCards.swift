@@ -30,18 +30,29 @@ struct DailyIntakeCard: View {
                     }.buttonStyle(.plain).accessibilityIdentifier("chooseDate")
                 }
                 Spacer()
-                Menu("日期与参考目标", systemImage: "calendar") {
-                    Button("前一天", systemImage: "chevron.left", action: onPrevious)
-                    Button("选择日期", systemImage: "calendar", action: onDate)
-                    Button("后一天", systemImage: "chevron.right", action: onNext).disabled(isToday)
-                    Button("设置热量参考", systemImage: "flag", action: onGoal)
+                HStack(spacing: 6) {
                     if let onLiveActivity, isToday {
-                        Button(liveActivityRunning ? "关闭灵动岛" : "灵动岛显示今日摄入",
-                               systemImage: liveActivityRunning ? "stop.circle" : "bolt.circle",
-                               action: onLiveActivity)
-                            .accessibilityIdentifier("toggleLiveActivity")
+                        Button(action: onLiveActivity) {
+                            HStack(spacing: 5) {
+                                Image(systemName: liveActivityRunning ? "capsule.fill" : "capsule")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text("灵动岛").font(.system(size: 11, weight: .semibold))
+                            }
+                            .padding(.horizontal, 10)
+                            .frame(height: 36)
+                            .background(Theme.surface.opacity(liveActivityRunning ? 0.9 : 0.55), in: .capsule)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(liveActivityRunning ? "关闭灵动岛" : "灵动岛显示今日摄入")
+                        .accessibilityIdentifier("toggleLiveActivity")
                     }
-                }.labelStyle(.iconOnly).font(.title3).frame(width: 36, height: 36)
+                    Menu("日期与参考目标", systemImage: "calendar") {
+                        Button("前一天", systemImage: "chevron.left", action: onPrevious)
+                        Button("选择日期", systemImage: "calendar", action: onDate)
+                        Button("后一天", systemImage: "chevron.right", action: onNext).disabled(isToday)
+                        Button("设置热量参考", systemImage: "flag", action: onGoal)
+                    }.labelStyle(.iconOnly).font(.title3).frame(width: 36, height: 36)
+                }
             }
             HStack(alignment: .bottom, spacing: 0) {
                 VStack(alignment: .leading, spacing: 10) {
