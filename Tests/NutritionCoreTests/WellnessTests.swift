@@ -218,4 +218,13 @@ struct WellnessTests {
         #expect(throws: DiaryError.self) { try decoded.validate() }
     }
 
+
+    @Test func wellnessPromptAsksForConcreteActions() throws {
+        let snapshot = try summary(DiaryDocument(records: [meal(date(4))]))
+        let request = try DeepSeekClient.makeWellnessRequest(summary: snapshot)
+        let text = String(decoding: try #require(request.httpBody), as: UTF8.self)
+        #expect(text.contains("不能把「再记录几天」"))
+        #expect(text.contains("今天就能执行"))
+        #expect(!text.contains("连续记录一周"))
+    }
 }

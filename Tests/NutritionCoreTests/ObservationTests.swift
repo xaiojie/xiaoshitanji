@@ -235,4 +235,16 @@ struct ObservationTests {
         #expect(answer.evidence == context.evidence)
         #expect(answer.period == .week)
     }
+
+    @Test func askPromptDemandsConcreteAdviceInsteadOfPunting() throws {
+        let document = DiaryDocument(records: [record(10, calories: 700, protein: 30)])
+        let request = try DeepSeekClient.makeAskRequest(context: try context(document: document),
+                                                        question: "我要减肥，该吃多少卡路里？")
+        let body = String(decoding: request.httpBody ?? Data(), as: UTF8.self)
+        #expect(body.contains("第一句必须直接回答"))
+        #expect(body.contains("不能当主要建议"))
+        #expect(body.contains("1.2 至 1.6 克蛋白"))
+        #expect(body.contains("90 至 105 千卡"))
+        #expect(!body.contains("数据不足时直接说"))
+    }
 }

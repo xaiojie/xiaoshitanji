@@ -192,6 +192,25 @@
   `SmokingStatsTests::priceCountsPerWholePack`（开包余 5 根仍按 20 支折算）、
   `SmokingStatsTests::recordsIntoTheNamedPack`（补记落到旧包、余量各自扣、未知烟包报错）。
 
+## 2026-11-05 · 追问质量
+
+### 19. 不管问什么，蛙都劝「先连续记录 7 天」
+
+- **症状**：用户问「我要减肥，该吃多少卡路里」「跑完步晚饭吃什么」，回答都是
+  「这段记录还看不出……建议先连续记录 7 天」。用户原话：「不能给出明确的建议或者意见，这样用户会很烦」。
+- **根因**：`ObservationClient.askPrompt` 有两处反向指令——第 2 条要求「数据不足时直接说『这段记录还看不出』」
+  第 3 条要求「没有目标时不要编造目标」，模型于是把「拒绝回答」当成结论；
+  `WellnessReview.swift` 的示例 action 又直接写成「连续记录一周」，进一步强化了这个套路。
+- **修复**：
+  - `askPrompt` 重写为 8 条硬规则：第一句必须直接给结论；结论必须落到千卡/克数/份量/分钟；
+    缺数据时先给今天能做的方案、再说明假设，「多记几天会更准」最多结尾一句；
+    没有 target 时按 `averageCalories`、体重给出参考区间（减脂 1.2–1.6 克/公斤蛋白、不低于 1200 千卡）并标「估算」；
+    食物与运动给常见量（香蕉 90–105 千卡、76 公斤跑 30 分钟约 300 千卡）；末尾最多 3 条「·」建议；
+  - `wellnessPrompt` 增加「行动必须今天就能执行，不能把再记录几天当唯一行动」，示例 action 换成「晚餐加一份蛋白」；
+  - 界面提示改为「回答会给出具体数字和今天能做的做法；推算会标成估算」，旧答案标签由「基于旧数据」改为「按当时的记录」。
+- **验证**：`swift test` **224 项**。新增 `ObservationTests::askPromptDemandsConcreteAdviceInsteadOfPunting`、
+  `WellnessTests::wellnessPromptAsksForConcreteActions`；Debug 构建装到真机（1.0.2 / 38）。
+
 ## 更早版本（据提交记录整理，供追溯）
 
 这些修复发生在本轮之前，细节未逐条复述，回归时按标题排查：

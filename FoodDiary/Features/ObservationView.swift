@@ -177,7 +177,7 @@ struct ObservationView: View {
                 .disabled(asking || question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityIdentifier("sendObservationQuestion")
             }
-            Text("回答会引用记录里的日期和数字；数据不够时会直接说。")
+            Text("回答会给出具体数字和今天能做的做法；推算会标成估算。")
                 .font(.caption).foregroundStyle(Theme.mutedInk)
         }.contentCard()
     }
@@ -193,7 +193,7 @@ struct ObservationView: View {
                         HStack(spacing: 8) {
                             Text(answer.createdAt.formatted(date: .abbreviated, time: .shortened))
                             if answer.fingerprint != context.fingerprint {
-                                Text("基于旧数据").padding(.horizontal, 6).padding(.vertical, 2)
+                                Text("按当时的记录").padding(.horizontal, 6).padding(.vertical, 2)
                                     .background(Theme.gold.opacity(0.2), in: .capsule)
                             }
                         }.font(.caption2).foregroundStyle(Theme.mutedInk)

@@ -128,9 +128,9 @@ public extension DeepSeekClient {
         BMI仅为测量换算参考，缺少身高/体重时不得猜测。目标体重只作为用户自定目标，不替用户决定目标是否适宜。
         timelineUnit为day或month，timeline仅含有观察的日期/月份，缺失日期不代表零，monthly汇总不等于每天都记录。
         综合总结用具体证据说明各类数据可能提示的生活习惯，不能从共变声称因果。每类缺少数据时明确说明，建议有记录依据、可执行、避免苛责。
-        给出最多三项按优先级排序的日常行动，不做医学诊断，不给药物处方，不编造健康总评分。吸烟不因数量少被说成安全。
+        给出最多三项按优先级排序的日常行动，行动必须是今天就能执行的具体动作（份量、时间或次数），不能把「再记录几天」「继续记录」当作唯一行动。summary 先给一条最值得调整的结论，再用证据解释。不做医学诊断，不给药物处方，不编造健康总评分。吸烟不因数量少被说成安全。
         输出summary，observations包含diet/smoking/body/activity四项且各一次，每项area和text；actions为1至3项title/detail；limitations为实际数据缺口列表。
-        示例 {"summary":"当前记录主要覆盖饮食和活动，吸烟及身体变化仍需结合更多记录观察。","observations":[{"area":"diet","text":"按已记录餐次回顾饮食。"},{"area":"smoking","text":"当前缺少吸烟记录。"},{"area":"body","text":"当前缺少身高和体重。"},{"area":"activity","text":"按可读取日期回顾活动。"}],"actions":[{"title":"连续记录一周","detail":"继续记录实际吃下的餐食，观察日常搭配。"}],"limitations":["记录不足的日期保留未知。"]}
+        示例 {"summary":"当前记录主要覆盖饮食和活动，吸烟及身体变化仍需结合更多记录观察。","observations":[{"area":"diet","text":"按已记录餐次回顾饮食。"},{"area":"smoking","text":"当前缺少吸烟记录。"},{"area":"body","text":"当前缺少身高和体重。"},{"area":"activity","text":"按可读取日期回顾活动。"}],"actions":[{"title":"晚餐加一份蛋白","detail":"在现有晚饭里加约 100 克鸡胸或一块豆腐，把日均蛋白抬到 90 克上下；主食减到一拳头。"}],"limitations":["记录不足的日期保留未知。"]}
         """
     }
 }
