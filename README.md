@@ -50,7 +50,7 @@
 
 ## 这是什么
 
-「小食痰记」是一个**自用**的 iPhone 应用：你描述刚刚吃了什么（文字、相册照片或直接拍照），它调用 DeepSeek 估算食物条目、份量、热量与三大营养素，保存成一条餐次记录；每天结束时，它根据已保存的餐食生成一段 AI 回顾，并在 7/30 天趋势里展示摄入与评分变化。
+「小食痰记」是一个面向日常记录的 iPhone 应用：你描述刚刚吃了什么（文字、相册照片或直接拍照），它调用 DeepSeek 估算食物条目、份量、热量与三大营养素，保存成一条餐次记录；每天结束时，它根据已保存的餐食生成一段 AI 回顾，并在 7/30 天趋势里展示摄入与评分变化。
 
 除此之外，它还顺手管了两件事：
 
@@ -65,7 +65,7 @@
 | 语言 | 简体中文界面 |
 | 视觉 | 浅色黄色主题 + 原生 Liquid Glass，奶蛙吉祥物 |
 | 依赖 | 零第三方依赖，仅系统框架 |
-| 网络 | AI 分析直连 DeepSeek，启用云同步后连接所配置的同步服务器 |
+| 网络 | AI 分析通过小食痰记后端转交 DeepSeek，可选云同步使用独立登录账号 |
 
 ---
 
@@ -225,15 +225,11 @@ xcodebuild -project FoodDiary.xcodeproj -scheme FoodDiary \
 
 > `work/` 是本地构建与验证目录，已被 Git 忽略。
 
-### 配置 API Key
+### 使用 AI 分析
 
-首次使用需要自己的 DeepSeek API Key：
+AI 功能免费提供，无需填写 API Key，也无需先创建同步账号。打开「饮食」点「扫描记一餐」，或选择餐次后输入描述即可。
 
-1. 「我的 → 通用设置」填入 Key，点「保存 API Key」；
-2. Key 存进本机 Keychain（`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`），不会写进记录文件，也不会随导出泄露；
-3. 回到「饮食」点「扫描记一餐」，或直接点某个餐次开始记录。
-
-调用使用官方地址 `https://api.deepseek.com/chat/completions`，模型 `deepseek-flash`，JSON Output、非流式、关闭思考模式，超时 90 秒。费用记在你自己的 API 账户上。
+App 请求 `https://xiaoshitanji.papaclaoud.top/v1/ai/completions`，由服务器使用私密配置中的 DeepSeek 密钥转发。模型、4096 输出令牌上限和调用费用统一由后端管理。饮食与烟盒识别发送相关文字及压缩照片，汇总分析经确认后发送聚合数值。后端默认每个网络每分钟 10 次、每天 60 次，全服务每天 1,000 次，同时处理 4 个请求，日额度按 UTC 零点更新（北京时间 08:00）。App 请求超时为 120 秒，上游调用超时为 80 秒。
 
 参考文档：
 
@@ -257,7 +253,7 @@ swift test
 | --- | --- |
 | 界面 | SwiftUI（iOS 26）、Liquid Glass、Observation（`@Observable`） |
 | 数据 | `Codable` + JSON、`FileManager` 原子写入 |
-| 密钥 | Security.framework / Keychain |
+| 凭据 | AI 密钥保存在后端私密配置，云同步会话使用 iPhone Keychain |
 | AI | DeepSeek Chat Completions、JSON Output、vision |
 | 健康 | HealthKit（只读） |
 | 图像 | ImageIO（缩图 + 重编码）、UIImagePickerController |
@@ -300,7 +296,9 @@ flowchart LR
     A["文字 / 照片"] --> B["ComposerView"]
     B --> C["MealDraft<br/>请求去重 · 取消"]
     C --> D["DeepSeekClient"]
-    D -->|"JSON 估算"| E["解析 · 校验 · 合并旧 id"]
+    D --> K["小食痰记后端<br/>密钥 · 限流 · 用量"]
+    K --> L["DeepSeek"]
+    L -->|"JSON 估算"| E["解析 · 校验 · 合并旧 id"]
     E --> F["结果页<br/>份量 / 续改 / 移除"]
     F --> G["DiaryModel"]
     G --> H[("diary.json")]
@@ -367,10 +365,10 @@ flowchart LR
 
 隐私：
 
-- 默认不需要账号，数据只在本机；可选登录作者自建的同步服务，整份日记以快照形式存到你的账号下（服务端不记录 AI 请求内容）；AI 请求只在点击分析时直连 DeepSeek；
-- API Key 只在本机 Keychain；
+- 默认不需要账号，数据只在本机；可选登录作者自建的同步服务，整份日记以快照形式存到你的账号下（服务端不记录 AI 请求内容）；AI 请求在用户发起分析或烟盒扫描识别时经后端转交 DeepSeek；
+- AI 密钥只存放在服务器私密配置中，App 的请求无需提供模型或密钥；
 - 导出功能会生成完整记录 JSON（**不含 Key**），也可以从 iPhone「文件」App 直接访问应用目录；
-- Apple 健康数据只读。汇总分析可选择纳入所选期间的活动与身体测量，生成前确认后才将汇总数值发送到 DeepSeek。历史照片、头像、昵称和原始描述不进入该请求。报告及这次汇总值保存在本机，并随 JSON 导出。
+- Apple 健康数据只读。汇总分析可选择纳入所选期间的活动与身体测量，生成前确认后才将汇总数值经后端转交 DeepSeek。历史照片、头像、昵称和原始描述不进入该请求。报告及这次汇总值保存在本机，并随 JSON 导出及用户主动启用的云同步传输。
 
 ---
 

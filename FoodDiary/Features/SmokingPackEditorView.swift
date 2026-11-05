@@ -4,13 +4,14 @@ import AVFoundation
 import NutritionCore
 
 private enum SmokingEditorSheet: String, Identifiable {
-    case camera, settings
+    case camera
     var id: Self { self }
 }
 
 struct SmokingPackEditorView: View {
     @Environment(DiaryModel.self) private var diary
     @Environment(\.dismiss) private var dismiss
+    @State private var aiConsent = AIConsent()
     let original: CigarettePack?
     @State private var fields: CigaretteProductDraft
     @State private var openingCount: Int
@@ -46,7 +47,6 @@ struct SmokingPackEditorView: View {
                     }
                     if let errorMessage {
                         ErrorNotice(message: errorMessage).contentCard()
-                        Button("打开通用设置", systemImage: "gearshape") { sheet = .settings }.font(.subheadline)
                     }
                     NicotineExplanation()
                 }.padding(20)
@@ -77,7 +77,6 @@ struct SmokingPackEditorView: View {
                 case .camera:
                     CameraPicker { data in sheet = nil; loadPhoto { data } } onCancel: { sheet = nil }
                         .ignoresSafeArea()
-                case .settings: GeneralSettingsView(isPresented: true)
                 }
             }
             .photosPicker(isPresented: $showingPhotoPicker, selection: $photoItem, matching: .images)
@@ -93,6 +92,7 @@ struct SmokingPackEditorView: View {
             .interactiveDismissDisabled(busy)
             .onDisappear { cancelAnalysis(); loadingID = nil; photoTask?.cancel() }
         }
+        .aiDataConsent(aiConsent)
     }
 
     private var photoInput: some View {
@@ -131,7 +131,7 @@ struct SmokingPackEditorView: View {
                         .accessibilityIdentifier("updateSmokingPackRecognition")
                 }
             }.contentCard()
-            Text("扫描或导入图片后，AI 会自动读取。也可以说“这包买了30元”“价格改成25元”或“清空错误的尼古丁值”，再更新结果。识别时文字和照片会发送给 DeepSeek，费用记入你的 API 账户。")
+            Text("扫描或导入图片后，AI 会自动读取。也可以说“这包买了30元”“价格改成25元”或“清空错误的尼古丁值”，再更新结果。识别免费使用，文字和照片会经小食痰记服务器转交 DeepSeek 处理。")
                 .font(.caption2).foregroundStyle(.secondary)
         }
     }
@@ -205,9 +205,8 @@ struct SmokingPackEditorView: View {
         analysisTask = Task { @MainActor in
             defer { if analysisID == id { analysisID = nil } }
             do {
-                let key = try KeychainStore.load()
-                let result = try await DeepSeekClient().recognizeCigarette(text: text, imageJPEG: photo,
-                    apiKey: key, currency: selectedCurrency)
+                try await aiConsent.requirePermission()
+                let result = try await DeepSeekClient().recognizeCigarette(text: text, imageJPEG: photo, currency: selectedCurrency)
                 try Task.checkCancellation()
                 guard analysisID == id else { return }
                 fields.applyRecognition(result)

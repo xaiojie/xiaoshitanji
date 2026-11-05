@@ -60,8 +60,7 @@ public struct WellnessReview: Identifiable, Codable, Equatable, Sendable {
 }
 
 public extension DeepSeekClient {
-    static func makeWellnessRequest(summary: WellnessSummary, apiKey: String,
-                                    model: String = defaultModel) throws -> URLRequest {
+    static func makeWellnessRequest(summary: WellnessSummary) throws -> URLRequest {
         try summary.validate()
         guard summary.hasData else { throw DiaryError.invalidInput("先记录饮食、吸烟或身体数据，再生成汇总分析。") }
         let encoder = JSONEncoder()
@@ -84,11 +83,11 @@ public extension DeepSeekClient {
             throw DiaryError.invalidInput("全部历史记录较多，请先选择近7天或近30天分析。")
         }
         return try buildRequest(parts: [["type": "text", "text": String(decoding: data, as: UTF8.self)]],
-            prompt: wellnessPrompt, apiKey: apiKey, model: model)
+            prompt: wellnessPrompt)
     }
 
-    func reviewWellness(summary: WellnessSummary, apiKey: String) async throws -> WellnessReview {
-        let request = try Self.makeWellnessRequest(summary: summary, apiKey: apiKey)
+    func reviewWellness(summary: WellnessSummary) async throws -> WellnessReview {
+        let request = try Self.makeWellnessRequest(summary: summary)
         let (data, status) = try await complete(request)
         return try Self.parseWellnessResponse(data: data, statusCode: status, summary: summary)
     }

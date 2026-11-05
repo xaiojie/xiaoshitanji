@@ -6,11 +6,12 @@ import NutritionCore
     let name = "Sync regression"
 }
 @MainActor enum SyncCredentialStore {
+    static var clearCount = 0
     static func load() -> CloudSyncSession? {
         CloudSyncSession(token: "fixture", expiresAt: .distantFuture, username: "fixture", version: 2)
     }
     static func save(_ session: CloudSyncSession) throws {}
-    static func clear() {}
+    static func clear() { clearCount += 1 }
 }
 @MainActor final class DiaryModel {
     var document: DiaryDocument
@@ -25,6 +26,8 @@ final class SyncFixture: @unchecked Sendable {
     var version = 2
     var uploads = 0
     var forceConflict = true
+    var failDeletion = true
+    var deletionRequests = 0
     init(original: DiaryDocument, current: DiaryDocument) { self.original = original; self.current = current }
     func handle(_ request: URLRequest) throws -> (Int, Data) {
         try lock.withLock {
@@ -35,6 +38,14 @@ final class SyncFixture: @unchecked Sendable {
             let path = request.url!.path
             var status = 200
             var object: Any = [:]
+            if path == "/v1/account" {
+                guard request.httpMethod == "DELETE",
+                      request.value(forHTTPHeaderField: "Authorization") == "Bearer fixture" else {
+                    throw URLError(.badServerResponse)
+                }
+                deletionRequests += 1
+                return failDeletion ? (503, Data(#"{"detail":"稍后重试"}"#.utf8)) : (204, Data())
+            }
             if path == "/v1/sync/state" { object = ["version": version] }
             else if path == "/v1/sync/versions" { object = [] as [String] }
             else if path.hasPrefix("/v1/sync/restore/") {
@@ -127,6 +138,25 @@ final class SyncFixtureProtocol: URLProtocol, @unchecked Sendable {
         guard defaults.string(forKey: "sync.baselineOwner") == "https://sync.fixture\nfixture" else {
             fatalError("Successful baseline did not retain its server/account owner")
         }
+        let priorVersion = sync.lastKnownVersion
+        let priorSyncedAt = sync.lastSyncedAt
+        await sync.deleteAccount()
+        guard sync.errorText != nil, sync.isLoggedIn,
+              sync.lastKnownVersion == priorVersion, sync.lastSyncedAt == priorSyncedAt,
+              SyncCredentialStore.clearCount == 0 else {
+            fatalError("Failed account deletion cleared the session or synchronization baseline")
+        }
+        fixture.failDeletion = false
+        await sync.deleteAccount()
+        guard sync.errorText == nil, !sync.isLoggedIn, sync.phase == .idle,
+              sync.lastKnownVersion == 0, sync.lastSyncedAt == nil, sync.versions.isEmpty,
+              defaults.object(forKey: "sync.baselineOwner") == nil,
+              defaults.object(forKey: "sync.knownVersion") == nil,
+              SyncCredentialStore.clearCount == 1, fixture.deletionRequests == 2,
+              diary.document.records.count == 3 else {
+            fatalError("Successful account deletion did not clear credentials and baseline while retaining local entries")
+        }
+        print("PASS — account deletion preserves state on failure and clears credentials/baseline only after success")
         print(legacyOwner ? "PASS — legacy unowned baseline forced a first pull and preserved remote records" : "PASS — actual SyncModel restored history, preserved local/cloud records and retried a conflict before marking synchronized")
     }
 }

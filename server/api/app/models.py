@@ -17,6 +17,15 @@ def new_id() -> str:
     return str(uuid.uuid4())
 
 
+class AIUsage(Base):
+    """Only daily request counts, keyed by an ephemeral daily network hash."""
+    __tablename__ = "ai_usage"
+
+    day: Mapped[str] = mapped_column(String(10), primary_key=True)
+    subject: Mapped[str] = mapped_column(String(64), primary_key=True)
+    requests: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class User(Base):
     __tablename__ = "users"
 

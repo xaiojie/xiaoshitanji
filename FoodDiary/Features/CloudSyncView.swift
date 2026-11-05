@@ -9,6 +9,7 @@ struct CloudSyncView: View {
     @State private var username = ""
     @State private var password = ""
     @State private var confirmRestore: Int?
+    @State private var confirmDeleteAccount = false
 
     var body: some View {
         NavigationStack {
@@ -38,6 +39,12 @@ struct CloudSyncView: View {
             }
             .task {
                 await sync.refreshVersions()
+            }
+            .alert("永久删除云端账号？", isPresented: $confirmDeleteAccount) {
+                Button("删除账号", role: .destructive) { Task { await sync.deleteAccount() } }
+                Button("取消", role: .cancel) {}
+            } message: {
+                Text("将永久删除这个账号及其全部云端日记、照片和版本历史。删除后无法恢复。手机中的本机记录会保留。")
             }
             .confirmationDialog("把第 \(confirmRestore ?? 0) 版合并回本机？",
                                 isPresented: Binding(get: { confirmRestore != nil },
@@ -144,6 +151,11 @@ struct CloudSyncView: View {
             .accessibilityIdentifier("syncNow")
             Text("云端有更新版本时先合并两边记录，再上传。同一条记录使用本机值，独有条目全部保留。")
                 .font(.caption).foregroundStyle(Theme.mutedInk).lineSpacing(3)
+            Divider()
+            Button("删除云端账号", role: .destructive) { confirmDeleteAccount = true }
+                .font(.subheadline)
+                .disabled(sync.phase != .idle)
+                .accessibilityIdentifier("deleteCloudAccount")
         }.contentCard()
     }
 

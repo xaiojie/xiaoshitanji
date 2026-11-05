@@ -45,7 +45,6 @@ struct MealInputView: View {
     let loadingPhoto: Bool
     let onCamera: () -> Void
     let onRemovePhoto: () -> Void
-    let onSettings: () -> Void
     @State private var transcriber = SpeechTranscriber()
 
     var body: some View {
@@ -122,9 +121,8 @@ struct MealInputView: View {
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "lock.shield").foregroundStyle(Theme.olive)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("点击分析后，文字和压缩后的照片会发送给 DeepSeek，按你的 API 账户计费。")
+                    Text("AI 分析免费使用。点击分析后，文字和压缩后的照片会经小食痰记服务器转交 DeepSeek 处理。")
                         .font(.caption).foregroundStyle(.secondary)
-                    Button("配置 DeepSeek", action: onSettings).font(.caption.weight(.medium))
                 }
             }
             .padding(.horizontal, 6)

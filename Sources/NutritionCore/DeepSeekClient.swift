@@ -9,15 +9,13 @@ public struct FoodEstimate: Sendable {
 
 public struct DeepSeekClient: Sendable {
     public static let defaultModel = "deepseek-flash"
+    public static let endpoint = URL(string: "https://xiaoshitanji.papaclaoud.top/v1/ai/completions")!
     private let session: URLSession
 
     public init(session: URLSession = .shared) { self.session = session }
 
-    public static func makeRequest(text: String, imageJPEG: Data?, apiKey: String,
-                                   model: String = defaultModel, mode: FoodAnalysisMode = .automatic) throws -> URLRequest {
-        let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    public static func makeRequest(text: String, imageJPEG: Data?, mode: FoodAnalysisMode = .automatic) throws -> URLRequest {
         let description = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !key.isEmpty else { throw DiaryError.missingAPIKey }
         guard !description.isEmpty || imageJPEG?.isEmpty == false else {
             throw DiaryError.invalidInput("请描述吃了什么，或选择一张食物照片。")
         }
@@ -36,11 +34,10 @@ public struct DeepSeekClient: Sendable {
                 "image_url": ["url": "data:image/jpeg;base64,\(imageJPEG.base64EncodedString())", "detail": "auto"]
             ])
         }
-        return try buildRequest(parts: parts, prompt: systemPrompt + "\n" + mode.instruction, apiKey: key, model: model)
+        return try buildRequest(parts: parts, prompt: systemPrompt + "\n" + mode.instruction)
     }
 
-    public static func makeRefinementRequest(record: MealRecord, instruction: String, apiKey: String,
-                                              model: String = defaultModel) throws -> URLRequest {
+    public static func makeRefinementRequest(record: MealRecord, instruction: String) throws -> URLRequest {
         if !record.foods.isEmpty { try record.validate() }
         let instruction = instruction.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !instruction.isEmpty && instruction.count <= 4_000 else {
@@ -61,11 +58,10 @@ public struct DeepSeekClient: Sendable {
         原有食物必须返回current_foods中的id，新增食物可不返回id。未涉及的营养标签原样保留。
         已有标签只调整份量时同步调整consumedAmount，保留标签密度。用户明确更换产品或否定旧标签时返回discardNutritionLabel为true。
         """
-        return try buildRequest(parts: parts, prompt: prompt, apiKey: apiKey, model: model)
+        return try buildRequest(parts: parts, prompt: prompt)
     }
 
-    public static func makeReviewRequest(records: [MealRecord], calorieGoal: Double?, apiKey: String,
-                                         model: String = defaultModel) throws -> URLRequest {
+    public static func makeReviewRequest(records: [MealRecord], calorieGoal: Double?) throws -> URLRequest {
         guard !records.isEmpty else { throw DiaryError.invalidInput("先记录一餐，再让 AI 回顾这一天。") }
         for record in records { try record.validate() }
         if let calorieGoal, !calorieGoal.isFinite || calorieGoal <= 0 {
@@ -74,49 +70,39 @@ public struct DeepSeekClient: Sendable {
         let context = ReviewContext(meals: records.map(ReviewMeal.init), calorie_goal: calorieGoal)
         let data = try JSONEncoder().encode(context)
         let parts: [[String: Any]] = [["type": "text", "text": String(decoding: data, as: UTF8.self)]]
-        return try buildRequest(parts: parts, prompt: reviewPrompt, apiKey: apiKey, model: model)
+        return try buildRequest(parts: parts, prompt: reviewPrompt)
     }
 
-    static func buildRequest(parts: [[String: Any]], prompt: String, apiKey: String,
-                                      model: String) throws -> URLRequest {
-        let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !key.isEmpty else { throw DiaryError.missingAPIKey }
+    static func buildRequest(parts: [[String: Any]], prompt: String, responseIsJSON: Bool = true) throws -> URLRequest {
         let body: [String: Any] = [
-            "model": model,
             "messages": [
                 ["role": "system", "content": prompt],
                 ["role": "user", "content": parts]
             ],
-            "thinking": ["type": "disabled"],
-            "response_format": ["type": "json_object"],
-            "temperature": 0.2,
-            "max_tokens": 4096,
-            "stream": false
+            "response_format": ["type": responseIsJSON ? "json_object" : "text"]
         ]
-        var request = URLRequest(url: URL(string: "https://api.deepseek.com/chat/completions")!)
+        var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
-        request.timeoutInterval = 90
+        request.timeoutInterval = 120
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         return request
     }
 
-    public func analyze(text: String, imageJPEG: Data?, apiKey: String,
-                        model: String = defaultModel, mode: FoodAnalysisMode = .automatic) async throws -> FoodEstimate {
-        let request = try Self.makeRequest(text: text, imageJPEG: imageJPEG, apiKey: apiKey, model: model, mode: mode)
+    public func analyze(text: String, imageJPEG: Data?, mode: FoodAnalysisMode = .automatic) async throws -> FoodEstimate {
+        let request = try Self.makeRequest(text: text, imageJPEG: imageJPEG, mode: mode)
         let (data, status) = try await complete(request)
         return try Self.parseResponse(data: data, statusCode: status)
     }
 
-    public func refine(record: MealRecord, instruction: String, apiKey: String) async throws -> FoodEstimate {
-        let request = try Self.makeRefinementRequest(record: record, instruction: instruction, apiKey: apiKey)
+    public func refine(record: MealRecord, instruction: String) async throws -> FoodEstimate {
+        let request = try Self.makeRefinementRequest(record: record, instruction: instruction)
         let (data, status) = try await complete(request)
         return try Self.parseRefinementResponse(data: data, statusCode: status, record: record)
     }
 
-    public func reviewDay(records: [MealRecord], date: Date, calorieGoal: Double?, apiKey: String) async throws -> DietReview {
-        let request = try Self.makeReviewRequest(records: records, calorieGoal: calorieGoal, apiKey: apiKey)
+    public func reviewDay(records: [MealRecord], date: Date, calorieGoal: Double?) async throws -> DietReview {
+        let request = try Self.makeReviewRequest(records: records, calorieGoal: calorieGoal)
         let (data, status) = try await complete(request)
         return try Self.parseReviewResponse(data: data, statusCode: status, date: date,
                                             recordCount: records.count, calorieGoal: calorieGoal)
@@ -127,7 +113,12 @@ public struct DeepSeekClient: Sendable {
             let (data, response) = try await session.data(for: request)
             try Task.checkCancellation()
             guard let response = response as? HTTPURLResponse else {
-                throw DiaryError.invalidResponse("DeepSeek 返回了无法识别的响应，请重试。")
+                throw DiaryError.invalidResponse("AI 服务返回了无法识别的响应，请重试。")
+            }
+            if !(200..<300).contains(response.statusCode),
+               let error = try? JSONDecoder().decode(ServiceError.self, from: data),
+               !error.detail.isEmpty, error.detail.count <= 300 {
+                throw DiaryError.invalidResponse(error.detail)
             }
             return (data, response.statusCode)
         } catch let error as URLError {
@@ -135,7 +126,7 @@ public struct DeepSeekClient: Sendable {
             if error.code == .timedOut {
                 throw DiaryError.invalidResponse("分析超时，输入已保留，请稍后重试。")
             }
-            throw DiaryError.invalidResponse("暂时无法连接 DeepSeek，请检查网络后重试。")
+            throw DiaryError.invalidResponse("暂时无法连接 AI 服务，请检查网络后重试。")
         }
     }
 
@@ -254,6 +245,10 @@ public struct DeepSeekClient: Sendable {
     输出严格 JSON，所有文字使用简体中文。
     示例 {"summary":"基于已记录的两餐，主食和蛋白质搭配较完整，晚餐可补充蔬菜。","score":78,"highlights":["两餐都含蛋白质来源"],"suggestions":["下一餐加一份深色蔬菜"]}
     """
+}
+
+private struct ServiceError: Decodable {
+    let detail: String
 }
 
 struct Completion: Decodable {

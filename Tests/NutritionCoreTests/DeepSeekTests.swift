@@ -14,15 +14,15 @@ struct DeepSeekTests {
         ])
     }
 
-    @Test func requestUsesOfficialVisionAndJSONContract() throws {
-        let request = try DeepSeekClient.makeRequest(text: "午餐，吃了一半", imageJPEG: Data([1, 2, 3]), apiKey: " test-key ")
-        #expect(request.url?.absoluteString == "https://api.deepseek.com/chat/completions")
-        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-key")
+    @Test func requestUsesManagedBackendWithoutProviderCredentials() throws {
+        let request = try DeepSeekClient.makeRequest(text: "午餐，吃了一半", imageJPEG: Data([1, 2, 3]))
+        #expect(request.url?.absoluteString == "https://xiaoshitanji.papaclaoud.top/v1/ai/completions")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
         #expect(request.httpMethod == "POST")
         let bodyData = try #require(request.httpBody)
         let body = try #require(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
-        #expect(body["model"] as? String == "deepseek-flash")
-        #expect((body["thinking"] as? [String: String])?["type"] == "disabled")
+        #expect(body["model"] == nil)
+        #expect(body["max_tokens"] == nil)
         #expect((body["response_format"] as? [String: String])?["type"] == "json_object")
         let messages = try #require(body["messages"] as? [[String: Any]])
         let parts = try #require(messages.last?["content"] as? [[String: Any]])
@@ -30,15 +30,12 @@ struct DeepSeekTests {
         #expect((parts[1]["image_url"] as? [String: String])?["url"] == "data:image/jpeg;base64,AQID")
     }
 
-    @Test func emptyCredentialsAndEmptyInputAreRejected() {
+    @Test func emptyInputIsRejected() {
         #expect(throws: DiaryError.self) {
-            try DeepSeekClient.makeRequest(text: "米饭", imageJPEG: nil, apiKey: " \n")
+            try DeepSeekClient.makeRequest(text: "  ", imageJPEG: nil)
         }
         #expect(throws: DiaryError.self) {
-            try DeepSeekClient.makeRequest(text: "  ", imageJPEG: nil, apiKey: "test-key")
-        }
-        #expect(throws: DiaryError.self) {
-            try DeepSeekClient.makeRequest(text: String(repeating: "a", count: 10_001), imageJPEG: nil, apiKey: "test-key")
+            try DeepSeekClient.makeRequest(text: String(repeating: "a", count: 10_001), imageJPEG: nil)
         }
     }
 

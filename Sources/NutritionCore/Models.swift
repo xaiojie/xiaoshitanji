@@ -5,7 +5,6 @@ public enum DiaryError: Error, LocalizedError, Sendable {
     case unreadableDiary
     case unsupportedVersion
     case storage(String)
-    case missingAPIKey
     case invalidResponse(String)
     case http(Int)
 
@@ -15,13 +14,12 @@ public enum DiaryError: Error, LocalizedError, Sendable {
         case .unreadableDiary: "饮食记录文件无法读取。原文件已保留，请先导出备份后检查。"
         case .unsupportedVersion: "记录来自更新版本的应用，请升级应用后再打开。"
         case .storage(let message): "记录未能保存，草稿已保留。\(message)"
-        case .missingAPIKey: "请先在「我的 → 通用设置」中配置 DeepSeek API Key，再使用 AI 识别。"
-        case .http(401): "DeepSeek API Key 无效，请到「通用设置」中检查。"
-        case .http(402): "DeepSeek 账户余额不足，请充值后重试。"
-        case .http(429): "DeepSeek 请求较多，请稍后重试。"
-        case .http(400), .http(422): "DeepSeek 无法处理这次输入，请检查模型设置或更换照片后重试。"
-        case .http(let status) where status >= 500: "DeepSeek 服务暂时不可用，请稍后重试。"
-        case .http(let status): "DeepSeek 请求失败（HTTP \(status)），请稍后重试。"
+        case .http(401): "AI 服务暂时不可用，请稍后重试。"
+        case .http(402): "AI 服务暂时不可用，请稍后重试。"
+        case .http(429): "分析次数较多，请稍后重试。"
+        case .http(400), .http(422): "AI 无法处理这次输入，请简化描述或更换照片后重试。"
+        case .http(let status) where status >= 500: "AI 服务暂时不可用，请稍后重试。"
+        case .http(let status): "AI 请求失败（HTTP \(status)），请稍后重试。"
         }
     }
 }

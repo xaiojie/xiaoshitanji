@@ -140,6 +140,17 @@ final class SyncModel {
 
     // MARK: - 同步
 
+    func deleteAccount() async {
+        guard let token = session?.token else { return }
+        await run("正在删除账号…") {
+            try await client().deleteAccount(token: token)
+            SyncCredentialStore.clear()
+            session = nil
+            clearBaseline()
+            noticeText = "云端账号及其日记、照片和版本历史已删除。"
+        }
+    }
+
     func syncNow(diary: DiaryModel) async {
         guard let token = session?.token else {
             errorText = CloudSyncError.notLoggedIn.errorDescription

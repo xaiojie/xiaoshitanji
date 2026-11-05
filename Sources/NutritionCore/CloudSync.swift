@@ -190,6 +190,10 @@ public struct CloudSyncClient: Sendable {
         request("/v1/auth/logout", method: "POST", token: token)
     }
 
+    public func makeDeleteAccountRequest(token: String) -> URLRequest {
+        request("/v1/account", method: "DELETE", token: token)
+    }
+
     public func makeStateRequest(token: String) -> URLRequest {
         request("/v1/sync/state", method: "GET", token: token)
     }
@@ -405,6 +409,11 @@ public struct CloudSyncClient: Sendable {
 
     public func logout(token: String) async throws {
         let (data, status) = try await send(makeLogoutRequest(token: token))
+        try Self.parseEmpty(data: data, statusCode: status)
+    }
+
+    public func deleteAccount(token: String) async throws {
+        let (data, status) = try await send(makeDeleteAccountRequest(token: token))
         try Self.parseEmpty(data: data, statusCode: status)
     }
 

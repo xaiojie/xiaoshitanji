@@ -8,12 +8,12 @@ import NutritionCore
 @Observable
 final class MealDraft {
     let original: MealRecord
+    let aiConsent = AIConsent()
     let isEditing: Bool
     var record: MealRecord
     var reviewing: Bool
     var correction = ""
     var errorMessage: String?
-    private(set) var requiresKey = false
     private(set) var isAnalyzing = false
     private(set) var isRefining = false
     private(set) var photoLoadID: UUID?
@@ -123,7 +123,6 @@ final class MealDraft {
         let snapshot = record
         requestID = id
         errorMessage = nil
-        requiresKey = false
         isAnalyzing = true
         isRefining = instruction != nil
         analysisTask = Task { @MainActor in
@@ -135,18 +134,13 @@ final class MealDraft {
                 }
             }
             do {
-                let key = try KeychainStore.load()
-                guard !key.isEmpty else {
-                    requiresKey = true
-                    throw DiaryError.missingAPIKey
-                }
+                try await aiConsent.requirePermission()
                 let client = DeepSeekClient()
                 let estimate: FoodEstimate
                 if let instruction {
-                    estimate = try await client.refine(record: snapshot, instruction: instruction, apiKey: key)
+                    estimate = try await client.refine(record: snapshot, instruction: instruction)
                 } else {
-                    estimate = try await client.analyze(text: snapshot.originalText, imageJPEG: snapshot.photoJPEG,
-                        apiKey: key, mode: snapshot.analysisMode ?? .automatic)
+                    estimate = try await client.analyze(text: snapshot.originalText, imageJPEG: snapshot.photoJPEG, mode: snapshot.analysisMode ?? .automatic)
                 }
                 try Task.checkCancellation()
                 guard requestID == id else { return }

@@ -62,7 +62,7 @@ public struct CigaretteProductDraft: Equatable, Sendable {
 }
 
 public extension DeepSeekClient {
-    static func makeCigaretteRequest(text: String, imageJPEG: Data?, apiKey: String) throws -> URLRequest {
+    static func makeCigaretteRequest(text: String, imageJPEG: Data?) throws -> URLRequest {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || imageJPEG?.isEmpty == false else {
             throw DiaryError.invalidInput("请拍摄烟盒或描述香烟名称。")
@@ -74,12 +74,12 @@ public extension DeepSeekClient {
         if let imageJPEG, !imageJPEG.isEmpty {
             parts.append(["type": "image_url", "image_url": ["url": "data:image/jpeg;base64,\(imageJPEG.base64EncodedString())", "detail": "auto"]])
         }
-        return try buildRequest(parts: parts, prompt: cigarettePrompt, apiKey: apiKey, model: defaultModel)
+        return try buildRequest(parts: parts, prompt: cigarettePrompt)
     }
 
-    func recognizeCigarette(text: String, imageJPEG: Data?, apiKey: String,
+    func recognizeCigarette(text: String, imageJPEG: Data?,
                             currency: SmokingCurrency = .cny) async throws -> CigaretteRecognition {
-        let request = try Self.makeCigaretteRequest(text: text, imageJPEG: imageJPEG, apiKey: apiKey)
+        let request = try Self.makeCigaretteRequest(text: text, imageJPEG: imageJPEG)
         let (data, status) = try await complete(request)
         return try Self.parseCigaretteResponse(data: data, statusCode: status, currency: currency, userText: text)
     }

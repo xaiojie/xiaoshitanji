@@ -1,4 +1,4 @@
-# 小食痰记同步服务
+# 小食痰记 AI 与同步服务
 
 给 App 用的自建同步后端：**用户名 + 密码**登录，Postgres 存快照，nginx 终止 HTTPS。
 
@@ -22,6 +22,7 @@
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | `GET` | `/healthz` | 存活检查，不需要登录 |
+| `POST` | `/v1/ai/completions` | 免费 AI 网关，无需同步账号；固定上游和输出限制，按网络及全服务限额 |
 | `POST` | `/v1/auth/register` | `{username,password,deviceName}` → `{token,expiresAt,username,version}` |
 | `POST` | `/v1/auth/login` | 同上；错误口令 401 |
 | `POST` | `/v1/auth/logout` | 吊销当前 token |
@@ -100,3 +101,13 @@ api/.venv/bin/uvicorn app.main:app --reload --app-dir api
 - token 哈希入库，数据库泄露也拿不到可用会话；
 - nginx 只暴露 443，容器端口只绑 `127.0.0.1`；
 - 不记录请求体与口令日志（Caddy/nginx access log 只有方法与路径）。
+
+## AI 网关配置
+
+在服务器 `.env` 中配置 `DEEPSEEK_API_KEY`，文件权限设为 `600`。模型由 `DEEPSEEK_MODEL` 控制，默认 `deepseek-flash`。用户侧不传入服务商密钥，也不选择模型。支持文字与最多一张压缩 JPEG，保持原有餐食、烟盒和汇总分析的结构化响应。
+
+公平使用默认值为 `AI_REQUESTS_PER_MINUTE=10`、`AI_DAILY_LIMIT=60`、`AI_GLOBAL_DAILY_LIMIT=1000`、`AI_MAX_CONCURRENT=4`。日额度按 UTC 零点更新，即北京时间 08:00。同一网络共享额度，失败的上游尝试同样占用次数。日计数存入 `ai_usage`，条件更新与全局计数位于同一事务，重启服务不会清空当日额度。该表只保存日计数和每日变化的网络散列，不保存 AI 正文、图片或响应。
+
+Nginx 必须用 `$remote_addr` 覆盖 `X-Forwarded-For`，避免客户端伪造网络来源。保留 API 仅监听宿主机回环地址，并将代理超时设为 120 秒。`server/deploy/nginx-xiaoshitanji.conf` 包含相应配置。
+
+升级前备份 `.env`、源码和数据库，随后运行 `docker compose up -d --build api`，启动会创建独立的 `ai_usage` 表。将 `public/privacy.html` 和 `public/support.html` 部署到 `/var/www/xiaoshitanji/`，同步公开的数据处理说明。

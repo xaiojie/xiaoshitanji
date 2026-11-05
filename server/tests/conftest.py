@@ -23,6 +23,7 @@ async def app(tmp_path):
     )
     await application.state.database.create_all()
     yield application
+    await application.state.ai_client.aclose()
     await application.state.database.dispose()
 
 

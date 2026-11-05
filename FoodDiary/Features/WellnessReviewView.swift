@@ -5,6 +5,7 @@ struct WellnessReviewView: View {
     @Environment(DiaryModel.self) private var diary
     @Environment(HealthDataModel.self) private var health
     @Environment(\.dismiss) private var dismiss
+    @State private var aiConsent = AIConsent()
     @AppStorage("dailyCalorieGoal") private var calorieGoal = 0.0
     @State private var period = WellnessPeriod.week
     @State private var includesHealth = false
@@ -79,7 +80,7 @@ struct WellnessReviewView: View {
                 Button("发送并生成") { generate(summary) }
                 Button("继续查看", role: .cancel) { pendingSummary = nil }
             } message: { summary in
-                Text("将\(summary.period.title)的饮食、吸烟和身体测量汇总\(summary.includesHealth ? "，以及可读取的 Apple 健康活动数值" : "数值")发送给 DeepSeek。费用由你的 API 账户承担。生成后保存这次报告和汇总数值。")
+                Text("将\(summary.period.title)的饮食、吸烟和身体测量汇总\(summary.includesHealth ? "，以及可读取的 Apple 健康活动数值" : "数值")经小食痰记服务器转交 DeepSeek 处理。AI 分析免费使用。生成后保存这次报告和汇总数值。")
             }
             .onAppear {
                 if !initialized { includesHealth = health.accessRequested; initialized = true }
@@ -88,6 +89,7 @@ struct WellnessReviewView: View {
             .refreshable { await prepare() }
             .onDisappear { readToken = nil; cancelReview() }
         }
+        .aiDataConsent(aiConsent)
     }
 
     private var healthSelection: some View {
@@ -159,8 +161,8 @@ struct WellnessReviewView: View {
         reviewTask = Task { @MainActor in
             defer { if requestID == id { requestID = nil } }
             do {
-                let key = try KeychainStore.load()
-                let result = try await DeepSeekClient().reviewWellness(summary: summary, apiKey: key)
+                try await aiConsent.requirePermission()
+                let result = try await DeepSeekClient().reviewWellness(summary: summary)
                 try Task.checkCancellation()
                 guard requestID == id else { return }
                 try diary.saveWellnessReview(result)

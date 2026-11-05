@@ -6,6 +6,7 @@ struct ObservationView: View {
     @Environment(DiaryModel.self) private var diary
     @Environment(HealthDataModel.self) private var health
     @Environment(\.dismiss) private var dismiss
+    @State private var aiConsent = AIConsent()
     @AppStorage("showHealthPatterns") private var showPatterns = true
     @State private var period = WellnessPeriod.week
     @State private var context: ObservationContext?
@@ -64,6 +65,7 @@ struct ObservationView: View {
             .task(id: selectionID) { await prepare() }
             .onDisappear { readToken = nil; requestID = nil }
         }
+        .aiDataConsent(aiConsent)
     }
 
     private var healthSelection: some View {
@@ -221,8 +223,8 @@ struct ObservationView: View {
         Task { @MainActor in
             defer { if requestID == id { requestID = nil; asking = false } }
             do {
-                let key = try KeychainStore.load()
-                let answer = try await DeepSeekClient().ask(question: text, context: context, apiKey: key)
+                try await aiConsent.requirePermission()
+                let answer = try await DeepSeekClient().ask(question: text, context: context)
                 try Task.checkCancellation()
                 guard requestID == id else { return }
                 try diary.saveObservation(answer)

@@ -2,22 +2,13 @@ import SwiftUI
 import NutritionCore
 
 struct GeneralSettingsView: View {
-    /// 直接读 Bundle 里的版本，避免这里写死后和实际安装包对不上。
-    private var versionText: String {
-        let info = Bundle.main.infoDictionary
-        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = info?["CFBundleVersion"] as? String
-        return build.map { "版本 \(short) (\($0))" } ?? "版本 \(short)"
-    }
-
     @Environment(DiaryModel.self) private var diary
     @Environment(HealthDataModel.self) private var health
     @Environment(\.dismiss) private var dismiss
+    @State private var aiConsent = AIConsent()
+    @AppStorage(AIConsent.storageKey) private var aiConsentVersion = 0
     let isPresented: Bool
     @AppStorage("dailyCalorieGoal") private var goal = 0.0
-    @State private var apiKey = ""
-    @State private var revealKey = false
-    @State private var keyLoaded = false
     @State private var goalEnabled = false
     @State private var goalText = ""
     @State private var errorMessage: String?
@@ -39,8 +30,8 @@ struct GeneralSettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    FrogCallout(text: "蛙的工具箱", detail: "AI、个人目标和数据，都在这里安排。")
-                    apiSettings
+                    FrogCallout(text: "蛙的工具箱", detail: "个人目标、提醒和本机数据，都在这里安排。")
+                    aiPrivacySettings
                     goalSettings
                     healthSettings
                     reminderSettings
@@ -51,14 +42,23 @@ struct GeneralSettingsView: View {
                             .font(.subheadline).foregroundStyle(Theme.olive).contentCard()
                             .accessibilityIdentifier("settingsFeedback")
                     }
-                    HStack(spacing: 13) {
-                        Image("BrandMark").resizable().scaledToFill().frame(width: 46, height: 46)
-                            .clipShape(.rect(cornerRadius: 14))
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("小食痰记").font(.headline)
-                            Text(versionText).font(.caption).foregroundStyle(Theme.mutedInk)
+                    NavigationLink {
+                        AboutView()
+                    } label: {
+                        HStack(spacing: 13) {
+                            Image("BrandMark").resizable().scaledToFill().frame(width: 46, height: 46)
+                                .clipShape(.rect(cornerRadius: 14)).accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("关于小食痰记").font(.headline)
+                                Text(AppInformation.versionText).font(.caption).foregroundStyle(Theme.mutedInk)
+                            }
+                            Spacer(minLength: 8)
+                            Image(systemName: "chevron.right").font(.caption.weight(.bold))
+                                .foregroundStyle(Theme.mutedInk)
                         }
-                    }.frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 12)
+                        .foregroundStyle(Theme.ink).contentCard()
+                    }
+                    .buttonStyle(.plain).disabled(dataBusy).accessibilityIdentifier("aboutApp")
                 }.padding(20)
             }
             .background(Theme.background).scrollDismissesKeyboard(.interactively)
@@ -94,36 +94,40 @@ struct GeneralSettingsView: View {
             .interactiveDismissDisabled(dataBusy)
             .task { await ReminderScheduler.reschedule(reminders) }
             .onAppear {
-                loadKey()
                 goalEnabled = goal > 0
                 goalText = goal > 0 ? String(goal) : ""
             }
         }
+        .aiDataConsent(aiConsent)
     }
 
-    private var apiSettings: some View {
-        BrandSection("DeepSeek", symbol: "sparkles") {
-            HStack(spacing: 6) {
-                Group {
-                    if revealKey { TextField("填写 API Key", text: $apiKey) }
-                    else { SecureField("填写 API Key", text: $apiKey) }
-                }
-                .textInputAutocapitalization(.never).autocorrectionDisabled()
-                .accessibilityIdentifier("deepSeekKey")
-                Button(revealKey ? "隐藏密钥" : "显示密钥", systemImage: revealKey ? "eye.slash" : "eye") {
-                    revealKey.toggle()
-                }.labelStyle(.iconOnly).buttonStyle(.plain).frame(width: 44, height: 44)
-            }
-            .padding(.leading, 13).background(Theme.softYellow.opacity(0.35), in: .rect(cornerRadius: 15))
-            LabeledContent("当前模型", value: DeepSeekClient.defaultModel).foregroundStyle(Theme.mutedInk)
-            Button { saveKey() } label: {
-                Label("保存 API Key", systemImage: "key.fill").frame(maxWidth: .infinity, minHeight: 38)
-            }.yellowAction().disabled(!keyLoaded).accessibilityIdentifier("saveAPIKey")
-            Link(destination: URL(string: "https://platform.deepseek.com/api_keys")!) {
-                Label("打开 DeepSeek 开放平台", systemImage: "arrow.up.right.square").font(.caption)
-            }
-            Text("密钥保存在这台 iPhone 的钥匙串。饮食和烟盒识别会发送对应文字及处理后的照片，汇总分析在确认后发送所选数据的汇总数值。调用费用由你的 API 账户承担。清空后保存可移除密钥。")
+    private var aiPrivacySettings: some View {
+        BrandSection("AI 与隐私", symbol: "hand.raised.fill") {
+            LabeledContent("AI 数据授权", value: aiConsentVersion == AIConsent.currentVersion ? "已允许" : "等待确认")
+            Text("使用 AI 时，本次分析所需的文字、所选照片或经你确认的健康汇总，会经小食痰记服务器转交 DeepSeek 处理。")
                 .font(.caption).foregroundStyle(Theme.mutedInk).lineSpacing(3)
+            if aiConsentVersion == AIConsent.currentVersion {
+                Button("撤回 AI 数据授权", role: .destructive) {
+                    aiConsentVersion = 0
+                    feedback = "AI 数据授权已撤回，下次分析时会重新确认。"
+                }
+                .accessibilityIdentifier("revokeAIDataSharing")
+            } else {
+                Button("查看并授权") {
+                    feedback = nil
+                    Task {
+                        do {
+                            try await aiConsent.requirePermission()
+                            feedback = "AI 数据授权已允许。"
+                        } catch is CancellationError {
+                        } catch { errorMessage = error.localizedDescription }
+                    }
+                }
+                .disabled(aiConsent.isPresented)
+                .accessibilityIdentifier("manageAIDataSharing")
+            }
+            Link("小食痰记隐私政策", destination: URL(string: "https://xiaoshitanji.papaclaoud.top/privacy")!)
+            Link("DeepSeek 隐私政策", destination: URL(string: "https://cdn.deepseek.com/policies/zh-CN/deepseek-privacy-policy.html")!)
         }
     }
 
@@ -244,7 +248,7 @@ struct GeneralSettingsView: View {
                 ErrorNotice(message: error)
                 Button("重新读取记录", action: diary.reload)
             }
-            Text("导出包含饮食、照片、个人资料、手动体重、烟包、抽烟和分烟记录，以及已保存的汇总报告和分析数值。API Key 保存在钥匙串。完整 JSON 包含照片内容，可在其他设备恢复。本机 FoodDiary/diary.json 使用外置 Photos 目录，需与照片一起保留。")
+            Text("导出包含饮食、照片、个人资料、手动体重、烟包、抽烟和分烟记录，以及已保存的汇总报告和分析数值。完整 JSON 包含照片内容，可在其他设备恢复。本机 FoodDiary/diary.json 使用外置 Photos 目录，需与照片一起保留。")
                 .font(.caption).foregroundStyle(Theme.mutedInk).lineSpacing(3)
         }
     }
@@ -303,25 +307,6 @@ struct GeneralSettingsView: View {
                 feedback = "备份已恢复，恢复前的数据保存在本机 Backups 目录。"
             } catch { errorMessage = error.localizedDescription }
         }
-    }
-
-    private func loadKey() {
-        do {
-            apiKey = try KeychainStore.load()
-            keyLoaded = true
-        } catch {
-            keyLoaded = false
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    private func saveKey() {
-        do {
-            try KeychainStore.save(apiKey)
-            apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-            feedback = apiKey.isEmpty ? "API Key 已移除，已有饮食记录保留在本机。" : "API Key 已保存，可前往「饮食」分析这一餐。"
-            errorMessage = nil
-        } catch { errorMessage = error.localizedDescription; feedback = nil }
     }
 
     private func saveGoal() {

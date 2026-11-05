@@ -5,6 +5,7 @@ struct TodayView: View {
     @Environment(DiaryModel.self) private var diary
     @Environment(HealthDataModel.self) private var health
     @Environment(\.scenePhase) private var scenePhase
+    @State private var aiConsent = AIConsent()
     @AppStorage("dailyCalorieGoal") private var goal = 0.0
     @State private var selectedDate = Date.now
     @State private var lastActiveDate = Date.now
@@ -64,8 +65,6 @@ struct TodayView: View {
                         if let reviewError {
                             VStack(alignment: .leading, spacing: 12) {
                                 ErrorNotice(message: reviewError)
-                                Button("打开 DeepSeek 设置", systemImage: "key") { sheet = .settings }
-                                    .font(.subheadline).buttonStyle(.bordered)
                             }
                             .contentCard()
                         }
@@ -105,6 +104,7 @@ struct TodayView: View {
                 Button("好", role: .cancel) { liveActivityError = nil }
             } message: { Text(liveActivityError ?? "") }
         }
+        .aiDataConsent(aiConsent)
     }
 
     @ViewBuilder
@@ -150,9 +150,9 @@ struct TodayView: View {
         reviewTask = Task { @MainActor in
             defer { if reviewRequestID == id { reviewRequestID = nil } }
             do {
-                let key = try KeychainStore.load()
+                try await aiConsent.requirePermission()
                 let value = try await DeepSeekClient().reviewDay(records: snapshot, date: date,
-                                                                 calorieGoal: analyzedGoal, apiKey: key)
+                                                                 calorieGoal: analyzedGoal)
                 try Task.checkCancellation()
                 guard reviewRequestID == id, referenceGoal == analyzedGoal else { return }
                 try diary.saveReview(value, snapshot: snapshot)

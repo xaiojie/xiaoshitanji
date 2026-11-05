@@ -2,19 +2,18 @@ import Foundation
 
 public extension DeepSeekClient {
     /// 自由追问：把本地聚合摘要和问题一起发给模型，要求只引用已给数据。
-    static func makeAskRequest(context: ObservationContext, question: String, apiKey: String,
-                               model: String = defaultModel) throws -> URLRequest {
+    static func makeAskRequest(context: ObservationContext, question: String) throws -> URLRequest {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 200 else {
             throw DiaryError.invalidInput("问题需要 1 至 200 个字。")
         }
         let json = try context.promptJSON()
         return try buildRequest(parts: [["type": "text", "text": json]],
-                                prompt: askPrompt(question: trimmed), apiKey: apiKey, model: model)
+                                prompt: askPrompt(question: trimmed), responseIsJSON: false)
     }
 
-    func ask(question: String, context: ObservationContext, apiKey: String) async throws -> AnalysisAnswer {
-        let request = try Self.makeAskRequest(context: context, question: question, apiKey: apiKey)
+    func ask(question: String, context: ObservationContext) async throws -> AnalysisAnswer {
+        let request = try Self.makeAskRequest(context: context, question: question)
         let (data, status) = try await complete(request)
         return try Self.parseAskResponse(data: data, statusCode: status, question: question, context: context)
     }

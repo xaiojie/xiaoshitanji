@@ -1,5 +1,7 @@
 """小食痰记同步服务：账号与快照 API。"""
 
+import asyncio
+import httpx
 import hashlib
 import json
 import re
@@ -12,6 +14,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
+from .ai import router as ai_router
 from .config import Settings, settings as default_settings
 from .db import Database, get_session
 from .models import Photo, Snapshot, Token, User, utcnow
@@ -132,12 +135,17 @@ def validate_payload(payload: dict, limit: int) -> bytes:
 async def lifespan(app: FastAPI):
     await app.state.database.create_all()
     yield
+    await app.state.ai_client.aclose()
     await app.state.database.dispose()
 
 
 def create_app(app_settings: Settings | None = None) -> FastAPI:
     config = app_settings or default_settings
     app = FastAPI(title="小食痰记同步服务", version="1.0.1", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app.include_router(ai_router)
+    app.state.ai_client = httpx.AsyncClient(timeout=httpx.Timeout(80, connect=10), follow_redirects=False)
+    app.state.ai_semaphore = asyncio.Semaphore(config.ai_max_concurrent)
+    app.state.ai_recent = {}
     app.state.settings = config
     app.state.database = Database(config.database_url)
     app.state.limiter = AttemptLimiter(config.auth_attempts_per_minute)

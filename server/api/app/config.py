@@ -28,6 +28,12 @@ class Settings:
     trust_proxy_headers: bool = field(
         default_factory=lambda: os.environ.get("TRUST_PROXY_HEADERS", "1") == "1"
     )
+    ai_api_key: str = field(default_factory=lambda: os.environ.get("DEEPSEEK_API_KEY", "").strip())
+    ai_model: str = field(default_factory=lambda: os.environ.get("DEEPSEEK_MODEL", "deepseek-flash"))
+    ai_daily_limit: int = field(default_factory=lambda: _int("AI_DAILY_LIMIT", 60))
+    ai_global_daily_limit: int = field(default_factory=lambda: _int("AI_GLOBAL_DAILY_LIMIT", 1000))
+    ai_requests_per_minute: int = field(default_factory=lambda: _int("AI_REQUESTS_PER_MINUTE", 10))
+    ai_max_concurrent: int = field(default_factory=lambda: _int("AI_MAX_CONCURRENT", 4))
 
 
 settings = Settings()

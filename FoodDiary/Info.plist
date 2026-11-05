@@ -24,9 +24,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>扫描食物、营养成分表或烟盒，并按你的操作发送给 AI 识别。</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>仅在你主动保存训练或体重记录时，把这条记录写入 Apple 健康，方便其他健康 App 统一查看。小食痰记不会在后台写入或修改你的健康数据。</string>
+	<string>小食痰记通过健康框架展示你授权的健康信息，当前仅请求读取权限，不会向 Apple 健康写入或修改记录。</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>读取活动、睡眠、心率与静息心率、心率变异性、有氧适能、耳机音量、体能训练及身高体重，用于健康主页和汇总分析。你可以在确认后将所选汇总数值发送给 DeepSeek 生成建议。</string>
+	<string>读取活动、睡眠、心率与静息心率、心率变异性、有氧适能、耳机音量、体能训练及身高体重，用于健康主页和汇总分析。你可以在确认后将所选汇总数值经小食痰记服务器转交 DeepSeek 生成建议。</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>用语音描述刚吃的一餐，声音只用于转成文字。</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

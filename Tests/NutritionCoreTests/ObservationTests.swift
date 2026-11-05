@@ -208,14 +208,14 @@ struct ObservationTests {
     @Test func askRequestRejectsLongQuestion() throws {
         let context = try context(document: DiaryDocument())
         #expect(throws: DiaryError.self) {
-            _ = try DeepSeekClient.makeAskRequest(context: context, question: String(repeating: "问", count: 201), apiKey: "k")
+            _ = try DeepSeekClient.makeAskRequest(context: context, question: String(repeating: "问", count: 201))
         }
     }
 
     @Test func askRequestCarriesContextAndRules() throws {
         let document = DiaryDocument(records: [record(10, calories: 700, protein: 30)])
         let context = try context(document: document)
-        let request = try DeepSeekClient.makeAskRequest(context: context, question: "晚饭怎么改？", apiKey: "k")
+        let request = try DeepSeekClient.makeAskRequest(context: context, question: "晚饭怎么改？")
         let body = String(decoding: request.httpBody ?? Data(), as: UTF8.self)
         #expect(body.contains("averageCalories"))
         #expect(body.contains("晚饭怎么改"))

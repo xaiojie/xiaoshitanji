@@ -59,8 +59,7 @@ struct ComposerView: View {
                             photoItem: $photoItem, photoJPEG: draft.record.photoJPEG,
                             loadingPhoto: draft.photoLoadID != nil,
                             onCamera: openCamera,
-                            onRemovePhoto: { draft.removePhoto(); photoItem = nil },
-                            onSettings: { sheet = .settings }
+                            onRemovePhoto: { draft.removePhoto(); photoItem = nil }
                         )
                         .disabled(draft.busy)
                         Button("手动填写 / 常吃 / 最近吃过", systemImage: "square.and.pencil") { sheet = .quickAdd }
@@ -74,10 +73,6 @@ struct ComposerView: View {
                     if let message = draft.errorMessage {
                         VStack(alignment: .leading, spacing: 12) {
                             ErrorNotice(message: message)
-                            if draft.requiresKey {
-                                Button("配置 DeepSeek API Key", systemImage: "key") { sheet = .settings }
-                                    .buttonStyle(.bordered)
-                            }
                         }
                         .contentCard()
                     }
@@ -117,6 +112,7 @@ struct ComposerView: View {
             }
             .onDisappear { draft.cancelAll() }
         }
+        .aiDataConsent(draft.aiConsent)
     }
 
     private var primaryAction: some View {
@@ -164,8 +160,6 @@ struct ComposerView: View {
                 onFood: { draft.addFood($0) },
                 onTemplate: { draft.apply(template: $0) },
                 onRecord: { draft.copy(record: $0) })
-        case .settings:
-            GeneralSettingsView(isPresented: true)
         }
     }
 
@@ -216,12 +210,11 @@ struct ComposerView: View {
 }
 
 private enum ComposerSheet: Identifiable {
-    case camera, settings, quickAdd
+    case camera, quickAdd
     case food(FoodItem)
     var id: String {
         switch self {
         case .camera: "camera"
-        case .settings: "settings"
         case .quickAdd: "quickAdd"
         case .food(let food): food.id.uuidString
         }
