@@ -9,6 +9,9 @@ final class AIConsent {
     static let currentVersion = 1
 
     var isPresented = false
+    /// 用户明确拒绝后的一次性提示。调用方只处理 `CancellationError`，不显示任何反馈，
+    /// 否则按了「暂不使用 AI」会像是没反应。
+    var declinedNotice: String?
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var waiters: [UUID: CheckedContinuation<Bool, Never>] = [:]
 
@@ -31,6 +34,7 @@ final class AIConsent {
                     return
                 }
                 waiters[id] = continuation
+                declinedNotice = nil
                 isPresented = true
             }
         } onCancel: {
@@ -46,7 +50,10 @@ final class AIConsent {
         resolve(true)
     }
 
-    func decline() { resolve(false) }
+    func decline() {
+        declinedNotice = "已取消，本次没有发送任何内容。需要时再点一次，或在通用设置里允许 AI 分析。"
+        resolve(false)
+    }
     func cancelPending() { resolve(false) }
 
     private func cancel(_ id: UUID) {

@@ -52,7 +52,9 @@ struct TodayView: View {
                                     + (workoutTotals.hasWorkout ? " · 锻炼 \(workoutTotals.minutes) 分钟" : "")
                             },
                             onDate: { sheet = .calendar }, onPrevious: { moveDate(by: -1) }, onNext: { moveDate(by: 1) },
-                            onGoal: { sheet = budget == nil ? .settings : .energy })
+                            onGoal: { sheet = budget == nil ? .settings : .energy },
+                            liveActivityRunning: liveActivity.isRunning,
+                            onLiveActivity: toggleLiveActivity)
                         VStack(spacing: 0) {
                             ForEach([MealKind.breakfast, .lunch, .snack, .dinner]) { kind in
                                 MealSectionCard(kind: kind, records: records.filter { $0.kind == kind },

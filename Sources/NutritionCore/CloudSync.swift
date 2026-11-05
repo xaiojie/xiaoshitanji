@@ -465,7 +465,9 @@ extension DiaryDocument {
         var result = self
         result.schemaVersion = DiaryDocument.currentSchemaVersion
         result.records = Self.union(records, remote.records).sorted { $0.date < $1.date }
-        result.reviews = Self.union(reviews, remote.reviews)
+        // 复盘按天唯一（saveReview 也按天去重）：两台设备各给同一天写复盘时保留生成时间较新的那份，
+        // 否则 review(on:) 取首条，用户会看到过期结论。
+        result.reviews = Self.oneReviewPerDay(Self.union(reviews, remote.reviews))
         result.weights = Self.union(weights, remote.weights).sorted { $0.date < $1.date }
         result.workouts = Self.union(workouts, remote.workouts).sorted { $0.date < $1.date }
         result.plans = Self.union(plans, remote.plans).sorted { $0.lastUsedAt > $1.lastUsedAt }
@@ -491,5 +493,16 @@ extension DiaryDocument {
             seen.insert(item.id)
         }
         return result
+    }
+
+    /// 同一天只留一条复盘，取生成时间较新的那份（`saveReview` 也是按天替换）。
+    private static func oneReviewPerDay(_ reviews: [DietReview], calendar: Calendar = .current) -> [DietReview] {
+        var byDay: [Date: DietReview] = [:]
+        for review in reviews {
+            let day = calendar.startOfDay(for: review.date)
+            if let existing = byDay[day], existing.generatedAt >= review.generatedAt { continue }
+            byDay[day] = review
+        }
+        return byDay.values.sorted { $0.date < $1.date }
     }
 }

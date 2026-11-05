@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import NutritionCore
 
 struct GeneralSettingsView: View {
@@ -23,6 +24,7 @@ struct GeneralSettingsView: View {
     @State private var dataBusy = false
     @AppStorage("autoBackupEnabled") private var autoBackup = true
     @State private var reminders = ReminderStore.load()
+    @State private var notificationsDenied = false
 
     init(isPresented: Bool = false) { self.isPresented = isPresented }
 
@@ -30,7 +32,7 @@ struct GeneralSettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    FrogCallout(text: "蛙的工具箱", detail: "个人目标、提醒和本机数据，都在这里安排。")
+                    FrogCallout(text: "奶蛙的工具箱", detail: "个人目标、提醒和本机数据，都在这里安排。")
                     aiPrivacySettings
                     goalSettings
                     healthSettings
@@ -92,7 +94,10 @@ struct GeneralSettingsView: View {
                 Text("将恢复这份备份中的\(document.records.count)餐饮食与\(document.workouts.count)次训练，并替换当前记录。恢复前会完整保留当前数据及照片。")
             }
             .interactiveDismissDisabled(dataBusy)
-            .task { await ReminderScheduler.reschedule(reminders) }
+            .task {
+                let result = await ReminderScheduler.reschedule(reminders)
+                notificationsDenied = result == .notificationsDenied && reminders.contains(where: \.isEnabled)
+            }
             .onAppear {
                 goalEnabled = goal > 0
                 goalText = goal > 0 ? String(goal) : ""
@@ -205,6 +210,23 @@ struct GeneralSettingsView: View {
             }
             Text("关闭后不再提醒；系统里关掉通知开关也会一并静音。")
                 .font(.caption).foregroundStyle(Theme.mutedInk)
+            if notificationsDenied {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "bell.slash.fill").foregroundStyle(Theme.accent)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("提醒发不出去：系统通知被关掉了").font(.subheadline.weight(.semibold))
+                        Text("到「设置 → 通知 → 小食痰记」允许通知，再回来打开提醒。")
+                            .font(.caption).foregroundStyle(Theme.mutedInk).lineSpacing(3)
+                        Button("打开系统设置") { openNotificationSettings() }
+                            .font(.caption.weight(.semibold))
+                            .accessibilityIdentifier("openNotificationSettings")
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(12)
+                .background(Theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+                .accessibilityIdentifier("notificationDeniedNotice")
+            }
         }
         .contentCard()
     }
@@ -212,7 +234,15 @@ struct GeneralSettingsView: View {
     private func saveReminders() {
         ReminderStore.save(reminders)
         let snapshot = reminders
-        Task { await ReminderScheduler.reschedule(snapshot) }
+        Task {
+            let result = await ReminderScheduler.reschedule(snapshot)
+            notificationsDenied = result == .notificationsDenied && snapshot.contains(where: \.isEnabled)
+        }
+    }
+
+    private func openNotificationSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     private var dataSettings: some View {

@@ -14,6 +14,8 @@ struct DailyIntakeCard: View {
     let onPrevious: () -> Void
     let onNext: () -> Void
     let onGoal: () -> Void
+    var liveActivityRunning: Bool = false
+    var onLiveActivity: (() -> Void)?
 
     private var progress: Double { goal > 0 ? min(nutrition.calories / goal, 1) : 0 }
 
@@ -33,6 +35,12 @@ struct DailyIntakeCard: View {
                     Button("选择日期", systemImage: "calendar", action: onDate)
                     Button("后一天", systemImage: "chevron.right", action: onNext).disabled(isToday)
                     Button("设置热量参考", systemImage: "flag", action: onGoal)
+                    if let onLiveActivity, isToday {
+                        Button(liveActivityRunning ? "关闭灵动岛" : "灵动岛显示今日摄入",
+                               systemImage: liveActivityRunning ? "stop.circle" : "bolt.circle",
+                               action: onLiveActivity)
+                            .accessibilityIdentifier("toggleLiveActivity")
+                    }
                 }.labelStyle(.iconOnly).font(.title3).frame(width: 36, height: 36)
             }
             HStack(alignment: .bottom, spacing: 0) {

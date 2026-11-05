@@ -177,7 +177,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     @app.post("/v1/auth/register", status_code=201, response_model=SessionOut)
     async def register(body: Credentials, request: Request, session: AsyncSession = Depends(get_session)) -> SessionOut:
         name = validate_credentials(body.username, body.password)
-        app.state.limiter.check(client_key(request, name))
+        app.state.limiter.check(client_key(request, name, trust_forwarded=config.trust_proxy_headers))
         existing = await session.scalar(select(User).where(User.username == name))
         if existing is not None:
             raise HTTPException(status_code=409, detail="这个名字已经有人用了，换一个吧。")
@@ -194,7 +194,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     @app.post("/v1/auth/login", response_model=SessionOut)
     async def login(body: Credentials, request: Request, session: AsyncSession = Depends(get_session)) -> SessionOut:
         name = validate_credentials(body.username, body.password)
-        app.state.limiter.check(client_key(request, name))
+        app.state.limiter.check(client_key(request, name, trust_forwarded=config.trust_proxy_headers))
         user = await session.scalar(select(User).where(User.username == name))
         if user is None or not verify_password(user.password_hash, body.password):
             raise HTTPException(status_code=401, detail="用户名或密码不对。")
@@ -357,8 +357,9 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
                     "checksum": previous.checksum,
                     "unchanged": True,
                 })
+        user_id = user.id
         snapshot = Snapshot(
-            user_id=user.id,
+            user_id=user_id,
             version=current + 1,
             payload=body.payload,
             checksum=digest,
@@ -368,13 +369,29 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
         session.add(snapshot)
         user.current_version = current + 1
         user.updated_at = utcnow()
-        await session.flush()
-        floor = user.current_version - config.versions_kept
-        if floor > 0:
-            await session.execute(
-                delete(Snapshot).where(Snapshot.user_id == user.id, Snapshot.version <= floor)
+        floor = current + 1 - config.versions_kept
+        try:
+            await session.flush()
+            if floor > 0:
+                await session.execute(
+                    delete(Snapshot).where(Snapshot.user_id == user_id, Snapshot.version <= floor)
+                )
+            await session.commit()
+        except IntegrityError:
+            # 两台设备同时用同一 baseVersion 上传时，靠 (user_id, version) 唯一约束兜底：
+            # 输掉竞争的一方拿到 409 去合并，而不是 500。
+            await session.rollback()
+            loser = await session.scalar(select(User).where(User.id == user_id))
+            latest = (
+                await state_of(session, loser)
+                if loser is not None
+                else SyncState(version=current, updatedAt=None, checksum=None)
             )
-        await session.commit()
+            return JSONResponse(status_code=409, content={
+                "detail": "服务器上有更新的数据，请先下载合并。",
+                "version": latest.version,
+                "updatedAt": latest.updatedAt.isoformat() if latest.updatedAt else None,
+            })
         return JSONResponse(status_code=201, content={
             "version": snapshot.version,
             "updatedAt": snapshot.created_at.isoformat(),

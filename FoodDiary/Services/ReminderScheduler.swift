@@ -27,16 +27,23 @@ enum ReminderStore {
     }
 }
 
+/// 排期结果：通知被系统关掉时，界面需要明确告诉用户去哪儿打开，而不是静默失败。
+enum ReminderScheduling: Equatable {
+    case scheduled
+    case notificationsDenied
+}
+
 enum ReminderScheduler {
     static var authorizationStatus: UNAuthorizationStatus {
         get async { await UNUserNotificationCenter.current().notificationSettings().authorizationStatus }
     }
 
     /// 重新排期：先清掉旧的四条，再按开启的提醒装回系统。
-    static func reschedule(_ reminders: [Reminder]) async {
+    @discardableResult
+    static func reschedule(_ reminders: [Reminder]) async -> ReminderScheduling {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ReminderKind.allCases.map { "reminder.\($0.rawValue)" })
-        guard await requestAuthorization() else { return }
+        guard await requestAuthorization() else { return .notificationsDenied }
         for reminder in ReminderPlanner.scheduled(reminders) {
             let content = UNMutableNotificationContent()
             content.title = "小食痰记 · \(reminder.kind.title)"
@@ -46,6 +53,7 @@ enum ReminderScheduler {
             try? await center.add(UNNotificationRequest(identifier: "reminder.\(reminder.kind.rawValue)",
                                                         content: content, trigger: trigger))
         }
+        return .scheduled
     }
 
     @discardableResult

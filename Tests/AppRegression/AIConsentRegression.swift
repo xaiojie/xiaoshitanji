@@ -30,7 +30,9 @@ import Foundation
         do { try await declined.value; fatalError("Declined analysis continued") }
         catch is CancellationError {}
         precondition(operations == 1 && !consent.isAuthorized)
-        print("PASS — declining blocks analysis and revocation requires a new approval")
+        // 调用方只吞掉 CancellationError：拒绝必须在界面上留下可见反馈。
+        precondition(consent.declinedNotice?.contains("没有发送") == true)
+        print("PASS — declining blocks analysis, keeps the data local and leaves a visible notice")
 
         let cancelled = Task { @MainActor in
             try await consent.requirePermission()
@@ -49,7 +51,8 @@ import Foundation
         do { try await dismissed.value; fatalError("Dismissed analysis continued") }
         catch is CancellationError {}
         precondition(!consent.isPresented && !consent.isAuthorized)
-        print("PASS — leaving the view resolves pending authorization without sending")
+        precondition(consent.declinedNotice == nil, "Dismissing the view is not a refusal and must stay silent")
+        print("PASS — leaving the view resolves pending authorization without sending or nagging")
 
         let cancelledPeer = Task { @MainActor in try await consent.requirePermission() }
         let remainingPeer = Task { @MainActor in try await consent.requirePermission() }

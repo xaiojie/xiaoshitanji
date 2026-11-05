@@ -38,6 +38,19 @@ struct DiaryCSVTests {
         #expect(csv.contains("\"自己做的\n两行备注\""))
     }
 
+    @Test("公式开头的字段会加单引号，纯数字保持原样")
+    func escapesFormulaInjection() {
+        let diary = DiaryDocument(records: [
+            MealRecord(foods: [.manual(name: "=1+1", nutrition: Nutrition(calories: 100))]),
+            MealRecord(foods: [.manual(name: "-3.5", nutrition: Nutrition(calories: 200))]),
+        ])
+        let csv = DiaryCSV.meals(diary)
+        // Excel/Numbers 会把 = 开头的单元格当公式执行。
+        #expect(csv.contains("'=1+1"))
+        // 数值列里的负数不是公式，保持原样交给表格软件解析。
+        #expect(csv.contains(",-3.5,"))
+    }
+
     @Test("体重与抽烟表")
     func exportsWeightsAndSmoking() throws {
         var document = document()
