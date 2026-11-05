@@ -6,3 +6,6 @@ DerivedData/
 xcuserdata/
 .env
 *.xcarchive
+
+# Local App Store exports and receipts; published screenshots live in docs/screenshots/.
+outputs/
