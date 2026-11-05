@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.1%20(34)-yellow" alt="version" />
-  <img src="https://img.shields.io/badge/tests-208%20passed-brightgreen" alt="tests" />
+  <img src="https://img.shields.io/badge/version-1.0.1%20(37)-yellow" alt="version 1.0.1 (37)" />
+  <img src="https://img.shields.io/badge/Swift%20tests-210%20total-brightgreen" alt="210 项 Swift 测试，含 1 项默认跳过" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -33,6 +33,7 @@
 ## 目录
 
 - [这是什么](#这是什么)
+- [App 截图](#app-截图)
 - [功能](#功能)
 - [快速开始](#快速开始)
 - [技术栈](#技术栈)
@@ -66,6 +67,31 @@
 | 视觉 | 浅色黄色主题 + 原生 Liquid Glass，奶蛙吉祥物 |
 | 依赖 | 零第三方依赖，仅系统框架 |
 | 网络 | AI 分析通过小食痰记后端转交 DeepSeek，可选云同步使用独立登录账号 |
+
+作者：**爬爬 · Jay He** · [隐私政策](https://xiaoshitanji.papaclaoud.top/privacy) · [支持与反馈](https://xiaoshitanji.papaclaoud.top/support)
+
+---
+
+## App 截图
+
+用户提供的 iPhone 真机截图，展示现有黄色奶蛙界面。点击可查看原图。
+
+<table>
+  <tr>
+    <th>饮食记录</th>
+    <th>摄入趋势</th>
+    <th>戒烟记录</th>
+    <th>个人健康</th>
+  </tr>
+  <tr>
+    <td width="25%"><a href="docs/screenshots/01-diary.png"><img src="docs/screenshots/01-diary.png" width="240" alt="饮食首页：今日摄入、三大营养素、餐次与扫描记餐入口" /></a></td>
+    <td width="25%"><a href="docs/screenshots/02-trends.png"><img src="docs/screenshots/02-trends.png" width="240" alt="趋势页面：近七天摄入与吸烟记录图表" /></a></td>
+    <td width="25%"><a href="docs/screenshots/03-smoking.png"><img src="docs/screenshots/03-smoking.png" width="240" alt="戒烟页面：今日根数、烟包余量、分烟与尼古丁标注累计" /></a></td>
+    <td width="25%"><a href="docs/screenshots/04-profile.png"><img src="docs/screenshots/04-profile.png" width="240" alt="我的页面：个人资料、BMI、汇总分析与分类健康信息" /></a></td>
+  </tr>
+</table>
+
+截图采集于 2026-11-05，部分按钮文案早于构建 37 的调整。截图展示已实现功能，后续规划中的首次引导、独立健身首页和经期跟踪尚未上线。素材说明见 [截图目录](docs/screenshots/README.md)。
 
 ---
 
@@ -107,6 +133,7 @@
 ### 我的与 Apple 健康
 
 - 首页按个人资料、汇总分析、四项今日概况、健康分类和常用工具组织。身体测量、活动与训练、心脏与体能、睡眠与听力分别进入二级页，指标详情与七日变化可继续展开。
+- 「通用设置 → 关于小食痰记」提供作者署名、邮箱联系、用户协议、隐私说明、应用权限说明、个人信息清单与第三方 SDK / 服务说明；文档可在 App 内阅读。
 - 默认餐次及个人页功能采用暖白黄色系透明拟物 PNG，晚餐使用双耳砂锅炖菜与锅盖造型。早餐、午餐和加餐使用现有素材，用户餐食照片优先展示。
 
 - 顶部资料卡：头像、昵称、身高、当前体重、目标体重，自动算 BMI（身高需在 50–250 cm 之间才计算）。
@@ -376,13 +403,15 @@ flowchart LR
 
 ```sh
 swift test
-# 209 tests in 27 suites，208 passed，1 skipped
+# 2026-11-05：210 tests in 28 suites，含 1 项默认跳过的演示工具
+Tests/AppRegression/run-ai-consent.sh
+# 首次明确授权、拒绝、撤回、任务取消与并发等待，共 5 项 PASS
 Tests/AppRegression/run-sync-model.sh
-# 恢复合并与冲突重试、旧账号基线迁移，两项 PASS
+# 恢复合并、冲突重试、旧账号基线迁移及账号删除失败保护
 python3 Tests/AppRegression/check-profile-artwork.py
 # 11 项健康指标分类、15 个图片资源及入口标识核验
 cd server && api/.venv/bin/python -m pytest -q
-# 42 passed
+# 2026-11-05：63 passed
 ```
 
 Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列出主要测试组，照片传输测试通过 URLSession 实际客户端验证请求顺序与失败保护。
@@ -392,6 +421,7 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | `DiaryTests` | 份量缩放（150 g 米饭 → 174 kcal）、非法值/重复食物拒绝、保存重开编辑删除、损坏与高版本文档不可覆盖、本地日历分组、草稿预填时间 |
 | `CoachTests` | 续改请求上下文、份量解析与 `adjustments` 累积、回顾请求营养与可选目标、空记录报错、单餐不评分 |
 | `DeepSeekTests` | 请求构造、`finish_reason` 校验、错误映射、空响应拒绝 |
+| `ManagedAIServiceTests` | 受管后端请求、无需客户端密钥、服务错误与限额提示 |
 | `NutritionLabelTests` | 三种基准（g/mL/份/包）、kJ→kcal、按食用量缩放、非法基准拒绝 |
 | `MealTimeTests` | 各餐次预设时间与取中点规则 |
 | `HealthProfileTests` | BMI 边界、资料校验、体重来源与同日选择、旧格式兼容 |
@@ -426,7 +456,7 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit、App Group（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 1.0.1，构建号 34，App 与小组件一致 |
+| 版本 | 1.0.1，构建号 37，App 与小组件一致 |
 
 真机测试、TestFlight 上传与正式发布均使用当前分支最新源码构建。执行前核对提交、工作区改动及主程序和小组件版本，安装后回读设备上的版本号。上传与发布按用户当次指令执行。
 
@@ -436,7 +466,9 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 
 ## 项目状态与路线图
 
-**当前源码版本 1.0.1（34）**，本轮修复 schema 5 服务端兼容、独立照片同步、完整备份恢复、训练与计划合并、首次拉取与冲突重试，并整理编译警告与截图工具。构建 32 补齐旧汇总报告新增健康指标的解码兼容，缺失指标保留未知。构建 33 完成个人主页分类与拟物图标。构建 34 将晚餐默认图重新设计为带锅盖的双耳砂锅炖菜。
+**当前源码版本 1.0.1（37）**。构建 35 将 AI 调用迁至后端，用户无需填写密钥；构建 36 增加首次 AI 数据明确授权和撤回入口；构建 37 增加关于页及五类说明文档，并补齐 HealthKit 要求的用途说明，应用实际仍只请求读取健康数据。此前的旧记录兼容、独立照片同步、完整备份恢复、训练与计划合并、个人主页分类和晚餐独立图标均保留。
+
+2026-11-05，用户已完成真机测试并确认已提交 Apple 审核。当前优先完成上架；下列后续需求仅登记待办，不进入本次审核包。审核与正式上架结果以 App Store Connect 为准。
 
 | 状态 | 事项 |
 | --- | --- |
@@ -445,14 +477,25 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | ✅ 已实现 | 「蛙的观察」：五种本地模式识别（蛋白、抽烟时段、断档、体重停滞、热量超标）+ 只发聚合数值的追问，回答标注依据与「基于旧数据」 |
 | ✅ 已实现 | 「我的」跨饮食、抽烟、运动与身体的 AI 汇总分析。默认近7天，可切换30天和全部记录，预览并确认后发送，按范围保留最新报告 |
 | ✅ 已实现 | 健康全景：睡眠、心率 / 静息心率 / HRV、有氧适能、耳机音量与 Apple 健康体能训练接入趋势与 AI 分析，缺失数据明确标为缺口 |
-| ✅ 已实现 | 云端同步与自包含备份恢复，208 项 Swift 测试通过、1 项演示工具跳过，42 项服务端测试通过 |
+| ✅ 已核验 | 云端同步与自包含备份恢复；2026-11-05 Swift 套件共 210 项（含 1 项默认跳过），AI 授权与同步编排回归通过，后端 63 项通过 |
 | ✅ 线上验证 | 2026-11-05 已部署兼容修复，公共 HTTPS 照片往返、账号隔离、并发冲突、去重与历史恢复通过，临时账号已清理 |
-| ⏳ 当前界面验收 | 1.0.1（33）已安装，界面由用户真机测试。构建 34 更新晚餐默认图，安装状态以设备回读为准 |
+| ✅ 用户真机测试 | 1.0.1（37）已安装并回读版本，用户报告测试完成。此项为用户验收记录，不表示自动化覆盖所有界面 |
 | ✅ 历史真机记录核验 | 1.0.1（32）已安装。iPhone Use 实查昨天 5 餐、两包香烟及历史记录恢复显示，今日新增早餐正常保存。原记录与 5 张照片已逐项核对，完整相机、键盘与两设备交互验收继续由用户测试 |
 | ✅ 已实现 | 七条主线的首版能力见 [`docs/backlog.md`](docs/backlog.md) 的进度，扩展需求保留在后续规划表 |
-| 🧪 TestFlight 核验 | 2026-11-05 查询 App Store Connect，1.0（29）与 0.16.0（27）均处理为 VALID，内部状态 READY_FOR_BETA_TESTING，外部状态 READY_FOR_BETA_SUBMISSION。本轮 1.0.1（34）尚未上传，测试组实际分发状态待确认 |
+| 🧪 TestFlight 核验 | 2026-11-05，1.0.1（37）上传成功，Apple 处理为 VALID，并已关联内部测试组；不代表 App Store 审核通过 |
+| ⏳ 后续待完成 | 首次引导、可不透露的性别与年龄、个人目标、吸烟模块开关、统一 AI 个性化与独立健身入口，建议排入 1.1.0 |
+| ⏳ 后续待完成 | 经期记录、日历、提醒、独立 AI / 同步选择及跨模块分析，建议排入 1.2.0 |
 
-> 设计验收记录见 [`design-qa.md`](design-qa.md)，后续开发清单见 [`docs/backlog.md`](docs/backlog.md)。
+### 下一阶段：个性化、健身与经期跟踪（未开发）
+
+| 建议阶段 | 计划内容 | 关键验收 |
+| --- | --- | --- |
+| 1.1.0 | 三步可跳过引导、年龄与性别可不透露、个人目标、独立模块开关、统一 AI 上下文、健身放在趋势后面 | 关闭吸烟后所有新分析均不含历史吸烟数据；无资料不猜测；训练与消耗不重复计算 |
+| 1.2.0 | 经期日历、实际记录与预计日期、可选提醒、独立隐私选择和综合建议 | 未开启不采集；AI 与云同步分别选择；拒绝后仍可本机记录 |
+
+性别只用于初始推荐，吸烟与经期可独立开启，女性用户也能同时使用两者。关闭模块保留历史，删除需单独确认。食品营养事实不随个人目标改变，个性化用于建议。版本号是排期建议，尚未实施或发布。
+
+详细规则见 [后续设计方案](docs/superpowers/specs/2026-11-05-personalization-fitness-cycle.md)，可勾选步骤见 [实施待办](docs/superpowers/plans/2026-11-05-personalization-fitness-cycle.md)，项目总清单见 [backlog](docs/backlog.md)。真机设计验收记录 `design-qa.md` 保留在本地，不随仓库发布。
 
 ---
 
@@ -467,6 +510,8 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | [`specs/2026-11-04-labels-and-smoking.md`](docs/superpowers/specs/2026-11-04-labels-and-smoking.md) | 营养标签与戒烟记录 |
 | [`specs/2026-11-04-personal-health.md`](docs/superpowers/specs/2026-11-04-personal-health.md) | 个人档案、体重、Apple 健康 |
 | [`specs/2026-11-04-yellow-ui.md`](docs/superpowers/specs/2026-11-04-yellow-ui.md) | 黄色奶蛙视觉与自定义 TabBar |
+| [`specs/2026-11-05-personalization-fitness-cycle.md`](docs/superpowers/specs/2026-11-05-personalization-fitness-cycle.md) | 后续待完成：首次引导、个人目标、动态模块、AI 个性化、健身与经期跟踪 |
+| [`plans/2026-11-05-personalization-fitness-cycle.md`](docs/superpowers/plans/2026-11-05-personalization-fitness-cycle.md) | 上述方案的分阶段任务、依赖、验收与发版门槛，全部待完成 |
 
 对应实施计划在 `docs/superpowers/plans/`，任务勾选状态代表真实进度。
 
