@@ -56,10 +56,10 @@ struct TodayView: View {
                             liveActivityRunning: liveActivity.isRunning,
                             onLiveActivity: toggleLiveActivity)
                         VStack(spacing: 0) {
-                            ForEach([MealKind.breakfast, .lunch, .snack, .dinner]) { kind in
+                            ForEach([MealKind.breakfast, .lunch, .dinner, .snack]) { kind in
                                 MealSectionCard(kind: kind, records: records.filter { $0.kind == kind },
                                     onAdd: { openMeal(kind) }, onRecord: { sheet = .record($0) })
-                                if kind != .dinner { Divider().overlay(Theme.gold.opacity(0.07)).padding(.leading, 72) }
+                                if kind != .snack { Divider().overlay(Theme.gold.opacity(0.07)).padding(.leading, 72) }
                             }
                         }
                         .padding(.horizontal, 12).padding(.vertical, 4)
