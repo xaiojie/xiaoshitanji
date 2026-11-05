@@ -25,7 +25,7 @@ struct ComposerView: View {
                     MealMetadataView(kind: Binding(
                         get: { draft.record.kind },
                         set: { kind in
-                            if kind != draft.record.kind { draft.record.usePresetTime(for: kind) }
+                            if kind != draft.record.kind { draft.record.applyKind(kind) }
                         }
                     ), date: $draft.record.date)
                         .disabled(draft.busy)

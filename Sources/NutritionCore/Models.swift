@@ -235,25 +235,25 @@ public struct MealRecord: Identifiable, Codable, Equatable, Sendable {
     public var nutrition: Nutrition { foods.reduce(.zero) { $0 + $1.nutrition } }
     public var foodNames: String { foods.map(\.name).joined(separator: " · ") }
 
+    /// 新记录一律落在「现在」的钟点上；餐次只决定归类，不再决定时间。
     public static func draft(on day: Date, kind: MealKind? = nil, now: Date = .now,
                               calendar: Calendar = .current) -> MealRecord {
         var record = MealRecord(date: day, kind: kind ?? .suggested(for: now, calendar: calendar))
-        record.usePresetTime(for: record.kind, now: now, calendar: calendar)
+        record.useClockTime(now, calendar: calendar)
         return record
     }
 
-    public mutating func usePresetTime(for kind: MealKind, now: Date = .now, calendar: Calendar = .current) {
-        let time: (hour: Int, minute: Int, second: Int)
-        switch kind {
-        case .breakfast: time = (8, 45, 0)
-        case .lunch: time = (12, 0, 0)
-        case .dinner: time = (20, 0, 0)
-        case .snack:
-            time = (calendar.component(.hour, from: now), calendar.component(.minute, from: now),
-                    calendar.component(.second, from: now))
-        }
-        self.kind = kind
+    /// 把 `now` 的时分秒放到当前日期上，保留调用方选的日期。
+    public mutating func useClockTime(_ now: Date = .now, calendar: Calendar = .current) {
+        let time = (hour: calendar.component(.hour, from: now),
+                    minute: calendar.component(.minute, from: now),
+                    second: calendar.component(.second, from: now))
         date = calendar.date(bySettingHour: time.hour, minute: time.minute, second: time.second, of: date) ?? date
+    }
+
+    /// 只换餐次；时间由用户决定，切餐次不再把时间改掉。
+    public mutating func applyKind(_ kind: MealKind) {
+        self.kind = kind
     }
 
     public mutating func updateInput(text: String, photoJPEG: Data?, analysisMode: FoodAnalysisMode? = nil) {

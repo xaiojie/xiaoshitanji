@@ -20,7 +20,7 @@ struct MealMetadataView: View {
                 .pickerStyle(.segmented)
                 DatePicker("用餐时间", selection: $date, in: ...latestRecordDate)
                     .font(.subheadline)
-                Text(kind == .snack ? "加餐按记录时刻预填，可点选调整。" : "已按常用用餐时间预填，可点选调整。")
+                Text("默认记成现在的时间，可点开改成实际用餐时间。")
                     .font(.caption).foregroundStyle(Theme.mutedInk)
             }.padding(.top, 14)
         } label: {

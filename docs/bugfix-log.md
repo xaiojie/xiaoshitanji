@@ -251,6 +251,17 @@
 - **部署**：服务端在 `sub2api-US`（154.201.78.199，`/opt/xiaoshitanji-sync`，无 git，靠传文件 + `docker compose up -d --build api`）。已把 `api/app/{ai,main,security}.py` 传上去重建，`/healthz` 返回 `{"status":"ok","schemaVersion":5,"photoTransferVersion":1}`。
 - **线上复测**（两张图：营养表 + 包装正面，文字「一桶香辣牛肉面，整桶都吃了，汤没喝完」）：返回 126 克（140 × 0.9）、能量约 589 千卡，假设写「汤没喝完，按整桶约90%计」「净含量按包装标注的面饼+配料140克估算」——与手工核算的 654 千卡整桶、不喝汤约 590 千卡一致。
 
+### 22. 不管几点记录，时间都写成晚上 8 点
+
+- **症状**：点「晚餐」或从首页记一餐，录入页的时间默认是 20:00；18:20 记的晚餐也被写成 20:00，超过当下的时间只能被 DatePicker 的上限拦住。
+- **根因**：`Sources/NutritionCore/Models.swift` 的 `MealRecord.usePresetTime(for:)` 按餐次查表：早餐 08:45、午餐 12:00、**晚餐 20:00**（只有加餐取当前时刻）。首页点行、扫描记一餐（按时间猜成晚餐）、以及在录入页把餐次拨成晚餐，三条路径都会落到 20:00。
+- **修复**：
+  - `MealRecord.draft(on:kind:now:calendar:)` 改成统一调用新的 `useClockTime(_:calendar:)`：取「现在」的时分秒放到所选日期上，餐次只决定归类；
+  - 删除 `usePresetTime(for:)`，拆成 `useClockTime(_:calendar:)`（只改时间）与 `applyKind(_:)`（只改餐次），`ComposerView` 拨餐次时不再改时间；
+  - `MealInputView` 说明文案改为「默认记成现在的时间，可点开改成实际用餐时间。」；
+  - 设置里的提醒时间（8:00 / 12:10 / 18:00）保持不变，只发通知，不再影响记录时间。
+- **验证**：`swift test` **231 tests / 30 suites passed**（改写 3 条 + 新增「18:20 记晚餐仍是 18:20」「切餐次不改时间」「五个餐次窗口边界」共 6 条）；`Tests/AppRegression/run-widget.sh` 9 条 PASS（同步修正了深链草稿的期望时间）；Debug 与 Release 的 `xcodebuild -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO` 均 BUILD SUCCEEDED。真机安装需设备重新连接后验证。
+
 ## 更早版本（据提交记录整理，供追溯）
 
 这些修复发生在本轮之前，细节未逐条复述，回归时按标题排查：

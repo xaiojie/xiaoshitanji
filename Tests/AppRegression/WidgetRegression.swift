@@ -103,7 +103,7 @@ import NutritionCore
         let breakfastRequest = delayed.takeRequest(canPresent: true)!
         let requestedBreakfast = breakfastRequest.mealDraft(calendar: calendar)!
         precondition(breakfastRequest.receivedAt == beforeLunch)
-        precondition(requestedBreakfast.kind == .breakfast && requestedBreakfast.date == date("2026-11-05T00:45:00Z"))
+        precondition(requestedBreakfast.kind == .breakfast && requestedBreakfast.date == beforeLunch)
         delayed.mealPresentationEnded()
         let beforeMidnight = date("2026-11-04T15:59:00Z")
         precondition(delayed.receive(DiaryWidgetRoute.newMeal.url, at: beforeMidnight))
