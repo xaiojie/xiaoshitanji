@@ -161,7 +161,7 @@ struct SmokingTests {
         let recognized = try DeepSeekClient.parseCigaretteResponse(data: response, statusCode: 200)
         #expect(recognized.product.nicotineMG == 0.8)
         #expect(recognized.product.pricePerPack == nil)
-        let request = try DeepSeekClient.makeCigaretteRequest(text: "这一包", imageJPEG: Data([1, 2]), apiKey: "test-key")
+        let request = try DeepSeekClient.makeCigaretteRequest(text: "这一包", imageJPEG: Data([1, 2]))
         #expect(String(decoding: try #require(request.httpBody), as: UTF8.self).contains("不得猜测"))
         #expect(throws: DiaryError.self) { try DeepSeekClient.parseCigaretteResponse(data: response, statusCode: 401) }
     }

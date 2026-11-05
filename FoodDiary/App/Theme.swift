@@ -52,11 +52,33 @@ struct MealIcon: View {
     var size: CGFloat = 42
 
     var body: some View {
-        Image(systemName: kind.symbol)
-            .font(.system(size: size * 0.43, weight: .semibold))
-            .foregroundStyle(Theme.mealColor(kind))
+        ObjectIcon(kind.artworkName, size: size)
+    }
+}
+
+extension MealKind {
+    var artworkName: String {
+        switch self {
+        case .breakfast: "FoodBreakfast"
+        case .lunch: "FoodLunch"
+        case .dinner: "FoodDinner"
+        case .snack: "FoodSnack"
+        }
+    }
+}
+
+struct ObjectIcon: View {
+    let name: String
+    var size: CGFloat
+
+    init(_ name: String, size: CGFloat = 44) {
+        self.name = name
+        self.size = size
+    }
+
+    var body: some View {
+        Image(name).resizable().scaledToFit()
             .frame(width: size, height: size)
-            .background(Theme.mealColor(kind).opacity(0.12), in: .circle)
             .accessibilityHidden(true)
     }
 }

@@ -8,12 +8,12 @@ import NutritionCore
 @Observable
 final class MealDraft {
     let original: MealRecord
+    let aiConsent = AIConsent()
     let isEditing: Bool
     var record: MealRecord
     var reviewing: Bool
     var correction = ""
     var errorMessage: String?
-    private(set) var requiresKey = false
     private(set) var isAnalyzing = false
     private(set) var isRefining = false
     private(set) var photoLoadID: UUID?
@@ -45,11 +45,47 @@ final class MealDraft {
         performAnalysis(instruction: instruction)
     }
 
+    func addFood(_ food: FoodItem) {
+        do {
+            try record.addFood(food)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func replaceFood(_ food: FoodItem) {
-        guard let index = record.foods.firstIndex(where: { $0.id == food.id }) else { return }
-        record.foods[index] = food
-        record.adjustments = (record.adjustments ?? []) + ["\(food.name)调整为\(food.portionLabel)"]
+        do {
+            try record.replaceFood(food)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 套用常吃组合或复制最近的一餐：保留食物与营养，标记为手动来源。
+    func copyContent(from other: MealRecord, note: String) {
+        record.foods = other.foods
+        record.source = .manual
+        record.model = nil
+        record.summary = other.summary
+        record.assumptions = []
+        record.originalText = ""
+        record.photoJPEG = nil
+        record.photoFileName = nil
+        record.adjustments = (record.adjustments ?? []) + [note]
+        reviewing = true
         errorMessage = nil
+    }
+
+    func apply(template: MealTemplate) {
+        copyContent(from: template.makeRecord(on: record.date, kind: record.kind),
+                    note: "套用常吃组合「\(template.name)」")
+    }
+
+    func copy(record other: MealRecord) {
+        copyContent(from: other,
+                    note: "复制自 \(other.date.formatted(.dateTime.month().day().hour().minute())) 的\(other.kind.title)")
     }
 
     func removeFood(_ food: FoodItem) {
@@ -87,7 +123,6 @@ final class MealDraft {
         let snapshot = record
         requestID = id
         errorMessage = nil
-        requiresKey = false
         isAnalyzing = true
         isRefining = instruction != nil
         analysisTask = Task { @MainActor in
@@ -99,18 +134,13 @@ final class MealDraft {
                 }
             }
             do {
-                let key = try KeychainStore.load()
-                guard !key.isEmpty else {
-                    requiresKey = true
-                    throw DiaryError.missingAPIKey
-                }
+                try await aiConsent.requirePermission()
                 let client = DeepSeekClient()
                 let estimate: FoodEstimate
                 if let instruction {
-                    estimate = try await client.refine(record: snapshot, instruction: instruction, apiKey: key)
+                    estimate = try await client.refine(record: snapshot, instruction: instruction)
                 } else {
-                    estimate = try await client.analyze(text: snapshot.originalText, imageJPEG: snapshot.photoJPEG,
-                        apiKey: key, mode: snapshot.analysisMode ?? .automatic)
+                    estimate = try await client.analyze(text: snapshot.originalText, imageJPEG: snapshot.photoJPEG, mode: snapshot.analysisMode ?? .automatic)
                 }
                 try Task.checkCancellation()
                 guard requestID == id else { return }

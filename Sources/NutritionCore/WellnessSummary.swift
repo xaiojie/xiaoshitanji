@@ -42,16 +42,61 @@ public struct WellnessActivity: Codable, Equatable, Sendable {
     public let activeCalories: WellnessMetric
     public let exerciseMinutes: WellnessMetric
     public let distanceMeters: WellnessMetric
+    public let sleepHours: WellnessMetric
+    public let averageHeartRate: WellnessMetric
+    public let restingHeartRate: WellnessMetric
+    public let heartRateVariability: WellnessMetric
+    public let vo2Max: WellnessMetric
+    public let headphoneAudioMinutes: WellnessMetric
+    public let workoutSessions: WellnessMetric
+    public let workoutMinutes: WellnessMetric
+    public let workoutCalories: WellnessMetric
 
     init(days: [HealthActivityDay]) {
         steps = WellnessMetric(days.map(\.steps))
         activeCalories = WellnessMetric(days.map(\.activeCalories))
         exerciseMinutes = WellnessMetric(days.map(\.exerciseMinutes))
         distanceMeters = WellnessMetric(days.map(\.distanceMeters))
+        sleepHours = WellnessMetric(days.map(\.sleepHours))
+        averageHeartRate = WellnessMetric(days.map(\.averageHeartRate))
+        restingHeartRate = WellnessMetric(days.map(\.restingHeartRate))
+        heartRateVariability = WellnessMetric(days.map(\.heartRateVariabilityMS))
+        vo2Max = WellnessMetric(days.map(\.vo2Max))
+        headphoneAudioMinutes = WellnessMetric(days.map(\.headphoneAudioMinutes))
+        workoutSessions = WellnessMetric(days.map(\.workoutSessions))
+        workoutMinutes = WellnessMetric(days.map(\.workoutMinutes))
+        workoutCalories = WellnessMetric(days.map(\.workoutCalories))
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case steps, activeCalories, exerciseMinutes, distanceMeters
+        case sleepHours, averageHeartRate, restingHeartRate, heartRateVariability, vo2Max
+        case headphoneAudioMinutes, workoutSessions, workoutMinutes, workoutCalories
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        steps = try values.decode(WellnessMetric.self, forKey: .steps)
+        activeCalories = try values.decode(WellnessMetric.self, forKey: .activeCalories)
+        exerciseMinutes = try values.decode(WellnessMetric.self, forKey: .exerciseMinutes)
+        distanceMeters = try values.decode(WellnessMetric.self, forKey: .distanceMeters)
+        // 旧报告的新增健康指标保持未知，观察天数为零。
+        let unknown = WellnessMetric([])
+        sleepHours = try values.decodeIfPresent(WellnessMetric.self, forKey: .sleepHours) ?? unknown
+        averageHeartRate = try values.decodeIfPresent(WellnessMetric.self, forKey: .averageHeartRate) ?? unknown
+        restingHeartRate = try values.decodeIfPresent(WellnessMetric.self, forKey: .restingHeartRate) ?? unknown
+        heartRateVariability = try values.decodeIfPresent(WellnessMetric.self, forKey: .heartRateVariability) ?? unknown
+        vo2Max = try values.decodeIfPresent(WellnessMetric.self, forKey: .vo2Max) ?? unknown
+        headphoneAudioMinutes = try values.decodeIfPresent(WellnessMetric.self, forKey: .headphoneAudioMinutes) ?? unknown
+        workoutSessions = try values.decodeIfPresent(WellnessMetric.self, forKey: .workoutSessions) ?? unknown
+        workoutMinutes = try values.decodeIfPresent(WellnessMetric.self, forKey: .workoutMinutes) ?? unknown
+        workoutCalories = try values.decodeIfPresent(WellnessMetric.self, forKey: .workoutCalories) ?? unknown
     }
 
     public var hasData: Bool {
-        [steps, activeCalories, exerciseMinutes, distanceMeters].contains { $0.observedDays > 0 }
+        [steps, activeCalories, exerciseMinutes, distanceMeters, sleepHours, averageHeartRate,
+         restingHeartRate, heartRateVariability, vo2Max, headphoneAudioMinutes,
+         workoutSessions, workoutMinutes, workoutCalories].contains { $0.observedDays > 0 }
     }
 }
 
@@ -228,7 +273,10 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
             throw DiaryError.invalidInput("汇总数值无效，请重新读取记录。")
         }
         try diet.total?.validate()
-        let metrics = [activity.steps, activity.activeCalories, activity.exerciseMinutes, activity.distanceMeters]
+        let metrics = [activity.steps, activity.activeCalories, activity.exerciseMinutes, activity.distanceMeters,
+                       activity.sleepHours, activity.averageHeartRate, activity.restingHeartRate,
+                       activity.heartRateVariability, activity.vo2Max, activity.headphoneAudioMinutes,
+                       activity.workoutSessions, activity.workoutMinutes, activity.workoutCalories]
         guard metrics.allSatisfy({
             $0.observedDays >= 0 && $0.observedDays <= dayCount
                 && ($0.observedDays == 0 ? $0.total == nil : $0.total.map { $0.isFinite && $0 >= 0 } == true)

@@ -60,8 +60,7 @@ public struct WellnessReview: Identifiable, Codable, Equatable, Sendable {
 }
 
 public extension DeepSeekClient {
-    static func makeWellnessRequest(summary: WellnessSummary, apiKey: String,
-                                    model: String = defaultModel) throws -> URLRequest {
+    static func makeWellnessRequest(summary: WellnessSummary) throws -> URLRequest {
         try summary.validate()
         guard summary.hasData else { throw DiaryError.invalidInput("先记录饮食、吸烟或身体数据，再生成汇总分析。") }
         let encoder = JSONEncoder()
@@ -84,11 +83,11 @@ public extension DeepSeekClient {
             throw DiaryError.invalidInput("全部历史记录较多，请先选择近7天或近30天分析。")
         }
         return try buildRequest(parts: [["type": "text", "text": String(decoding: data, as: UTF8.self)]],
-            prompt: wellnessPrompt, apiKey: apiKey, model: model)
+            prompt: wellnessPrompt)
     }
 
-    func reviewWellness(summary: WellnessSummary, apiKey: String) async throws -> WellnessReview {
-        let request = try Self.makeWellnessRequest(summary: summary, apiKey: apiKey)
+    func reviewWellness(summary: WellnessSummary) async throws -> WellnessReview {
+        let request = try Self.makeWellnessRequest(summary: summary)
         let (data, status) = try await complete(request)
         return try Self.parseWellnessResponse(data: data, statusCode: status, summary: summary)
     }
@@ -120,7 +119,9 @@ public extension DeepSeekClient {
         foodNames只列最常见的至多20个名称，不能据此断言用户从未吃过未出现的食物。
         缺失字段或null代表未知，与0有区别。activity每项的observedDays可能不同，总值除以各自observedDays才是有数据日均值。
         activity.activeCalories单位千卡，仅含活动能量，不含基础代谢或全天总消耗。steps为步，exerciseMinutes为分钟，distanceMeters为米。
-        不得用摄入减活动能量声称全天热量盈余/缺口，不得推算基础代谢、减重速度或未读取的睡眠、心率、疾病。
+        activity.sleepHours为按醒来日统计的睡着小时数，restingHeartRate与averageHeartRate为次/分，heartRateVariability为SDNN毫秒，vo2Max为毫升/公斤/分钟，headphoneAudioMinutes为戴耳机听音频的分钟数。
+        activity.workoutSessions/workoutMinutes/workoutCalories来自 Apple 健康体能训练，是本机记录之外的另一来源；两者不要相加或重复计数，仅在各自出现时分别引用。
+        不得用摄入减活动能量声称全天热量盈余/缺口，不得推算基础代谢、减重速度，也不得把睡眠、心率、HRV、最大摄氧量、耳机音量解读为疾病或医学结论；这些只是习惯线索。
         smoking.smoked只包含自己抽的，shared为分给别人，校准不计摄入。没有事件的日期代表未记录，不等于戒烟成功或没有吸烟。
         knownNicotineMG为烟盒标注烟气释放量累计，unknownNicotineCount为缺少标注根数，不是人体实际尼古丁吸收量。费用按costs的currency分别理解，禁止跨币种相加。
         body.latestWeight可能早于范围，必须结合日期和来源。weightChange只能在firstWeightInRange早于latestWeight时用两者公斤差，不能把范围外旧测量当作本周起点。

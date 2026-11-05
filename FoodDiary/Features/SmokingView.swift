@@ -41,7 +41,7 @@ struct SmokingView: View {
                     todayHero
                     currentPack
                     Button(action: recordOne) {
-                        Label(pack == nil ? "选择当前烟包" : (remaining == 0 ? "换一包" : "抽一根"), systemImage: "wind")
+                        Label(pack == nil ? "选择当前烟包" : (remaining == 0 ? "换一包" : "记录一根"), systemImage: "wind")
                             .font(.title3.bold()).frame(maxWidth: .infinity, minHeight: 46)
                     }.yellowAction().disabled(diary.loadError != nil).accessibilityIdentifier("smokeOne")
                     HStack(spacing: 12) {

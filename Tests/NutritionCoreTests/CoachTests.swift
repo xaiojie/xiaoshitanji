@@ -24,14 +24,14 @@ struct CoachTests {
     }
 
     @Test func refinementIncludesAlreadyAdjustedFoodsAndNewInstruction() throws {
-        let request = try DeepSeekClient.makeRefinementRequest(record: meal, instruction: "再加一个鸡蛋", apiKey: "key")
+        let request = try DeepSeekClient.makeRefinementRequest(record: meal, instruction: "再加一个鸡蛋")
         let payload = try content(of: request)
         #expect(payload["instruction"] as? String == "再加一个鸡蛋")
         let foods = try #require(payload["current_foods"] as? [[String: Any]])
         #expect(foods[0]["grams"] as? Double == 75)
         #expect(payload["already_applied_adjustments"] as? [String] == ["米饭只吃了一半"])
         #expect(throws: DiaryError.self) {
-            try DeepSeekClient.makeRefinementRequest(record: meal, instruction: " ", apiKey: "key")
+            try DeepSeekClient.makeRefinementRequest(record: meal, instruction: " ")
         }
     }
 
@@ -49,14 +49,14 @@ struct CoachTests {
     }
 
     @Test func dailyReviewRequestUsesRecordedNutritionAndOptionalGoal() throws {
-        let request = try DeepSeekClient.makeReviewRequest(records: [meal], calorieGoal: nil, apiKey: "key")
+        let request = try DeepSeekClient.makeReviewRequest(records: [meal], calorieGoal: nil)
         let payload = try content(of: request)
         let meals = try #require(payload["meals"] as? [[String: Any]])
         let nutrition = try #require(meals[0]["nutrition"] as? [String: Any])
         #expect(nutrition["calories"] as? Double == 87)
         #expect(payload["calorie_goal"] == nil)
         #expect(throws: DiaryError.self) {
-            try DeepSeekClient.makeReviewRequest(records: [], calorieGoal: nil, apiKey: "key")
+            try DeepSeekClient.makeReviewRequest(records: [], calorieGoal: nil)
         }
     }
 
@@ -75,7 +75,7 @@ struct CoachTests {
     @Test func refinementCanReplaceTheLastRemovedFood() throws {
         var empty = meal
         empty.foods = []
-        let request = try DeepSeekClient.makeRefinementRequest(record: empty, instruction: "其实只有一个鸡蛋", apiKey: "key")
+        let request = try DeepSeekClient.makeRefinementRequest(record: empty, instruction: "其实只有一个鸡蛋")
         let payload = try content(of: request)
         let foods = try #require(payload["current_foods"] as? [[String: Any]])
         #expect(foods.isEmpty)

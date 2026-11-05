@@ -45,7 +45,7 @@ struct MealInputView: View {
     let loadingPhoto: Bool
     let onCamera: () -> Void
     let onRemovePhoto: () -> Void
-    let onSettings: () -> Void
+    @State private var transcriber = SpeechTranscriber()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -80,9 +80,29 @@ struct MealInputView: View {
 
             VStack(alignment: .leading, spacing: 13) {
                 Label("吃了多少？说一句就好", systemImage: "text.bubble").font(.headline)
-                TextField("比如：牛奶喝了半盒，或一碗牛肉粉只吃了面", text: $text, axis: .vertical)
-                    .lineLimit(2...5).font(.subheadline).lineSpacing(4)
-                    .accessibilityIdentifier("mealDescription")
+                HStack(alignment: .top, spacing: 10) {
+                    TextField("比如：牛奶喝了半盒，或一碗牛肉粉只吃了面", text: $text, axis: .vertical)
+                        .lineLimit(2...5).font(.subheadline).lineSpacing(4)
+                        .accessibilityIdentifier("mealDescription")
+                    Button {
+                        Task { await transcriber.toggle() }
+                    } label: {
+                        Image(systemName: transcriber.isRecording ? "stop.circle.fill" : "mic.fill")
+                            .font(.title3)
+                            .foregroundStyle(transcriber.isRecording ? Theme.gold : Theme.olive)
+                            .symbolEffect(.pulse, isActive: transcriber.isRecording)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(transcriber.isRecording ? "停止语音输入" : "语音输入")
+                    .accessibilityIdentifier("dictateMeal")
+                }
+                if transcriber.isRecording {
+                    Label("正在听…说完点一下停止，文字会填进输入框。", systemImage: "waveform")
+                        .font(.caption).foregroundStyle(Theme.olive)
+                }
+                if let error = transcriber.errorMessage {
+                    Text(error).font(.caption).foregroundStyle(Theme.gold)
+                }
                 Text("也可以只用文字记餐，份量和营养由 AI 估算。")
                     .font(.caption).foregroundStyle(Theme.mutedInk)
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -94,13 +114,15 @@ struct MealInputView: View {
                     }
                 }
             }.contentCard()
+            .onChange(of: transcriber.transcript) { _, value in
+                if !value.isEmpty { text = value }
+            }
 
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "lock.shield").foregroundStyle(Theme.olive)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("点击分析后，文字和压缩后的照片会发送给 DeepSeek，按你的 API 账户计费。")
+                    Text("AI 分析免费使用。点击分析后，文字和压缩后的照片会经小食痰记服务器转交 DeepSeek 处理。")
                         .font(.caption).foregroundStyle(.secondary)
-                    Button("配置 DeepSeek", action: onSettings).font(.caption.weight(.medium))
                 }
             }
             .padding(.horizontal, 6)

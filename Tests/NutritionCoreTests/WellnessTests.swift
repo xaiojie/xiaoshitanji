@@ -117,7 +117,7 @@ struct WellnessTests {
         let document = DiaryDocument(records: [record], profile: HealthProfile(nickname: "PRIVATE_NAME", avatarJPEG: Data([1, 2, 3])),
             weights: [WeightRecord(date: date(3), kilograms: 71), WeightRecord(date: date(4), kilograms: 70)])
         let snapshot = try summary(document)
-        let request = try DeepSeekClient.makeWellnessRequest(summary: snapshot, apiKey: "test-key")
+        let request = try DeepSeekClient.makeWellnessRequest(summary: snapshot)
         let body = try #require(request.httpBody)
         let text = String(decoding: body, as: UTF8.self)
         #expect(!text.contains("PRIVATE_"))
@@ -132,8 +132,7 @@ struct WellnessTests {
         let measurements = try #require(payload["body"] as? [String: Any])
         #expect((measurements["latestWeight"] as? [String: Any])?["id"] == nil)
         #expect((measurements["firstWeightInRange"] as? [String: Any])?["id"] == nil)
-        #expect(throws: DiaryError.self) { try DeepSeekClient.makeWellnessRequest(summary: snapshot, apiKey: " ") }
-        #expect(throws: DiaryError.self) { try DeepSeekClient.makeWellnessRequest(summary: summary(), apiKey: "key") }
+        #expect(throws: DiaryError.self) { try DeepSeekClient.makeWellnessRequest(summary: summary()) }
     }
 
     @Test func reportRequiresAllFourAreasAndCompleteOutput() throws {

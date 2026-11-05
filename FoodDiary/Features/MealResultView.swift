@@ -2,12 +2,13 @@ import SwiftUI
 import NutritionCore
 
 struct MealResultView: View {
+    @Environment(DiaryModel.self) private var diary
     let record: MealRecord
     let onFood: (FoodItem) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            if let photo = record.photoJPEG { ScanPhotoPreview(data: photo, height: 260) }
+            if let photo = diary.photoData(for: record) { ScanPhotoPreview(data: photo, height: 260) }
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Label("已识别 · 待你确认", systemImage: "checkmark.circle.fill")
@@ -44,6 +45,10 @@ struct MealResultView: View {
                                     Label(label.portionIsEstimated ? "营养标签 · 份量估算" : "按营养标签换算", systemImage: "doc.text.viewfinder")
                                         .font(.caption2).foregroundStyle(Theme.olive)
                                 }
+                                if food.isManual {
+                                    Label("手动填写", systemImage: "square.and.pencil")
+                                        .font(.caption2).foregroundStyle(Theme.olive)
+                                }
                             }
                             Spacer(minLength: 4)
                             Text("约 \(Theme.number(food.nutrition.calories)) 千卡")
@@ -59,7 +64,7 @@ struct MealResultView: View {
                     Text("用下方的描述补充食物，让 AI 重新计算这一餐。")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
-                Text("点食物可以选择吃了一半、少一点，或直接告诉 AI 实际吃了多少。")
+                Text("点食物可以改份量、手填营养值，或直接告诉 AI 实际吃了多少。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             .contentCard()

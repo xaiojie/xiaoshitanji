@@ -3,7 +3,9 @@ import NutritionCore
 
 struct TodayView: View {
     @Environment(DiaryModel.self) private var diary
+    @Environment(HealthDataModel.self) private var health
     @Environment(\.scenePhase) private var scenePhase
+    @State private var aiConsent = AIConsent()
     @AppStorage("dailyCalorieGoal") private var goal = 0.0
     @State private var selectedDate = Date.now
     @State private var lastActiveDate = Date.now
@@ -11,12 +13,23 @@ struct TodayView: View {
     @State private var reviewTask: Task<Void, Never>?
     @State private var reviewRequestID: UUID?
     @State private var reviewError: String?
+    @State private var liveActivity = IntakeActivityManager.shared
+    @State private var liveActivityError: String?
 
     private var records: [MealRecord] { diary.document.records(on: selectedDate) }
     private var nutrition: Nutrition { diary.document.total(on: selectedDate) }
-    private var referenceGoal: Double? { goal > 0 && goal.isFinite ? goal : nil }
+    private var budget: EnergyBudget? { diary.energyBudget(on: selectedDate) }
+    private var workoutTotals: HealthWorkoutTotals { health.workoutTotals(on: selectedDate) }
+    /// 健康里录了训练就用健康的消耗，否则用手填的，避免同一场训练算两次。
+    private var burned: Double {
+        ActivityBurn.resolve(manual: diary.burnedCalories(on: selectedDate), health: workoutTotals.calories)
+    }
+    /// 目标 + 当天训练消耗；没有能量设置时退回旧的「参考热量」。
+    private var balance: DailyBalance? { DailyBalance.make(budget: budget, burned: burned, intake: nutrition) }
+    private var referenceGoal: Double? { balance?.target ?? (goal > 0 && goal.isFinite ? goal : nil) }
+    private var reviewGoal: Double? { budget?.targetCalories ?? (goal > 0 && goal.isFinite ? goal : nil) }
     private var review: DietReview? {
-        guard let review = diary.document.review(on: selectedDate), review.calorieGoal == referenceGoal else { return nil }
+        guard let review = diary.document.review(on: selectedDate), review.calorieGoal == reviewGoal else { return nil }
         return review
     }
     private var isToday: Bool { Calendar.current.isDateInToday(selectedDate) }
@@ -30,10 +43,15 @@ struct TodayView: View {
                         ErrorNotice(message: error).contentCard()
                         Button("重新读取", action: diary.reload).buttonStyle(.bordered)
                     } else {
-                        DailyIntakeCard(nutrition: nutrition, goal: goal, mealCount: records.count,
+                        DailyIntakeCard(nutrition: nutrition, goal: referenceGoal ?? 0, mealCount: records.count,
                             foodCount: foodCount, date: selectedDate, isToday: isToday,
+                            goalNote: budget.map { note in
+                                "\(Theme.number(note.maintenance)) 千卡维持 · \(Theme.number(note.proteinGrams)) 克蛋白"
+                                    + (burned > 0 ? " · 训练 +\(Theme.number(burned))" : "")
+                                    + (workoutTotals.hasWorkout ? " · 锻炼 \(workoutTotals.minutes) 分钟" : "")
+                            },
                             onDate: { sheet = .calendar }, onPrevious: { moveDate(by: -1) }, onNext: { moveDate(by: 1) },
-                            onGoal: { sheet = .settings })
+                            onGoal: { sheet = budget == nil ? .settings : .energy })
                         VStack(spacing: 0) {
                             ForEach([MealKind.breakfast, .lunch, .snack, .dinner]) { kind in
                                 MealSectionCard(kind: kind, records: records.filter { $0.kind == kind },
@@ -47,8 +65,6 @@ struct TodayView: View {
                         if let reviewError {
                             VStack(alignment: .leading, spacing: 12) {
                                 ErrorNotice(message: reviewError)
-                                Button("打开 DeepSeek 设置", systemImage: "key") { sheet = .settings }
-                                    .font(.subheadline).buttonStyle(.bordered)
                             }
                             .contentCard()
                         }
@@ -73,13 +89,22 @@ struct TodayView: View {
             }
             .sheet(item: $sheet, content: sheetContent)
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { refreshSelectedDay() }
+                if phase == .active {
+                    refreshSelectedDay()
+                    consumePendingMeal()
+                }
             }
+            .onAppear(perform: consumePendingMeal)
             .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in refreshSelectedDay() }
             .onChange(of: selectedDate) { _, _ in cancelReview(); reviewError = nil }
             .onChange(of: goal) { _, _ in cancelReview(); reviewError = nil }
             .onDisappear(perform: cancelReview)
+            .alert("实时活动", isPresented: Binding(get: { liveActivityError != nil },
+                                                   set: { if !$0 { liveActivityError = nil } })) {
+                Button("好", role: .cancel) { liveActivityError = nil }
+            } message: { Text(liveActivityError ?? "") }
         }
+        .aiDataConsent(aiConsent)
     }
 
     @ViewBuilder
@@ -92,6 +117,9 @@ struct TodayView: View {
             RecordEntrySheet(onSelect: openMeal)
         case .settings:
             GeneralSettingsView(isPresented: true)
+        case .energy:
+            NavigationStack { EnergyGoalView(settings: diary.document.energy) }
+                .presentationDetents([.large])
         case .review(let value):
             DietReviewView(review: value, onRefresh: analyzeDay)
         case .calendar:
@@ -122,9 +150,9 @@ struct TodayView: View {
         reviewTask = Task { @MainActor in
             defer { if reviewRequestID == id { reviewRequestID = nil } }
             do {
-                let key = try KeychainStore.load()
+                try await aiConsent.requirePermission()
                 let value = try await DeepSeekClient().reviewDay(records: snapshot, date: date,
-                                                                 calorieGoal: analyzedGoal, apiKey: key)
+                                                                 calorieGoal: analyzedGoal)
                 try Task.checkCancellation()
                 guard reviewRequestID == id, referenceGoal == analyzedGoal else { return }
                 try diary.saveReview(value, snapshot: snapshot)
@@ -140,6 +168,21 @@ struct TodayView: View {
     private func cancelReview() {
         reviewRequestID = nil
         reviewTask?.cancel()
+    }
+
+    private func toggleLiveActivity() {
+        if liveActivity.isRunning {
+            liveActivity.end()
+            return
+        }
+        liveActivity.start(state: IntakeActivityManager.state(for: diary.document, budget: budget))
+        liveActivityError = liveActivity.errorMessage
+    }
+
+    /// 快捷指令留下的那句话：取一次就清掉，直接开记录页。
+    private func consumePendingMeal() {
+        guard let text = PendingMeal.take() else { return }
+        sheet = .record(PendingMeal.draft(from: text, now: selectedDate))
     }
 
     private func openMeal(_ kind: MealKind) {
@@ -159,7 +202,7 @@ struct TodayView: View {
 private enum TodaySheet: Identifiable {
     case record(MealRecord)
     case review(DietReview)
-    case calendar, entry, settings
+    case calendar, entry, settings, energy
 
     var id: String {
         switch self {
@@ -168,6 +211,7 @@ private enum TodaySheet: Identifiable {
         case .calendar: "calendar"
         case .entry: "entry"
         case .settings: "settings"
+        case .energy: "energy"
         }
     }
 }

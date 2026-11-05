@@ -37,12 +37,12 @@ struct NutritionLabelTests {
     }
 
     @Test func foodModesCarryBowlAndLabelInstructionsThroughRefinement() throws {
-        let request = try DeepSeekClient.makeRequest(text: "一碗米饭", imageJPEG: nil, apiKey: "test-key", mode: .meal)
+        let request = try DeepSeekClient.makeRequest(text: "一碗米饭", imageJPEG: nil, mode: .meal)
         let body = String(decoding: try #require(request.httpBody), as: UTF8.self)
         #expect(body.contains("碗"))
         #expect(body.contains("4.184"))
         let record = MealRecord(foods: [FoodItem(name: "米饭")], analysisMode: .label)
-        let refinement = try DeepSeekClient.makeRefinementRequest(record: record, instruction: "只喝一半", apiKey: "test-key")
+        let refinement = try DeepSeekClient.makeRefinementRequest(record: record, instruction: "只喝一半")
         #expect(String(decoding: try #require(refinement.httpBody), as: UTF8.self).contains("营养标签"))
     }
 
@@ -50,7 +50,7 @@ struct NutritionLabelTests {
         let label = NutritionLabel(basisAmount: 100, unit: .grams, energy: 400, energyUnit: .kilocalories,
             protein: 5, carbohydrates: 50, fat: 20, consumedAmount: 50, portionIsEstimated: false)
         var record = MealRecord(foods: [FoodItem(name: "饼干", nutritionLabel: label)], originalText: "吃半包", source: .photo)
-        let request = try DeepSeekClient.makeRefinementRequest(record: record, instruction: "再吃四分之一包", apiKey: "test-key")
+        let request = try DeepSeekClient.makeRefinementRequest(record: record, instruction: "再吃四分之一包")
         #expect(String(decoding: try #require(request.httpBody), as: UTF8.self).contains("nutritionLabel"))
         record.updateInput(text: record.originalText, photoJPEG: record.photoJPEG, analysisMode: .label)
         #expect(record.foods.isEmpty)

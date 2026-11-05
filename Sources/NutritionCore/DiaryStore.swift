@@ -20,9 +20,31 @@ public struct DiaryStore: Sendable {
     }
 
     public func save(_ document: DiaryDocument) throws {
+        var document = document
+        // 总是按当前版本写盘：文件里已经可能出现新字段，旧版本号会让老版本误读后丢数据。
+        document.schemaVersion = DiaryDocument.currentSchemaVersion
         try document.validate()
         // Read first so an unreadable or newer existing file can never be replaced by an empty diary.
         _ = try load()
+        try write(document)
+    }
+
+    public func restore(_ document: DiaryDocument, preservingExistingIn directory: URL) throws {
+        var document = document
+        document.schemaVersion = DiaryDocument.currentSchemaVersion
+        try document.validate()
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try FileManager.default.copyItem(at: fileURL, to: directory.appending(path: "diary.json"))
+            let photos = fileURL.deletingLastPathComponent().appending(path: PhotoArchive.directoryName)
+            if FileManager.default.fileExists(atPath: photos.path) {
+                try FileManager.default.copyItem(at: photos, to: directory.appending(path: PhotoArchive.directoryName))
+            }
+        }
+        try write(document)
+    }
+
+    private func write(_ document: DiaryDocument) throws {
         do {
             let directory = fileURL.deletingLastPathComponent()
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

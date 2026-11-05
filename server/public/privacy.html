@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小食痰记 · 隐私政策</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.75 -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+         max-width: 720px; margin: 0 auto; padding: 40px 22px 80px; }
+  h1 { font-size: 28px; margin-bottom: 4px; }
+  h2 { font-size: 19px; margin-top: 34px; }
+  .muted { color: #888; font-size: 14px; }
+  code { background: rgba(127,127,127,.15); padding: 1px 5px; border-radius: 4px; }
+  ul { padding-left: 22px; }
+  hr { border: none; border-top: 1px solid rgba(127,127,127,.25); margin: 40px 0; }
+</style>
+</head>
+<body>
+<h1>小食痰记 · 隐私政策</h1>
+<p class="muted">生效日期：2026 年 11 月 5 日</p>
+
+<p>小食痰记（以下简称「本 App」）是一款记录饮食、体重、训练和吸烟习惯的个人工具。我们尽量少收集数据：默认情况下，所有记录只保存在你的设备上。</p>
+
+<h2>1. 保存在你设备上的数据</h2>
+<ul>
+  <li>饮食记录、营养数值、训练记录、体重、吸烟记录、照片。</li>
+  <li>这些内容保存在 App 的本地存储中；你可以在「我的 → 通用设置 → 本机数据」里导出备份，并在对应记录页面删除。</li>
+  <li>照片默认随记录保存在 App 目录内，不会自动上传。</li>
+</ul>
+
+<h2>2. Apple 健康</h2>
+<ul>
+  <li>只有在你主动授权后，本 App 才会<strong>只读</strong>访问 Apple 健康中的步数、活动能量、锻炼时间、距离、体重、身高、睡眠、心率、心率变异性、有氧适能、耳机音量与体能训练。</li>
+  <li>健康原始样本在本机读取，用于展示和聚合。只有你确认生成 AI 分析时，所选汇总数值才会经小食痰记服务器发送至 DeepSeek。保存的报告及其聚合快照可随你主动启用的云同步上传。健康数据不会用于广告或出售。</li>
+  <li>生成 AI 分析前，App 会先在本机把数据聚合成数值摘要，并让你确认是否包含健康数据；只有你确认后才发送。</li>
+  <li>你可以在 iOS「设置 → 健康 → 数据访问与设备」中随时撤销授权。</li>
+</ul>
+
+<h2>3. AI 分析（DeepSeek）</h2>
+<ul>
+  <li>AI 功能由小食痰记提供，用户无需填写 API Key。当你点击 AI 分析、修正或回顾，或主动扫描、导入烟盒图片进行识别时，App 会通过 HTTPS 将相关文字描述、压缩后的餐食／营养表／烟盒照片、营养数值或你确认的健康聚合摘要发送到 <code>xiaoshitanji.papaclaoud.top</code>，由后端转交 DeepSeek API（<code>api.deepseek.com</code>）生成结果。</li>
+  <li>AI 请求只包含该功能所需的内容，不包含云同步密码、云同步令牌、头像昵称或 Apple 健康原始样本。汇总分析发送前会展示范围并让你确认。</li>
+  <li>相关数据会交由 DeepSeek 处理，适用其 <a href="https://cdn.deepseek.com/policies/zh-CN/deepseek-privacy-policy.html">隐私政策</a>。你可以选择不使用 AI，继续在本机手动记录。当前 AI 功能免费提供，设有公平使用额度。</li>
+</ul>
+
+<h2>4. 云端同步（可选）</h2>
+<ul>
+  <li>云端同步默认关闭。开启后，你需要在本 App 自建的服务器（<code>xiaoshitanji.papaclaoud.top</code>）上创建账号。</li>
+  <li>服务器保存用户名、密码的 Argon2id 哈希、同步令牌的哈希、日记快照及版本历史。快照可包含个人资料、饮食、体重、吸烟、训练记录，以及你已保存的分析报告和健康聚合数值。餐食与烟盒照片独立同步并校验。</li>
+  <li>传输使用 HTTPS；密码不以明文保存；我们不会把这些数据用于分析、广告或出售。</li>
+  <li>你可以在「我的 → 云端同步」登录后选择「删除云端账号」，删除账号及其云端日记、照片和版本历史，也可以通过下方邮箱申请删除。</li>
+</ul>
+
+<h2>5. 我们不收集什么</h2>
+<ul>
+  <li>不做广告追踪，不接入第三方分析或广告 SDK。</li>
+  <li>不收集通讯录、位置、剪贴板或设备唯一标识用于画像。</li>
+  <li>不出售、不出租你的任何数据。</li>
+</ul>
+
+<h2>6. 数据保留与删除</h2>
+<ul>
+  <li>本地数据：删除 App 或使用 App 内删除功能即可移除。</li>
+  <li>云端数据：删除账号会移除账号、令牌与全部快照；服务器同时保留有限时间的数据库备份，用于故障恢复。</li>
+  <li>AI 网关只为本次调用转发文字、照片和结果，不将请求或结果存入网关数据库或应用日志。为防滥用，服务器保存日请求计数和每日变化的网络散列值，最多约 3 天，限制同一网络及全服务的调用量。常规访问日志可能包含 IP、请求时间、路径及状态码，不记录 AI 请求正文或密钥。DeepSeek 对请求数据的处理与保留以其隐私政策为准。</li>
+</ul>
+
+<h2>7. 儿童</h2>
+<p>本 App 面向成年人，包含吸烟习惯记录功能。</p>
+
+<h2>8. 变更与联系</h2>
+<p>隐私政策如有更新，会发布在本页面。问题、数据删除请求请联系：<a href="mailto:2296900700@qq.com">2296900700@qq.com</a>。</p>
+
+<hr>
+<h1>Privacy Policy (English)</h1>
+<p class="muted">Effective November 5, 2026</p>
+<p>Xiao Shi Tan Ji is a personal diary for meals, weight, workouts and smoking. By default everything stays on your device.</p>
+<ul>
+  <li><strong>On-device data:</strong> meal entries, nutrition values, workouts, weight, smoking logs and photos are stored locally and can be exported or deleted in the app.</li>
+  <li><strong>Apple Health:</strong> with your permission the app reads steps, active energy, exercise minutes, distance, weight, height, sleep, heart rate, HRV, VO2 max, headphone audio exposure and workouts. Raw HealthKit samples stay on-device. Only aggregated values you confirm are sent through our server to DeepSeek for analysis. Saved reports and their aggregate snapshots can be included in optional cloud sync. Health data is never sold or used for advertising. You can revoke access in iOS Settings → Health.</li>
+  <li><strong>AI features:</strong> when you request an estimate, correction, review or follow-up, or scan/import a cigarette pack for recognition, relevant text, compressed photos, nutrition values and confirmed health aggregates are sent over HTTPS through our server to DeepSeek. No provider API Key is required. Cloud passwords/tokens, profile name/avatar and raw HealthKit samples are excluded from AI requests. Health review aggregates are shown for confirmation before sending. The AI gateway does not persist prompts, photos or responses. Daily request counts and rotating network hashes are retained for up to about three days to enforce fair use. Standard access logs may include IP, path, time and status, without request bodies or credentials. DeepSeek processes requests under its own privacy policy.</li>
+  <li><strong>Optional sync:</strong> if you enable cloud sync you create an account on our self-hosted server. It stores your username, an Argon2id password hash, hashed tokens and encrypted-in-transit diary snapshots. Snapshots may include your profile, diary, saved reports and health aggregates, with separately stored photos. Delete the cloud account from My → Cloud Sync after signing in, or contact us. This removes the cloud account, snapshots, photos and version history.</li>
+  <li><strong>No tracking:</strong> no ads, no third-party analytics SDKs, no data sold.</li>
+  <li><strong>Contact:</strong> <a href="mailto:2296900700@qq.com">2296900700@qq.com</a></li>
+</ul>
+<p class="muted" style="margin-top:28px">小食痰记 · <a href="/support">支持与反馈</a></p>
+</body>
+</html>

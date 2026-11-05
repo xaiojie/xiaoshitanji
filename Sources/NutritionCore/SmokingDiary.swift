@@ -48,19 +48,26 @@ public struct CigarettePack: Identifiable, Codable, Equatable, Sendable {
     public var product: CigaretteProduct
     public var openedAt: Date
     public var openingCount: Int
+    /// 旧数据内嵌的照片；迁移后为 nil。
     public var photoJPEG: Data?
+    /// 照片文件名（相对 `Photos/`）。
+    public var photoFileName: String?
 
     public init(id: UUID = UUID(), product: CigaretteProduct, openedAt: Date = .now,
-                openingCount: Int = 20, photoJPEG: Data? = nil) {
+                openingCount: Int = 20, photoJPEG: Data? = nil, photoFileName: String? = nil) {
         self.id = id
         self.product = product
         self.openedAt = openedAt
         self.openingCount = openingCount
         self.photoJPEG = photoJPEG
+        self.photoFileName = photoFileName
     }
 
     public func validate() throws {
         try product.validate()
+        if let photoFileName, !PhotoArchive.validName(photoFileName) {
+            throw DiaryError.invalidInput("烟包照片文件名无效。")
+        }
         guard openedAt.timeIntervalSinceReferenceDate.isFinite, (0...Self.capacity).contains(openingCount),
               (photoJPEG?.count ?? 0) <= 5_000_000 else {
             throw DiaryError.invalidInput("烟包余量需在0至20根之间，请检查照片和开包时间。")
@@ -126,6 +133,27 @@ public struct SmokingDiary: Codable, Equatable, Sendable {
         }
     }
 
+    /// 把烟包照片写到文件，旧文件迁移与保存新包都用这一条。
+    public mutating func externalizePhotos(in directory: URL) throws -> Bool {
+        var changed = false
+        for index in packs.indices where packs[index].photoJPEG != nil {
+            guard let data = packs[index].photoJPEG else { continue }
+            let name = try PhotoArchive.save(data, name: PhotoArchive.transferName(for: data), in: directory)
+            packs[index].photoFileName = name
+            packs[index].photoJPEG = nil
+            changed = true
+        }
+        return changed
+    }
+
+    mutating func transformPhotos(_ transform: (Data?, String?) throws -> (Data?, String?)) throws {
+        for index in packs.indices {
+            let photo = try transform(packs[index].photoJPEG, packs[index].photoFileName)
+            packs[index].photoJPEG = photo.0
+            packs[index].photoFileName = photo.1
+        }
+    }
+
     public mutating func openPack(_ pack: CigarettePack) throws {
         try pack.validate()
         guard !packs.contains(where: { $0.id == pack.id }) else {
@@ -160,6 +188,22 @@ public struct SmokingDiary: Codable, Equatable, Sendable {
             throw DiaryError.invalidInput("当前烟包余量不足，请检查实际剩余数量，或换一包。")
         }
         events.append(SmokingEvent(id: UUID(), packID: pack.id, date: date, kind: kind, count: count))
+    }
+
+    /// 合并另一份记录（例如云端）：按 id 去重，本机已有的不动。
+    public mutating func merge(_ other: SmokingDiary) {
+        var seenPacks = Set(packs.map(\.id))
+        for pack in other.packs where !seenPacks.contains(pack.id) {
+            packs.append(pack)
+            seenPacks.insert(pack.id)
+        }
+        var seenEvents = Set(events.map(\.id))
+        for event in other.events where !seenEvents.contains(event.id) {
+            events.append(event)
+            seenEvents.insert(event.id)
+        }
+        events.sort { $0.date < $1.date }
+        if activePackID == nil { activePackID = other.activePackID }
     }
 
     public mutating func removeEvent(id: UUID) throws {
