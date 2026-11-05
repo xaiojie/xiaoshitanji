@@ -77,7 +77,7 @@ struct RecordEntrySheet: View {
     let onSelect: (MealKind) -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 18) {
             HStack {
                 Label("记饮食", systemImage: "fork.knife").font(.headline)
                 Spacer()
@@ -92,8 +92,8 @@ struct RecordEntrySheet: View {
             HStack(spacing: 12) {
                 ForEach(MealKind.allCases) { kind in
                     Button { onSelect(kind) } label: {
-                        VStack(spacing: 10) {
-                            MealIcon(kind: kind, size: 48)
+                        VStack(spacing: 8) {
+                            MealIcon(kind: kind, size: 44)
                             Text("记\(kind.title)").font(.caption.weight(.medium)).foregroundStyle(.primary)
                         }
                         .frame(maxWidth: .infinity)
@@ -102,9 +102,10 @@ struct RecordEntrySheet: View {
                 }
             }
         }
-        .padding(24)
+        .padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 22)
+        .frame(maxWidth: .infinity, alignment: .top)
         .presentationBackground(Theme.background)
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.height(300), .large])
         .presentationDragIndicator(.visible)
     }
 }
