@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.1%20(31)-yellow" alt="version" />
-  <img src="https://img.shields.io/badge/tests-205%20passed-brightgreen" alt="tests" />
+  <img src="https://img.shields.io/badge/version-1.0.1%20(32)-yellow" alt="version" />
+  <img src="https://img.shields.io/badge/tests-208%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -375,7 +375,7 @@ flowchart LR
 
 ```sh
 swift test
-# 206 tests in 26 suites，205 passed，1 skipped
+# 209 tests in 27 suites，208 passed，1 skipped
 Tests/AppRegression/run-sync-model.sh
 # 恢复合并与冲突重试、旧账号基线迁移，两项 PASS
 cd server && api/.venv/bin/python -m pytest -q
@@ -407,6 +407,7 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | `BackupTests` | 同一天只写一份、按保留数量裁剪、还原往返、坏文件拒绝 |
 | `CloudSyncTests` | 服务器地址规范化、账号密码本地校验、请求构造与 Bearer 头、登录/状态/快照/上传/版本解析、409 与 413 分支、8 MB 上限、冲突合并的并集与本机优先、吸烟合并 |
 | `SyncIntegrityTests` | 训练与计划合并、照片内容名与去重、完整备份、旧数字日期、同日旧备份升级、恢复点保留、损坏原文件保护 |
+| `WellnessCompatibilityTests` | 旧报告与嵌套时间线缺少新增指标时读取、保存、备份、云端快照兼容，新指标往返与损坏数据拒绝 |
 | `CloudPhotoSyncTests` | 先照片后快照、重试去重、上传失败阻止快照发布、下载哈希校验与重试、拒绝无关照片清单 |
 
 界面布局、相机、键盘、健康授权和真实联网调用依赖真机，不在自动化测试范围内。
@@ -422,7 +423,7 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit、App Group（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 1.0.1，构建号 31，App 与小组件一致 |
+| 版本 | 1.0.1，构建号 32，App 与小组件一致 |
 
 真机测试、TestFlight 上传与正式发布均使用当前分支最新源码构建。执行前核对提交、工作区改动及主程序和小组件版本，安装后回读设备上的版本号。上传与发布按用户当次指令执行。
 
@@ -432,7 +433,7 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 
 ## 项目状态与路线图
 
-**当前源码版本 1.0.1（31）**，本轮修复 schema 5 服务端兼容、独立照片同步、完整备份恢复、训练与计划合并、首次拉取与冲突重试，并整理编译警告与截图工具。
+**当前源码版本 1.0.1（32）**，本轮修复 schema 5 服务端兼容、独立照片同步、完整备份恢复、训练与计划合并、首次拉取与冲突重试，并整理编译警告与截图工具。构建 32 补齐旧汇总报告新增健康指标的解码兼容，缺失指标保留未知。
 
 | 状态 | 事项 |
 | --- | --- |
@@ -441,11 +442,11 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | ✅ 已实现 | 「蛙的观察」：五种本地模式识别（蛋白、抽烟时段、断档、体重停滞、热量超标）+ 只发聚合数值的追问，回答标注依据与「基于旧数据」 |
 | ✅ 已实现 | 「我的」跨饮食、抽烟、运动与身体的 AI 汇总分析。默认近7天，可切换30天和全部记录，预览并确认后发送，按范围保留最新报告 |
 | ✅ 已实现 | 健康全景：睡眠、心率 / 静息心率 / HRV、有氧适能、耳机音量与 Apple 健康体能训练接入趋势与 AI 分析，缺失数据明确标为缺口 |
-| ✅ 已实现 | 云端同步与自包含备份恢复，205 项 Swift 测试通过、1 项演示工具跳过，42 项服务端测试通过 |
+| ✅ 已实现 | 云端同步与自包含备份恢复，208 项 Swift 测试通过、1 项演示工具跳过，42 项服务端测试通过 |
 | ✅ 线上验证 | 2026-11-05 已部署兼容修复，公共 HTTPS 照片往返、账号隔离、并发冲突、去重与历史恢复通过，临时账号已清理 |
-| ⏳ 真机验收 | 本轮已完成 iPhone 签名构建。当前设备不可用，安装、相机、键盘与两台实体设备同步验收等待连接 |
+| ✅ 真机记录核验 | 1.0.1（32）已安装。iPhone Use 实查昨天 5 餐、两包香烟及历史记录恢复显示，今日新增早餐正常保存。原记录与 5 张照片已逐项核对，完整相机、键盘与两设备交互验收继续由用户测试 |
 | ✅ 已实现 | 七条主线的首版能力见 [`docs/backlog.md`](docs/backlog.md) 的进度，扩展需求保留在后续规划表 |
-| 🧪 TestFlight 核验 | 2026-11-05 查询 App Store Connect，1.0（29）与 0.16.0（27）均处理为 VALID，内部状态 READY_FOR_BETA_TESTING，外部状态 READY_FOR_BETA_SUBMISSION。本轮 1.0.1（31）尚未上传，测试组实际分发状态待确认 |
+| 🧪 TestFlight 核验 | 2026-11-05 查询 App Store Connect，1.0（29）与 0.16.0（27）均处理为 VALID，内部状态 READY_FOR_BETA_TESTING，外部状态 READY_FOR_BETA_SUBMISSION。本轮 1.0.1（32）尚未上传，测试组实际分发状态待确认 |
 
 > 设计验收记录见 [`design-qa.md`](design-qa.md)，后续开发清单见 [`docs/backlog.md`](docs/backlog.md)。
 
