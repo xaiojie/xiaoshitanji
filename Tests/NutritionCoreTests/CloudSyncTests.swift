@@ -225,6 +225,24 @@ struct CloudSyncTests {
         #expect(again.templates.count == merged.templates.count)
     }
 
+    @Test("同一天两份复盘合并后只留较新的一条")
+    func mergesReviewsByDay() throws {
+        let day = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        func review(_ summary: String, at offset: TimeInterval, generated: TimeInterval) -> DietReview {
+            DietReview(date: day.addingTimeInterval(offset), recordCount: 2, summary: summary, score: 70,
+                       highlights: [], suggestions: [], model: "deepseek-flash",
+                       generatedAt: day.addingTimeInterval(generated))
+        }
+        var local = DiaryDocument()
+        local.reviews = [review("旧的", at: 3600, generated: 100)]
+        var remote = DiaryDocument()
+        remote.reviews = [review("新的", at: 7200, generated: 900)]
+
+        let merged = try local.merged(with: remote)
+        #expect(merged.reviews.count == 1)
+        #expect(merged.reviews.first?.summary == "新的")
+    }
+
     @Test("合并两侧吸烟记录")
     func mergesSmoking() throws {
         var local = DiaryDocument()

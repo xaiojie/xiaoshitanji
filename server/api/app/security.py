@@ -87,8 +87,13 @@ class AttemptLimiter:
         bucket.append(now)
 
 
-def client_key(request: Request, username: str = "") -> str:
-    forwarded = request.headers.get("x-forwarded-for", "")
+def client_key(request: Request, username: str = "", *, trust_forwarded: bool = False) -> str:
+    """限流分桶键。
+
+    只有部署在反向代理后面（`trust_proxy_headers`）时才采信
+    `X-Forwarded-For`，否则直连方可以伪造多个 IP 打散限流。
+    """
+    forwarded = request.headers.get("x-forwarded-for", "") if trust_forwarded else ""
     host = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "unknown")
     return f"{host}|{username}"
 

@@ -101,7 +101,12 @@ public enum DiaryCSV {
     }
 
     static func escape(_ field: String) -> String {
-        let trimmed = field.replacingOccurrences(of: "\r\n", with: "\n")
+        var trimmed = field.replacingOccurrences(of: "\r\n", with: "\n")
+        // 表格软件会把 =、+、-、@ 开头的单元格当公式执行，加单引号强制成文本；
+        // 纯数字（例如 -3.5）不算公式，保持原样以免破坏数值列。
+        if let first = trimmed.first, "=+-@\t".contains(first), Double(trimmed) == nil {
+            trimmed = "'" + trimmed
+        }
         guard trimmed.contains(",") || trimmed.contains("\"") || trimmed.contains("\n") else { return trimmed }
         return "\"" + trimmed.replacingOccurrences(of: "\"", with: "\"\"") + "\""
     }
