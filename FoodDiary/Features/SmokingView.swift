@@ -199,6 +199,7 @@ struct SmokingView: View {
 struct SmokingTrendCard: View {
     let journal: SmokingDiary
     let endingOn: Date
+    @State private var probe: Date?
     private var dates: [Date] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: endingOn)
@@ -210,18 +211,38 @@ struct SmokingTrendCard: View {
             HStack { Text("近 7 天记录").font(.headline); Spacer(); Text("根").font(.caption).foregroundStyle(.secondary) }
             Chart(dates, id: \.self) { date in
                 let day = journal.summary(on: date)
+                let probed = ChartProbe.nearest(to: probe, in: dates, date: { $0 })
+                let isSelected = probed.map { Calendar.current.isDate($0, inSameDayAs: date) } ?? false
                 BarMark(x: .value("日期", date, unit: .day), y: .value("根数", day.smoked))
                     .foregroundStyle(by: .value("类型", "自己抽的"))
                     .position(by: .value("类型", "自己抽的"))
+                    .opacity(probe == nil || isSelected ? 1 : 0.32)
                 BarMark(x: .value("日期", date, unit: .day), y: .value("根数", day.shared))
                     .foregroundStyle(by: .value("类型", "分给别人"))
                     .position(by: .value("类型", "分给别人"))
+                    .opacity(probe == nil || isSelected ? 1 : 0.32)
+                if let probed, let selected = dates.first(where: { Calendar.current.isDate($0, inSameDayAs: probed) }) {
+                    let summary = journal.summary(on: selected)
+                    RuleMark(x: .value("选中", selected, unit: .day))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                        .foregroundStyle(Theme.ink.opacity(0.3))
+                        .annotation(position: .top, spacing: 4,
+                                    overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                            ChartProbeBubble(title: ChartProbe.dayLabel(selected),
+                                             value: "自己 \(summary.smoked) 根 · 分人 \(summary.shared) 根")
+                        }
+                }
             }
+            .chartXSelection(value: $probe)
+            .chartProbeFeedback(probe)
+            .animation(.snappy(duration: 0.22), value: probe)
             .chartForegroundStyleScale(["自己抽的": Theme.accent, "分给别人": Theme.fat])
             .chartXAxis { AxisMarks(values: .stride(by: .day)) { _ in AxisValueLabel(format: .dateTime.weekday(.narrow)) } }
             .chartYAxis { AxisMarks(position: .leading) }
             .frame(height: 180)
-            Text("只汇总已记录的数量，余量校准单独保留在记录中。")
+            Text(probe == nil
+                 ? "按住图表左右拖动看每天的数量 · 只汇总已记录的部分"
+                 : "余量校准单独保留在记录中。")
                 .font(.caption2).foregroundStyle(.secondary)
         }.contentCard()
     }

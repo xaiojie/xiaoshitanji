@@ -13,6 +13,7 @@ struct WeightHistoryView: View {
     @State private var editing: WeightEditRequest?
     @State private var deleting: WeightRecord?
     @State private var errorMessage: String?
+    @State private var probe: Date?
 
     private var records: [WeightRecord] {
         (diary.document.weights + health.weights).sorted {
@@ -53,16 +54,34 @@ struct WeightHistoryView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         Text("最近 \(chartRecords.count) 次测量").font(.headline)
                         Chart(chartRecords) { record in
+                            let selected = ChartProbe.nearest(to: probe, in: chartRecords, date: \.date)
                             LineMark(x: .value("时间", record.date), y: .value("公斤", record.kilograms))
                                 .foregroundStyle(Theme.olive)
+                                .interpolationMethod(.catmullRom)
                             PointMark(x: .value("时间", record.date), y: .value("公斤", record.kilograms))
-                                .foregroundStyle(Theme.olive).symbolSize(35)
+                                .foregroundStyle(Theme.olive)
+                                .symbolSize(selected?.id == record.id ? 95 : 35)
                                 .accessibilityLabel(record.date.formatted(.dateTime.month().day().hour().minute()))
                                 .accessibilityValue("\(Theme.number(record.kilograms, decimals: 2)) 公斤，\(record.source.title)")
+                            if let selected, selected.id == record.id {
+                                RuleMark(x: .value("选中", record.date))
+                                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                                    .foregroundStyle(Theme.olive.opacity(0.45))
+                                    .annotation(position: .top, spacing: 4,
+                                                overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                                        ChartProbeBubble(title: ChartProbe.dayLabel(record.date),
+                                                         value: "\(Theme.number(record.kilograms, decimals: 2)) 公斤",
+                                                         detail: record.source.title)
+                                    }
+                            }
                         }
+                        .chartXSelection(value: $probe)
+                        .chartProbeFeedback(probe)
+                        .animation(.snappy(duration: 0.22), value: probe)
                         .chartYScale(domain: .automatic(includesZero: false))
                         .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month().day()) } }
                         .frame(height: 190)
+                        chartProbeHint("按住图表左右拖动，看每次称重的数值。")
                     }.contentCard()
                 }
 

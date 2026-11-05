@@ -7,6 +7,12 @@ struct TrendsView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var dayCount = 7
     @State private var currentDate = Date.now
+    /// 每张图各自的拖动位置，互不串台。
+    @State private var calorieProbe: Date?
+    @State private var scoreProbe: Date?
+    @State private var weightProbe: Date?
+    @State private var workoutProbe: Date?
+    @State private var smokeProbe: Date?
 
     private var days: [TrendDay] {
         let calendar = Calendar.current
@@ -45,6 +51,18 @@ struct TrendsView: View {
         guard !recordedDays.isEmpty else { return .zero }
         return recordedDays.reduce(Nutrition.zero) { $0 + $1.nutrition }.scaled(by: 1 / Double(recordedDays.count))
     }
+    private var probedDay: TrendDay? { ChartProbe.nearest(to: calorieProbe, in: recordedDays, date: \.date) }
+
+    private var probedScoreDay: TrendDay? { ChartProbe.nearest(to: scoreProbe, in: scoredDays, date: \.date) }
+    private var probedWeightDay: TrendDay? { ChartProbe.nearest(to: weightProbe, in: weightDays, date: \.date) }
+    private var probedWorkoutDay: TrendDay? { ChartProbe.nearest(to: workoutProbe, in: days, date: \.date) }
+    private var probedSmokeDay: TrendDay? { ChartProbe.nearest(to: smokeProbe, in: days, date: \.date) }
+
+    private func barColour(for day: TrendDay) -> Color {
+        if let probedDay { return day.id == probedDay.id ? Theme.accent : Theme.gold.opacity(0.3) }
+        return Calendar.current.isDate(day.date, inSameDayAs: currentDate) ? Theme.accent : Theme.gold.opacity(0.72)
+    }
+
     private var dateRange: ClosedRange<Date> {
         let start = days.first?.date ?? currentDate
         let end = Calendar.current.date(byAdding: .day, value: 1, to: days.last?.date ?? currentDate) ?? currentDate
@@ -76,6 +94,9 @@ struct TrendsView: View {
             }
             .background(Theme.background).toolbar(.hidden, for: .navigationBar)
             .onAppear { currentDate = .now }
+            .onChange(of: dayCount) { _, _ in
+                calorieProbe = nil; scoreProbe = nil; weightProbe = nil; workoutProbe = nil; smokeProbe = nil
+            }
             .onChange(of: scenePhase) { _, phase in if phase == .active { currentDate = .now } }
             .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in currentDate = .now }
         }
@@ -107,7 +128,7 @@ struct TrendsView: View {
                     ForEach(days) { day in
                         if day.count > 0 {
                             BarMark(x: .value("日期", day.date, unit: .day), y: .value("千卡", day.nutrition.calories))
-                                .foregroundStyle(Calendar.current.isDate(day.date, inSameDayAs: currentDate) ? Theme.accent : Theme.gold.opacity(0.72))
+                                .foregroundStyle(barColour(for: day))
                                 .cornerRadius(4)
                                 .accessibilityLabel(day.date.formatted(.dateTime.month().day()))
                                 .accessibilityValue("\(Theme.number(day.nutrition.calories)) 千卡")
@@ -115,7 +136,22 @@ struct TrendsView: View {
                     }
                     RuleMark(y: .value("记录日平均", average.calories))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 4])).foregroundStyle(Theme.accent.opacity(0.35))
+                    if let probedDay {
+                        RuleMark(x: .value("选中", probedDay.date, unit: .day))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                            .foregroundStyle(.white.opacity(0.3))
+                            .annotation(position: .top, spacing: 4,
+                                        overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                                ChartProbeBubble(title: ChartProbe.dayLabel(probedDay.date),
+                                                 value: "\(Theme.number(probedDay.nutrition.calories)) 千卡",
+                                                 detail: "\(probedDay.count) 餐 · 蛋白 \(Theme.number(probedDay.nutrition.protein)) g",
+                                                 onDark: true)
+                            }
+                    }
                 }
+                .chartXSelection(value: $calorieProbe)
+                .chartProbeFeedback(calorieProbe)
+                .animation(.snappy(duration: 0.22), value: calorieProbe)
                 .chartXScale(domain: dateRange)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: dayCount == 7 ? 1 : 5)) { value in
@@ -130,7 +166,9 @@ struct TrendsView: View {
                 .chartYAxis(.hidden).frame(height: 165)
                 .accessibilityLabel("最近\(dayCount)天饮食摄入，单位千卡")
             }
-            Text("当天未记完时数值仍会更新，未记录日期保留空缺。")
+            Text(calorieProbe == nil
+                 ? "按住图表左右拖动，看每一天的摄入。未记录日期保留空缺。"
+                 : "当天未记完时数值仍会更新。")
                 .font(.system(size: 10)).foregroundStyle(.white.opacity(0.6))
         }
         .foregroundStyle(Theme.surface).padding(20)
@@ -143,10 +181,25 @@ struct TrendsView: View {
             Chart(scoredDays) { day in
                 if let score = day.score {
                     PointMark(x: .value("日期", day.date, unit: .day), y: .value("评分", score))
-                        .foregroundStyle(Theme.olive).symbolSize(55)
+                        .foregroundStyle(scoreProbe == nil ? Theme.olive
+                                         : (day.id == probedScoreDay?.id ? Theme.olive : Theme.olive.opacity(0.32)))
+                        .symbolSize(day.id == probedScoreDay?.id ? 90 : 55)
                         .accessibilityLabel(day.date.formatted(.dateTime.month().day())).accessibilityValue("\(score) 分")
                 }
+                if let probedScoreDay {
+                    RuleMark(x: .value("选中", probedScoreDay.date, unit: .day))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                        .foregroundStyle(Theme.olive.opacity(0.4))
+                        .annotation(position: .top, spacing: 4,
+                                    overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                            ChartProbeBubble(title: ChartProbe.dayLabel(probedScoreDay.date),
+                                             value: "\(probedScoreDay.score ?? 0) 分")
+                        }
+                }
             }
+            .chartXSelection(value: $scoreProbe)
+            .chartProbeFeedback(scoreProbe)
+            .animation(.snappy(duration: 0.22), value: scoreProbe)
             .chartYScale(domain: 0...100).chartXScale(domain: dateRange)
             .chartXAxis { AxisMarks(values: .stride(by: .day, count: dayCount == 7 ? 1 : 5)) { _ in AxisValueLabel(format: .dateTime.day()) } }
             .chartYAxis { AxisMarks(position: .leading, values: [0, 50, 100]) }.frame(height: 145)
@@ -165,9 +218,24 @@ struct TrendsView: View {
             Chart(weightDays) { day in
                 if let weight = day.weight {
                     LineMark(x: .value("日期", day.date), y: .value("体重", weight))
+                        .interpolationMethod(.catmullRom)
                     PointMark(x: .value("日期", day.date), y: .value("体重", weight))
+                        .symbolSize(day.id == probedWeightDay?.id ? 90 : 35)
+                }
+                if let probedWeightDay, let weight = probedWeightDay.weight {
+                    RuleMark(x: .value("选中", probedWeightDay.date))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                        .foregroundStyle(Theme.olive.opacity(0.4))
+                        .annotation(position: .top, spacing: 4,
+                                    overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                            ChartProbeBubble(title: ChartProbe.dayLabel(probedWeightDay.date),
+                                             value: "\(Theme.number(weight, decimals: 2)) 公斤")
+                        }
                 }
             }
+            .chartXSelection(value: $weightProbe)
+            .chartProbeFeedback(weightProbe)
+            .animation(.snappy(duration: 0.22), value: weightProbe)
             .chartYScale(domain: weightDomain)
             .frame(height: 160)
         }.contentCard()
@@ -186,10 +254,30 @@ struct TrendsView: View {
                 Spacer()
                 Text("\(workoutDays.reduce(0) { $0 + $1.workoutMinutes }) 分钟").font(.caption).foregroundStyle(Theme.mutedInk)
             }
-            Chart(workoutDays) { day in
+            Chart(days) { day in
                 BarMark(x: .value("日期", day.date, unit: .day), y: .value("分钟", day.workoutMinutes))
                     .foregroundStyle(Theme.olive.gradient)
+                    .opacity(workoutProbe == nil || day.id == probedWorkoutDay?.id ? 1 : 0.38)
                     .cornerRadius(4)
+                if let probed = probedWorkoutDay {
+                    RuleMark(x: .value("选中", probed.date, unit: .day))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                        .foregroundStyle(Theme.olive.opacity(0.4))
+                        .annotation(position: .top, spacing: 4,
+                                    overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                            ChartProbeBubble(title: ChartProbe.dayLabel(probed.date),
+                                             value: "\(probed.workoutMinutes) 分钟")
+                        }
+                }
+            }
+            .chartXSelection(value: $workoutProbe)
+            .chartProbeFeedback(workoutProbe)
+            .animation(.snappy(duration: 0.22), value: workoutProbe)
+            .chartXScale(domain: dateRange)
+            .chartXAxis {
+                AxisMarks(values: .stride(by: .day, count: dayCount == 7 ? 1 : 5)) {
+                    AxisValueLabel(format: .dateTime.day())
+                }
             }
             .frame(height: 140)
         }.contentCard()
@@ -202,10 +290,30 @@ struct TrendsView: View {
                 Spacer()
                 Text("\(smokeDays.reduce(0) { $0 + $1.smokeCount }) 根").font(.caption).foregroundStyle(Theme.mutedInk)
             }
-            Chart(smokeDays) { day in
+            Chart(days) { day in
                 BarMark(x: .value("日期", day.date, unit: .day), y: .value("根数", day.smokeCount))
                     .foregroundStyle(Theme.gold.gradient)
+                    .opacity(smokeProbe == nil || day.id == probedSmokeDay?.id ? 1 : 0.38)
                     .cornerRadius(4)
+                if let probed = probedSmokeDay {
+                    RuleMark(x: .value("选中", probed.date, unit: .day))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                        .foregroundStyle(Theme.gold.opacity(0.5))
+                        .annotation(position: .top, spacing: 4,
+                                    overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                            ChartProbeBubble(title: ChartProbe.dayLabel(probed.date),
+                                             value: "\(probed.smokeCount) 根")
+                        }
+                }
+            }
+            .chartXSelection(value: $smokeProbe)
+            .chartProbeFeedback(smokeProbe)
+            .animation(.snappy(duration: 0.22), value: smokeProbe)
+            .chartXScale(domain: dateRange)
+            .chartXAxis {
+                AxisMarks(values: .stride(by: .day, count: dayCount == 7 ? 1 : 5)) {
+                    AxisValueLabel(format: .dateTime.day())
+                }
             }
             .frame(height: 140)
         }.contentCard()

@@ -120,8 +120,10 @@ enum ActivityMetric: String, CaseIterable, Identifiable {
 struct ActivityChartCard: View {
     let metric: ActivityMetric
     let days: [HealthActivityDay]
+    @State private var probe: Date?
 
     private var recorded: [HealthActivityDay] { days.filter { metric.value(in: $0) != nil } }
+    private var probedDay: HealthActivityDay? { ChartProbe.nearest(to: probe, in: recorded, date: \.date) }
     private var dateRange: ClosedRange<Date> {
         let start = days.first?.date ?? Calendar.current.startOfDay(for: .now)
         let last = days.last?.date ?? start
@@ -145,17 +147,37 @@ struct ActivityChartCard: View {
                 Chart(days) { day in
                     if let value = metric.value(in: day) {
                         BarMark(x: .value("日期", day.date, unit: .day), y: .value(metric.unit, value))
-                            .foregroundStyle(metric.color.gradient).cornerRadius(4)
+                            .foregroundStyle(probe == nil || day.id == probedDay?.id
+                                             ? metric.color.gradient
+                                             : metric.color.opacity(0.28).gradient)
+                            .cornerRadius(4)
                             .accessibilityLabel(day.date.formatted(.dateTime.month().day()))
                             .accessibilityValue("\(metric.formatted(value)) \(metric.unit)")
                     }
+                    if let probedDay, let value = metric.value(in: probedDay) {
+                        RuleMark(x: .value("选中", probedDay.date, unit: .day))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                            .foregroundStyle(metric.color.opacity(0.45))
+                            .annotation(position: .top, spacing: 4,
+                                        overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                                ChartProbeBubble(title: ChartProbe.dayLabel(probedDay.date),
+                                                 value: "\(metric.formatted(value)) \(metric.unit)",
+                                                 detail: metric.title)
+                            }
+                    }
                 }
+                .chartXSelection(value: $probe)
+                .chartProbeFeedback(probe)
+                .animation(.snappy(duration: 0.22), value: probe)
                 .chartXScale(domain: dateRange)
                 .chartXAxis { AxisMarks(values: .stride(by: .day)) { _ in AxisValueLabel(format: .dateTime.weekday(.narrow)) } }
                 .chartYAxis { AxisMarks(position: .leading) }
                 .frame(height: 175)
-                Text("有数据 \(recorded.count) 天 · 未读取到的日期保留空缺")
+                Text(probe == nil
+                     ? "按住图表左右拖动看每天数值 · 有数据 \(recorded.count) 天"
+                     : "有数据 \(recorded.count) 天 · 未读取到的日期保留空缺")
                     .font(.caption2).foregroundStyle(.secondary)
+                    .animation(.easeInOut(duration: 0.15), value: probe == nil)
             }
         }
         .contentCard()
@@ -209,6 +231,7 @@ struct HealthMetricDetailView: View {
 
 struct DietHealthDetailView: View {
     @Environment(DiaryModel.self) private var diary
+    @State private var probe: Date?
 
     private var dates: [Date] {
         let calendar = Calendar.current
@@ -237,12 +260,29 @@ struct DietHealthDetailView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         Text("近 7 天摄入").font(.headline)
                         Chart(dates, id: \.self) { date in
+                            let probed = ChartProbe.nearest(to: probe, in: dates, date: { $0 })
+                            let isSelected = probed.map { Calendar.current.isDate($0, inSameDayAs: date) } ?? false
                             if !diary.document.records(on: date).isEmpty {
                                 BarMark(x: .value("日期", date, unit: .day),
                                         y: .value("千卡", diary.document.total(on: date).calories))
-                                    .foregroundStyle(.orange.gradient).cornerRadius(4)
+                                    .foregroundStyle(probe == nil || isSelected ? Color.orange.gradient : Color.orange.opacity(0.28).gradient)
+                                    .cornerRadius(4)
+                            }
+                            if let probed, let selected = dates.first(where: { Calendar.current.isDate($0, inSameDayAs: probed) }) {
+                                RuleMark(x: .value("选中", selected, unit: .day))
+                                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                                    .foregroundStyle(Color.orange.opacity(0.45))
+                                    .annotation(position: .top, spacing: 4,
+                                                overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                                        ChartProbeBubble(title: ChartProbe.dayLabel(selected),
+                                                         value: "\(Theme.number(diary.document.total(on: selected).calories)) 千卡",
+                                                         detail: "\(diary.document.records(on: selected).count) 餐")
+                                    }
                             }
                         }
+                        .chartXSelection(value: $probe)
+                        .chartProbeFeedback(probe)
+                        .animation(.snappy(duration: 0.22), value: probe)
                         .chartXScale(domain: dateRange)
                         .chartXAxis { AxisMarks(values: .stride(by: .day)) { _ in AxisValueLabel(format: .dateTime.weekday(.narrow)) } }
                         .frame(height: 180)

@@ -121,6 +121,8 @@ struct CompactNutritionStrip: View {
 
 struct NutritionDistributionCard: View {
     let nutrition: Nutrition
+    /// 手指在色条上的位置（0…1），nil 表示没在拖。
+    @State private var probeFraction: Double?
 
     private var entries: [MacroEntry] {
         [MacroEntry(title: "蛋白质", grams: nutrition.protein, factor: 4, color: Theme.olive),
@@ -128,6 +130,17 @@ struct NutritionDistributionCard: View {
          MacroEntry(title: "脂肪", grams: nutrition.fat, factor: 9, color: Theme.fat)]
     }
     private var totalEnergy: Double { entries.reduce(0) { $0 + $1.energy } }
+
+    /// 手指所在位置对应的那一段营养素。
+    private var probedEntry: MacroEntry? {
+        guard let probeFraction, totalEnergy > 0 else { return nil }
+        var edge = 0.0
+        for entry in entries {
+            edge += entry.energy / totalEnergy
+            if probeFraction <= edge { return entry }
+        }
+        return entries.last
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 17) {
@@ -137,9 +150,25 @@ struct NutritionDistributionCard: View {
                     ForEach(entries) { entry in
                         Rectangle().fill(entry.color)
                             .frame(width: totalEnergy > 0 ? geometry.size.width * entry.energy / totalEnergy : 0)
+                            .opacity(probeFraction == nil || probedEntry?.id == entry.id ? 1 : 0.45)
+                            .animation(.snappy(duration: 0.2), value: probeFraction)
                     }
-                }.background(Theme.softYellow).clipShape(.capsule)
-            }.frame(height: 15).accessibilityHidden(true)
+                }
+                .background(Theme.softYellow)
+                .clipShape(.capsule)
+                .contentShape(.rect)
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            guard geometry.size.width > 0 else { return }
+                            probeFraction = min(max(value.location.x / geometry.size.width, 0), 1)
+                        }
+                        .onEnded { _ in withAnimation(.easeOut(duration: 0.18)) { probeFraction = nil } }
+                )
+            }
+            .frame(height: 15)
+            .sensoryFeedback(.selection, trigger: probedEntry?.id)
+            .accessibilityHidden(true)
             ForEach(entries) { entry in
                 HStack(spacing: 9) {
                     Circle().fill(entry.color).frame(width: 8, height: 8)
@@ -148,11 +177,23 @@ struct NutritionDistributionCard: View {
                     Text("\(Theme.number(entry.grams, decimals: 1)) g").font(.subheadline.bold()).monospacedDigit()
                     Text(totalEnergy > 0 ? "占 \(Theme.number(entry.energy / totalEnergy * 100))%" : "—")
                         .font(.caption).foregroundStyle(Theme.mutedInk).frame(width: 62, alignment: .trailing)
-                }.accessibilityElement(children: .combine)
+                }
+                .padding(.vertical, 3)
+                .padding(.horizontal, 6)
+                .background(probedEntry?.id == entry.id ? entry.color.opacity(0.14) : .clear, in: .rect(cornerRadius: 8))
+                .accessibilityElement(children: .combine)
             }
-            Text("供能占比由三大营养素估算，随已记录饮食更新。")
+            Text(probeText)
                 .font(.caption2).foregroundStyle(Theme.mutedInk)
+                .animation(.easeInOut(duration: 0.15), value: probeText)
         }.foregroundStyle(Theme.ink).contentCard()
+    }
+
+    private var probeText: String {
+        if let probedEntry, totalEnergy > 0 {
+            return "\(probedEntry.title) \(Theme.number(probedEntry.grams, decimals: 1)) 克 · 占 \(Theme.number(probedEntry.energy / totalEnergy * 100))% 供能"
+        }
+        return "按住色条左右拖动，看每段占多少。供能占比由三大营养素估算。"
     }
 }
 
