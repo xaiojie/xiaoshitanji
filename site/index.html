@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>小食痰记 · 吃一餐，记一笔。</title>
+<meta name="description" content="小食痰记：拍照或说一句，AI 帮你估算热量与营养，也把每一根烟、每一次身体变化认真记下来。">
+<meta name="theme-color" content="#2E261A">
+<link rel="icon" href="assets/derived/app-icon-128.webp" type="image/webp">
+<link rel="icon" href="assets/derived/app-icon-128.png" sizes="128x128" type="image/png">
+<link rel="apple-touch-icon" href="assets/derived/app-icon-256.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#features">跳到主要内容</a>
+
+<div class="page">
+  <!-- 首屏 -->
+  <header class="hero" id="top">
+    <div class="hero__inner wrap">
+      <nav class="nav" aria-label="主导航">
+        <a class="brand" href="#top">
+          <img src="assets/derived/app-icon-128.webp" width="40" height="40" alt="">
+          <span class="brand__name">小食痰记</span>
+        </a>
+
+        <div class="nav__links">
+          <a href="#features">功能特色</a>
+          <a href="#screens">界面一览</a>
+          <a href="#support">隐私与支持</a>
+        </div>
+
+        <button class="cta cta--nav" type="button" data-download disabled>
+          <span class="cta__main">获取 iOS 版</span>
+          <span class="cta__tag">即将上线</span>
+        </button>
+
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="打开菜单">
+          <span></span><span></span><span></span>
+        </button>
+      </nav>
+
+      <div class="hero__grid">
+        <div class="hero__copy">
+          <h1 class="hero__title">吃一餐，记一笔。<br><span>日子慢慢有迹可循。</span></h1>
+          <p class="hero__lead">拍照或说一句，AI 帮你估算热量与营养。也把每一根烟、每一次身体变化，认真记下来。</p>
+          <div class="hero__actions">
+            <button class="cta cta--large" type="button" data-download disabled>
+              <span class="cta__main">iOS 版即将上线</span>
+            </button>
+            <a class="ghost-link" href="#features">往下看看 <span aria-hidden="true">↓</span></a>
+          </div>
+          <p class="hero__note">适用于 iPhone · iOS 26 及以上</p>
+        </div>
+
+        <div class="hero__art">
+          <p class="bubble bubble--hero">吃都吃了，<br>先记一笔。</p>
+          <img class="mascot mascot--hero" src="assets/derived/milk-frog-hero-reclining.webp"
+               width="900" height="600" alt="" fetchpriority="high">
+          <img class="mascot mascot--hero-mobile" src="assets/derived/milk-frog-mobile-wave.webp"
+               width="900" height="900" alt="" fetchpriority="high">
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-panel" id="mobile-menu" hidden>
+      <a href="#features">功能特色</a>
+      <a href="#screens">界面一览</a>
+      <a href="#support">隐私与支持</a>
+      <button class="cta cta--menu" type="button" data-download disabled>
+        <span class="cta__main">iOS 版即将上线</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 01 记餐 -->
+  <section class="section section--meal" id="features" aria-labelledby="meal-title">
+    <div class="wrap section__grid">
+      <div class="section__copy">
+        <span class="section__badge" aria-hidden="true">01</span>
+        <div class="meal-head">
+          <div>
+            <h2 class="title" id="meal-title">一餐记下来，<br>营养看得见。</h2>
+            <p class="lead">拍餐食，也能拍营养成分表。AI 先估算，你确认后再保存。</p>
+          </div>
+          <img class="mascot mascot--bowl" src="assets/derived/milk-frog-meal-bowl.webp"
+               width="900" height="900" alt="" loading="lazy">
+        </div>
+
+        <div class="steps" role="list">
+          <div class="step" role="listitem">
+            <span class="step__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5h2.2L8 6.5h8l1.8 2H20a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 20 18.5H4A1.5 1.5 0 0 1 2.5 17V10A1.5 1.5 0 0 1 4 8.5Z"/><circle cx="12" cy="13" r="3.2"/></svg>
+            </span>
+            <p>拍照或说一句</p>
+          </div>
+          <span class="step__link" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 6 7-6 7"/></svg>
+          </span>
+          <div class="step" role="listitem">
+            <span class="step__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.6 4.2 4.2 1.6-4.2 1.6L12 15.1l-1.6-4.2L6.2 9.3l4.2-1.6L12 3.5Z"/><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2Z"/></svg>
+            </span>
+            <p>AI 估算热量<br>与营养</p>
+          </div>
+          <span class="step__link" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 6 7-6 7"/></svg>
+          </span>
+          <div class="step" role="listitem">
+            <span class="step__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.2 4.2L19 6.9"/></svg>
+            </span>
+            <p>确认后保存</p>
+          </div>
+        </div>
+      </div>
+
+      <figure class="shot shot--main">
+        <button class="shot__button" type="button" data-lightbox="assets/derived/app-screen-diary-1080.webp" data-alt="小食痰记饮食首页：今日摄入 1,221 千卡、目标 1,500 千卡，以及早餐、午餐、晚餐和加餐记录">
+          <img src="assets/derived/app-screen-diary-720.webp" width="720" height="1561" loading="lazy"
+               alt="小食痰记饮食首页：今日摄入 1,221 千卡、目标 1,500 千卡，以及早餐、午餐、晚餐和加餐记录">
+        </button>
+        <figcaption>饮食首页 · 今日摄入与三大营养</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 界面一览 -->
+  <section class="section section--screens" id="screens" aria-labelledby="screens-title">
+    <div class="wrap">
+      <h2 class="title title--wide" id="screens-title">把变化连起来，慢慢看懂自己。</h2>
+      <p class="lead lead--wide">自抽与分烟分开记，健康数据按需读取。</p>
+
+      <div class="columns">
+        <article class="column">
+          <div class="column__shot shot">
+            <button class="shot__button" type="button" data-lightbox="assets/derived/app-screen-trends-1080.webp" data-alt="趋势页：近 7 天日均摄入 1,748 千卡，柱状图与抽烟记录">
+              <img src="assets/derived/app-screen-trends-720.webp" width="720" height="1561" loading="lazy"
+                   alt="趋势页：近 7 天日均摄入 1,748 千卡，柱状图与抽烟记录">
+            </button>
+          </div>
+          <div class="column__text">
+            <span class="chip">趋势</span>
+            <h3>摄入趋势</h3>
+            <p>7 天、30 天及全部记录，按时间看看饮食变化。</p>
+          </div>
+          <img class="mascot mascot--tiny" src="assets/derived/milk-frog-trends-magnifier.webp"
+               width="900" height="900" alt="" loading="lazy">
+        </article>
+
+        <article class="column">
+          <div class="column__shot shot">
+            <button class="shot__button" type="button" data-lightbox="assets/derived/app-screen-smoking-1080.webp" data-alt="戒烟页：今日自抽 12 根、距离上次已过 37 分钟">
+              <img src="assets/derived/app-screen-smoking-720.webp" width="720" height="1561" loading="lazy"
+                   alt="戒烟页：今日自抽 12 根、距离上次已过 37 分钟">
+            </button>
+          </div>
+          <div class="column__text">
+            <span class="chip">戒烟</span>
+            <h3>吸烟记录</h3>
+            <p>自抽和分烟，分开记清楚。</p>
+          </div>
+          <img class="mascot mascot--tiny" src="assets/derived/milk-frog-smoking-pause.webp"
+               width="900" height="900" alt="" loading="lazy">
+        </article>
+
+        <article class="column">
+          <div class="column__shot shot">
+            <button class="shot__button" type="button" data-lightbox="assets/derived/app-screen-profile-1080.webp" data-alt="个人健康页：身高 168 厘米、体重 76 公斤、BMI 27、目标体重 60 公斤，以及汇总分析入口">
+              <img src="assets/derived/app-screen-profile-720.webp" width="720" height="1561" loading="lazy"
+                   alt="个人健康页：身高 168 厘米、体重 76 公斤、BMI 27、目标体重 60 公斤，以及汇总分析入口">
+            </button>
+          </div>
+          <div class="column__text">
+            <span class="chip">健康</span>
+            <h3>健康汇总</h3>
+            <p>把饮食、活动和身体变化，放在一起看看。</p>
+          </div>
+          <img class="mascot mascot--tiny" src="assets/derived/milk-frog-health-heart.webp"
+               width="900" height="900" alt="" loading="lazy">
+        </article>
+      </div>
+
+      <!-- 手机：标签 + 单张大图 -->
+      <div class="tabs" data-tabs>
+        <div class="tabs__bar" role="tablist" aria-label="界面一览">
+          <button role="tab" id="tab-trends" aria-controls="panel-trends" aria-selected="true" tabindex="0">趋势</button>
+          <button role="tab" id="tab-smoking" aria-controls="panel-smoking" aria-selected="false" tabindex="-1">戒烟</button>
+          <button role="tab" id="tab-health" aria-controls="panel-health" aria-selected="false" tabindex="-1">健康</button>
+        </div>
+
+        <div class="tabs__viewport">
+          <div class="tabs__track">
+            <section class="tabs__panel" role="tabpanel" id="panel-trends" aria-labelledby="tab-trends" tabindex="0">
+              <button class="shot__button shot__button--phone" type="button" data-lightbox="assets/derived/app-screen-trends-1080.webp" data-alt="趋势页：近 7 天日均摄入 1,748 千卡">
+                <img src="assets/derived/app-screen-trends-720.webp" width="720" height="1561" loading="lazy" alt="趋势页：近 7 天日均摄入 1,748 千卡">
+              </button>
+              <div class="tabs__text">
+                <img class="mascot mascot--tag" src="assets/derived/milk-frog-trends-magnifier.webp" width="900" height="900" alt="" loading="lazy">
+                <h3>摄入趋势</h3>
+                <p>7 天、30 天及全部记录，按时间看看饮食变化。</p>
+              </div>
+            </section>
+
+            <section class="tabs__panel" role="tabpanel" id="panel-smoking" aria-labelledby="tab-smoking" tabindex="0" inert>
+              <button class="shot__button shot__button--phone" type="button" data-lightbox="assets/derived/app-screen-smoking-1080.webp" data-alt="戒烟页：今日自抽 12 根">
+                <img src="assets/derived/app-screen-smoking-720.webp" width="720" height="1561" loading="lazy" alt="戒烟页：今日自抽 12 根">
+              </button>
+              <div class="tabs__text">
+                <img class="mascot mascot--tag" src="assets/derived/milk-frog-smoking-pause.webp" width="900" height="900" alt="" loading="lazy">
+                <h3>吸烟记录</h3>
+                <p>自抽和分烟，分开记清楚。</p>
+              </div>
+            </section>
+
+            <section class="tabs__panel" role="tabpanel" id="panel-health" aria-labelledby="tab-health" tabindex="0" inert>
+              <button class="shot__button shot__button--phone" type="button" data-lightbox="assets/derived/app-screen-profile-1080.webp" data-alt="个人健康页：身高、体重、BMI 与汇总分析">
+                <img src="assets/derived/app-screen-profile-720.webp" width="720" height="1561" loading="lazy" alt="个人健康页：身高、体重、BMI 与汇总分析">
+              </button>
+              <div class="tabs__text">
+                <img class="mascot mascot--tag" src="assets/derived/milk-frog-health-heart.webp" width="900" height="900" alt="" loading="lazy">
+                <h3>健康汇总</h3>
+                <p>把饮食、活动和身体变化，放在一起看看。</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 数据说明 -->
+  <section class="section section--note" id="support">
+    <div class="wrap note">
+      <p class="note__text">分析前确认发送内容，云同步按需开启。</p>
+      <div class="note__links">
+        <a href="https://xiaoshitanji.papaclaoud.top/privacy" target="_blank" rel="noreferrer">隐私政策</a>
+        <a href="https://xiaoshitanji.papaclaoud.top/support" target="_blank" rel="noreferrer">支持与反馈</a>
+        <a href="mailto:2296900700@qq.com">邮件联系</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 页尾 -->
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <div class="footer__brand">
+        <a class="brand brand--footer" href="#top">
+          <img src="assets/derived/app-icon-128.webp" width="40" height="40" alt="">
+          <span class="brand__name">小食痰记</span>
+        </a>
+        <p class="footer__tag">奶蛙生活手账 · 吃一餐，记一笔。</p>
+        <p class="footer__note">适用于 iPhone · iOS 26 及以上</p>
+      </div>
+
+      <nav class="footer__links" aria-label="页尾导航">
+        <a href="https://xiaoshitanji.papaclaoud.top/privacy" target="_blank" rel="noreferrer">隐私政策</a>
+        <a href="terms.html">用户协议</a>
+        <a href="https://xiaoshitanji.papaclaoud.top/support" target="_blank" rel="noreferrer">支持与反馈</a>
+      </nav>
+
+      <div class="footer__meta">
+        <p>爬爬 · Jay He</p>
+        <p><a href="mailto:2296900700@qq.com">2296900700@qq.com</a></p>
+        <p class="footer__copyright">© 2026 小食痰记</p>
+      </div>
+
+      <a class="footer__peek" href="https://xiaoshitanji.papaclaoud.top/support" target="_blank" rel="noreferrer"
+         aria-label="支持与反馈">
+        <img src="assets/derived/milk-frog-peek-curious.webp" width="900" height="900" alt="" loading="lazy">
+      </a>
+
+      <img class="mascot mascot--footer" src="assets/derived/milk-frog-footer-upsidedown.webp"
+           width="900" height="900" alt="" loading="lazy">
+    </div>
+  </footer>
+</div>
+
+<!-- 手机固定底栏 -->
+<div class="ios-bar" role="region" aria-label="iOS 下载状态">
+  <button class="cta cta--bar" type="button" data-download disabled>
+    <span class="cta__main">iOS 版即将上线</span>
+  </button>
+  <p class="ios-bar__note">适用于 iPhone · iOS 26 及以上</p>
+</div>
+
+<dialog class="lightbox" id="lightbox" aria-label="查看截图">
+  <button class="lightbox__close" type="button" aria-label="关闭">×</button>
+  <img class="lightbox__image" src="" alt="">
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

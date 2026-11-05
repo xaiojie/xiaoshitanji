@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-11-05",
+  "selectedDirection": 3,
+  "visualReference": "homepage-direction-03-mascot-poses.png",
+  "recreationPrompt": "WEBSITE_RECREATION_PROMPT.md",
+  "preview": "mascot-preview.html",
+  "assets": [
+    {
+      "file": "app-icon.png",
+      "kind": "brand_reference",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 763170,
+      "hasAlpha": false
+    },
+    {
+      "file": "app-screen-diary.png",
+      "kind": "app_screenshot",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 3179995,
+      "hasAlpha": false
+    },
+    {
+      "file": "app-screen-profile.png",
+      "kind": "app_screenshot",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2373997,
+      "hasAlpha": false
+    },
+    {
+      "file": "app-screen-smoking.png",
+      "kind": "app_screenshot",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 3137476,
+      "hasAlpha": false
+    },
+    {
+      "file": "app-screen-trends.png",
+      "kind": "app_screenshot",
+      "width": 1179,
+      "height": 2556,
+      "bytes": 2925121,
+      "hasAlpha": false
+    },
+    {
+      "file": "homepage-direction-03-mascot-poses.png",
+      "kind": "website_mockup",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1928590,
+      "hasAlpha": false
+    },
+    {
+      "file": "homepage-direction-03-original.png",
+      "kind": "website_mockup",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1876929,
+      "hasAlpha": false
+    },
+    {
+      "file": "milk-frog-footer-upsidedown.png",
+      "kind": "mascot",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 877413,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "fullyTransparentFraction": 0.634676,
+      "role": "页尾恶搞点缀",
+      "pose": "倒挂探头与观众对视"
+    },
+    {
+      "file": "milk-frog-health-heart.png",
+      "kind": "mascot",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1221549,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "fullyTransparentFraction": 0.390374,
+      "role": "健康汇总板块",
+      "pose": "蜷坐抱着小爱心"
+    },
+    {
+      "file": "milk-frog-hero-reclining.png",
+      "kind": "mascot",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1631900,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.604056,
+      "role": "桌面首页主视觉",
+      "pose": "搞怪侧躺托腮"
+    },
+    {
+      "file": "milk-frog-meal-bowl.png",
+      "kind": "mascot",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1129499,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "fullyTransparentFraction": 0.544914,
+      "role": "AI 记餐板块",
+      "pose": "盘腿捧碗准备开饭"
+    },
+    {
+      "file": "milk-frog-mobile-wave.png",
+      "kind": "mascot",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1048363,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "fullyTransparentFraction": 0.585902,
+      "role": "手机 H5 首屏",
+      "pose": "侧坐挥手打招呼"
+    },
+    {
+      "file": "milk-frog-peek-curious.png",
+      "kind": "mascot",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1212502,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "fullyTransparentFraction": 0.520313,
+      "role": "侧边与小屏点缀",
+      "pose": "歪头探身扒着边缘"
+    },
+    {
+      "file": "milk-frog-reference-face.png",
+      "kind": "brand_reference",
+      "width": 170,
+      "height": 170,
+      "bytes": 33875,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "fullyTransparentFraction": 0.330934
+    },
+    {
+      "file": "milk-frog-reference-standing.png",
+      "kind": "brand_reference",
+      "width": 340,
+      "height": 530,
+      "bytes": 156484,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "fullyTransparentFraction": 0.507825
+    },
+    {
+      "file": "milk-frog-smoking-pause.png",
+      "kind": "mascot",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1189155,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "fullyTransparentFraction": 0.514395,
+      "role": "吸烟记录板块",
+      "pose": "坐着伸手示意等一下"
+    },
+    {
+      "file": "milk-frog-trends-magnifier.png",
+      "kind": "mascot",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1095780,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "fullyTransparentFraction": 0.574246,
+      "role": "趋势数据板块",
+      "pose": "蹲着拿放大镜认真观察"
+    }
+  ]
+}
