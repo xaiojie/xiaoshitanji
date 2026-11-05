@@ -248,7 +248,8 @@
   - 新增 `Sources/NutritionCore/PackagedSizes.swift`：按食物名给「整桶 120/140 克」「整袋 105 克」等候选、识别汤汤水水；`FoodPortionView` 加「按整包记更准」卡片（整包 chip + 「汤没喝，按 90% 算」），`NutritionLabel.withConsumedAmount(_:)` 选完整包后把 `portionIsEstimated` 置为 false。
   - 结果页把「营养标签 · 份量估算」改成「份量是估的，可改成整包」。
 - **验证**：`swift test` **229 tests / 30 suites passed**（新增多图上限、提示词规则、`PackagedSizes`、整包换算 4 组）；`server/api/.venv/bin/python -m pytest ../tests -q` 从 `server/api` 目录运行 **89 passed**（新增 1/2/3 张图放行、4 张图 422）；Debug `xcodebuild` BUILD SUCCEEDED。真实端点复测（单图 + 「整桶都吃了，汤没喝完」）：模型给出 99 克（按常见 110 克 × 0.9）、假设写「汤没喝完，按整桶约90%计」「图片未显示净含量，按常见桶装方便面约110克估算」，整桶 140 克的修正在 UI 里一键可选。
-- **注意**：多图要服务端也更新到这次改动才生效，旧部署会把 2 张以上判成 422；代码已改，部署另行进行。
+- **部署**：服务端在 `sub2api-US`（154.201.78.199，`/opt/xiaoshitanji-sync`，无 git，靠传文件 + `docker compose up -d --build api`）。已把 `api/app/{ai,main,security}.py` 传上去重建，`/healthz` 返回 `{"status":"ok","schemaVersion":5,"photoTransferVersion":1}`。
+- **线上复测**（两张图：营养表 + 包装正面，文字「一桶香辣牛肉面，整桶都吃了，汤没喝完」）：返回 126 克（140 × 0.9）、能量约 589 千卡，假设写「汤没喝完，按整桶约90%计」「净含量按包装标注的面饼+配料140克估算」——与手工核算的 654 千卡整桶、不喝汤约 590 千卡一致。
 
 ## 更早版本（据提交记录整理，供追溯）
 

@@ -49,6 +49,14 @@ docker compose up -d --build
 curl -s http://127.0.0.1:8787/healthz
 ```
 
+服务器上没有 git 仓库，改动按文件同步后重建：
+
+```bash
+scp api/app/*.py sub2api-US:/opt/xiaoshitanji-sync/api/app/
+ssh sub2api-US 'cd /opt/xiaoshitanji-sync && docker compose up -d --build api'
+curl -s http://127.0.0.1:8787/healthz
+```
+
 nginx 站点见 [`deploy/nginx-xiaoshitanji.conf`](deploy/nginx-xiaoshitanji.conf)，证书：
 
 ```bash
