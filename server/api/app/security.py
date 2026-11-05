@@ -1,7 +1,6 @@
 """认证：Argon2id 口令、会话 token、简单限流。"""
 
 import hashlib
-import hmac
 import re
 import secrets
 import time
@@ -63,10 +62,6 @@ def token_digest(token: str) -> str:
 
 def token_expiry(days: int) -> datetime:
     return utcnow() + timedelta(days=days)
-
-
-def constant_time_equals(left: str, right: str) -> bool:
-    return hmac.compare_digest(left, right)
 
 
 class AttemptLimiter:

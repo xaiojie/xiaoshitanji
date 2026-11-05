@@ -94,7 +94,9 @@ async def test_payload_must_be_a_diary_document(client, auth):
 async def test_oversized_payload_is_rejected(client, auth):
     big = {"schemaVersion": 2, "records": [], "note": "x" * (70 * 1024)}
     response = await client.put("/v1/sync/snapshot", headers=auth, json={"baseVersion": 0, "payload": big})
-    assert response.status_code in {413, 422}
+    assert response.status_code == 413
+    # 上限来自配置（测试里是 64 KB），提示文案必须跟着走，不能写死 8 MB。
+    assert response.json()["detail"] == "快照超过 64 KB，请先清理内嵌照片后再同步。"
 
 
 async def test_users_cannot_see_each_other(app):
