@@ -67,7 +67,7 @@
             buildSettings = {
                 CODE_SIGN_ENTITLEMENTS = FoodDiaryWidgets/FoodDiaryWidgets.entitlements;
                 CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 39;
+                CURRENT_PROJECT_VERSION = 40;
                 DEVELOPMENT_TEAM = HU48382S8V;
                 GENERATE_INFOPLIST_FILE = YES;
                 INFOPLIST_FILE = FoodDiaryWidgets/Info.plist;
@@ -90,7 +90,7 @@
             buildSettings = {
                 CODE_SIGN_ENTITLEMENTS = FoodDiaryWidgets/FoodDiaryWidgets.entitlements;
                 CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 39;
+                CURRENT_PROJECT_VERSION = 40;
                 DEVELOPMENT_TEAM = HU48382S8V;
                 GENERATE_INFOPLIST_FILE = YES;
                 INFOPLIST_FILE = FoodDiaryWidgets/Info.plist;
@@ -142,7 +142,7 @@
                 CODE_SIGN_STYLE = Automatic;
                 CODE_SIGN_ENTITLEMENTS = FoodDiary/FoodDiary.entitlements;
                 COPY_PHASE_STRIP = NO;
-                CURRENT_PROJECT_VERSION = 39;
+                CURRENT_PROJECT_VERSION = 40;
                 DEVELOPMENT_TEAM = HU48382S8V;
                 ENABLE_PREVIEWS = YES;
                 GENERATE_INFOPLIST_FILE = YES;
@@ -168,7 +168,7 @@
                 CODE_SIGN_STYLE = Automatic;
                 CODE_SIGN_ENTITLEMENTS = FoodDiary/FoodDiary.entitlements;
                 COPY_PHASE_STRIP = NO;
-                CURRENT_PROJECT_VERSION = 39;
+                CURRENT_PROJECT_VERSION = 40;
                 DEVELOPMENT_TEAM = HU48382S8V;
                 GENERATE_INFOPLIST_FILE = YES;
                 INFOPLIST_FILE = FoodDiary/Info.plist;
