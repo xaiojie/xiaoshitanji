@@ -29,11 +29,11 @@
 
 **Files:** `Shared/DiaryWidgetSnapshot.swift`、新建 `FoodDiary/Services/WidgetSnapshotBuilder.swift`、新建 `FoodDiary/App/WidgetNavigation.swift`、`Tests/AppRegression/WidgetRegression.swift` 与运行脚本。
 
-**Interfaces:** `WidgetSnapshotBuilder.make(document:targetCalories:on:calendar:)` 返回完整当日摘要；`DiaryWidgetRoute` 提供今日页和新记餐 URL；`WidgetNavigation.receive(_:)` 接收有效路由，`takeRoute(canPresent:)` 在允许展示时消费一次。
+**Interfaces:** `WidgetSnapshotBuilder.make(document:targetCalories:on:calendar:)` 返回完整当日摘要；`DiaryWidgetRoute` 提供今日页和新记餐 URL；`WidgetNavigation.receive(_:)` 接收有效路由，`takeRequest(canPresent:)` 在允许展示时消费一次，并保留首次点击时间；正在展示的组件草稿合并重复点击。
 
-- [ ] 先写并运行旧 JSON、分餐、未知目标、进度、跨天及路由等待 / 消费用例，确认新接口尚未实现。
-- [ ] 实现可兼容解码的餐次字段、当日过滤、纯 Builder 和待处理路由。
-- [ ] 回归转绿，记录结果并提交。
+- [x] 先写并运行旧 JSON、分餐、未知目标、进度、跨天及路由等待 / 消费用例，确认新接口尚未实现。
+- [x] 实现可兼容解码的餐次字段、当日过滤、纯 Builder 和待处理路由。
+- [x] 回归转绿，记录结果并提交。
 
 ### Task 2: 两种尺寸的原生组件
 
@@ -41,9 +41,9 @@
 
 **Interfaces:** 可独立渲染的小号 / 中号内容 View 消费 Task 1 的快照；时间线提供零点清空条目；按钮与背景分别使用新记餐 / 今日 URL。
 
-- [ ] 按原型实现分层、奶蛙、进度、营养条与中号餐次 / 记餐按钮，处理空白、未设目标及旧数据。
-- [ ] 时间线在下一零点切换；检查 iOS 编译与扩展资源，按实际尺寸离屏渲染并对照原型。
-- [ ] 记录布局结果并提交。
+- [x] 按原型实现分层、奶蛙、进度、营养条与中号餐次 / 记餐按钮，处理空白、未设目标及旧数据。
+- [x] 时间线在下一零点切换；检查 iOS 编译与扩展资源，按实际尺寸离屏渲染并对照原型。
+- [x] 记录布局结果并提交。
 
 ### Task 3: App 直达记餐与数据刷新
 
@@ -51,9 +51,9 @@
 
 **Interfaces:** Root 持有 WidgetNavigation；TodayView 在可展示且日记正常时消费路由；DiaryModel 在保存和目标 / 健康 / 日期变动后发布同口径快照。
 
-- [ ] 接入新记餐路由，直接打开 ComposerView，不经过 RecordEntrySheet；正常关闭现有表单后再处理待办。
-- [ ] 发布分餐快照，接入参考热量、当日训练、健康刷新和跨日更新。
-- [ ] 运行 Widget 回归及现有 AI 授权 / 同步回归，构建主程序并提交。
+- [x] 接入新记餐路由，直接打开 ComposerView，不经过 RecordEntrySheet；正常关闭现有表单后再处理待办。
+- [x] 发布分餐快照，接入参考热量、当日训练、健康刷新和跨日更新。
+- [x] 运行 Widget 回归及现有 AI 授权 / 同步回归，构建主程序并提交。
 
 ### Task 4: 集成、构建与交付记录
 
