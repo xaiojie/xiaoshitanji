@@ -5,8 +5,10 @@ struct FoodDiaryApp: App {
     @State private var diary = DiaryModel()
     @State private var health = HealthDataModel()
     @State private var selectedTab = AppTab.diet
+    @State private var widgetNavigation = WidgetNavigation()
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("autoBackupEnabled") private var autoBackup = true
+    @AppStorage("dailyCalorieGoal") private var referenceCalorieGoal = 0.0
 
     var body: some Scene {
         WindowGroup {
@@ -23,6 +25,7 @@ struct FoodDiaryApp: App {
             .preferredColorScheme(.light)
             .environment(diary)
             .environment(health)
+            .environment(widgetNavigation)
             .environment(\.locale, Locale(identifier: "zh_CN"))
             .onAppear {
                 #if DEBUG
@@ -34,19 +37,36 @@ struct FoodDiaryApp: App {
                 }
                 #endif
             }
-            .task {
-                await health.refresh()
-                if autoBackup { await BackupService.backupIfNeeded(diary.document) }
+            .task { await refreshAppData() }
+            .onOpenURL { url in
+                if widgetNavigation.receive(url) { selectedTab = .diet }
+            }
+            .onChange(of: referenceCalorieGoal) { _, _ in refreshWidgets() }
+            .onChange(of: health.lastRefresh) { _, _ in refreshWidgets() }
+            .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+                Task { await refreshAppData() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+                Task { await refreshAppData() }
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     Task {
-                        await health.refresh()
-                        if autoBackup { await BackupService.backupIfNeeded(diary.document) }
+                        await refreshAppData()
                     }
                 }
             }
         }
+    }
+
+    private func refreshWidgets() {
+        diary.refreshWidgetSnapshot(healthWorkoutCalories: health.workoutTotals(on: .now).calories)
+    }
+
+    private func refreshAppData() async {
+        await health.refresh()
+        refreshWidgets()
+        if autoBackup { await BackupService.backupIfNeeded(diary.document) }
     }
 }
 

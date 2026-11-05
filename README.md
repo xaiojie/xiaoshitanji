@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.1%20(37)-yellow" alt="version 1.0.1 (37)" />
-  <img src="https://img.shields.io/badge/Swift%20tests-210%20total-brightgreen" alt="210 项 Swift 测试，含 1 项默认跳过" />
+  <img src="https://img.shields.io/badge/version-1.0.2%20(38)-yellow" alt="version 1.0.2 (38)" />
+  <img src="https://img.shields.io/badge/Swift%20tests-223%20total-brightgreen" alt="223 项 Swift 测试，含 1 项默认跳过" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
   <img src="https://img.shields.io/badge/license-personal%20use-lightgrey" alt="license" />
@@ -186,6 +186,16 @@
 - **一处看全**：累计次数、总时长、力量容量和有氧公里数在「我的 → 训练记录」顶部。
 
 ### 小组件与灵动岛
+
+- **奶蛙组件（1.0.2 / 38）**：小号显示摄入、餐数、剩余热量、目标进度与三大营养素；中号增加每日目标、更新时间、分餐信息，以及直接进入“AI 记饮食”的“记一餐”入口。
+- **真实数据与日期边界**：无目标不补默认值，旧组件快照可读取；保存、目标与健康训练变化后更新，时间线在本地零点切换，避免继续展示昨天的摄入。已有表单或草稿正常关闭后再处理记餐请求。
+
+<p>
+  <img src="docs/design/widgets/small-implemented.png" width="170" alt="小号奶蛙组件的原生 SwiftUI 静态渲染" />
+  <img src="docs/design/widgets/medium-implemented.png" width="364" alt="中号奶蛙组件的原生 SwiftUI 静态渲染，带直接记餐入口" />
+</p>
+
+以上为同一份 SwiftUI 内容在 macOS 的离屏排版核对图，使用演示数值；不代表已完成 iPhone 桌面与点击验收。原型、实现对照与验证范围见 [组件设计记录](docs/design/widgets/README.md)。
 
 - **今日摄入小组件**：主屏小/中尺寸显示今天的热量、剩余、三大营养素与餐数，半小时刷新一次，保存记录后立刻刷新；
 - **灵动岛 / 锁屏实时活动**：在首页菜单里手动打开「灵动岛显示今日摄入」，锁屏显示摄入与剩余，灵动岛紧凑态只留数字；
@@ -403,7 +413,9 @@ flowchart LR
 
 ```sh
 swift test
-# 2026-11-05：210 tests in 28 suites，含 1 项默认跳过的演示工具
+# 2026-11-05：223 tests in 30 suites，含 1 项默认跳过的演示工具
+Tests/AppRegression/run-widget.sh
+# 旧快照、分餐、目标、日期与时区、路由，以及真实 DiaryModel 的发布行为，9 组 PASS
 Tests/AppRegression/run-ai-consent.sh
 # 首次明确授权、拒绝、撤回、任务取消与并发等待，共 5 项 PASS
 Tests/AppRegression/run-sync-model.sh
@@ -411,7 +423,7 @@ Tests/AppRegression/run-sync-model.sh
 python3 Tests/AppRegression/check-profile-artwork.py
 # 11 项健康指标分类、15 个图片资源及入口标识核验
 cd server && api/.venv/bin/python -m pytest -q
-# 2026-11-05：63 passed
+# 2026-11-05：82 passed
 ```
 
 Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列出主要测试组，照片传输测试通过 URLSession 实际客户端验证请求顺序与失败保护。
@@ -455,7 +467,7 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit、App Group（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 1.0.1，构建号 37，App 与小组件一致 |
+| 版本 | 1.0.2，构建号 38，App 与小组件一致；当前审核构建为 1.0.1（37） |
 
 真机测试、TestFlight 上传与正式发布均使用当前分支最新源码构建。执行前核对提交、工作区改动及主程序和小组件版本，安装后回读设备上的版本号。上传与发布按用户当次指令执行。
 
@@ -465,7 +477,9 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 
 ## 项目状态与路线图
 
-**当前源码版本 1.0.1（37）**。构建 35 将 AI 调用迁至后端，用户无需填写密钥；构建 36 增加首次 AI 数据明确授权和撤回入口；构建 37 增加关于页及五类说明文档，并补齐 HealthKit 要求的用途说明，应用实际仍只请求读取健康数据。此前的旧记录兼容、独立照片同步、完整备份恢复、训练与计划合并、个人主页分类和晚餐独立图标均保留。
+**当前源码版本 1.0.2（38），供下一轮真机测试，尚未上传。** 小号与中号桌面组件按已确认原型加入奶蛙、三大营养素、目标进度与餐次信息；中号“记一餐”直接进入餐食录入。当前审核包仍为 1.0.1（37），由用户处理审核。
+
+此前版本：构建 35 将 AI 调用迁至后端，用户无需填写密钥；构建 36 增加首次 AI 数据明确授权和撤回入口；构建 37 增加关于页及五类说明文档，并补齐 HealthKit 要求的用途说明，应用实际仍只请求读取健康数据。此前的旧记录兼容、独立照片同步、完整备份恢复、训练与计划合并、个人主页分类和晚餐独立图标均保留。
 
 2026-11-05，用户已完成真机测试并确认已提交 Apple 审核。当前优先完成上架；下列后续需求仅登记待办，不进入本次审核包。审核与正式上架结果以 App Store Connect 为准。
 
@@ -476,10 +490,11 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | ✅ 已实现 | 「蛙的观察」：五种本地模式识别（蛋白、抽烟时段、断档、体重停滞、热量超标）+ 只发聚合数值的追问，回答标注依据与「基于旧数据」 |
 | ✅ 已实现 | 「我的」跨饮食、抽烟、运动与身体的 AI 汇总分析。默认近7天，可切换30天和全部记录，预览并确认后发送，按范围保留最新报告 |
 | ✅ 已实现 | 健康全景：睡眠、心率 / 静息心率 / HRV、有氧适能、耳机音量与 Apple 健康体能训练接入趋势与 AI 分析，缺失数据明确标为缺口 |
-| ✅ 已核验 | 云端同步与自包含备份恢复；2026-11-05 Swift 套件共 210 项（含 1 项默认跳过），AI 授权与同步编排回归通过，后端 63 项通过 |
+| ✅ 已核验 | 云端同步与自包含备份恢复；2026-11-05 Swift 套件共 223 项（含 1 项默认跳过），AI 授权与同步编排回归通过，后端 82 项通过 |
 | ✅ 线上验证 | 2026-11-05 已部署兼容修复，公共 HTTPS 照片往返、账号隔离、并发冲突、去重与历史恢复通过，临时账号已清理 |
 | ✅ 用户真机测试 | 1.0.1（37）已安装并回读版本，用户报告测试完成。此项为用户验收记录，不表示自动化覆盖所有界面 |
 | ✅ 历史真机记录核验 | 1.0.1（32）已安装。iPhone Use 实查昨天 5 餐、两包香烟及历史记录恢复显示，今日新增早餐正常保存。原记录与 5 张照片已逐项核对，完整相机、键盘与两设备交互验收继续由用户测试 |
+| ✅ 已实现，待用户真机验收 | 1.0.2（38）奶蛙组件与直接记餐；223 项 Swift 套件（含 1 项跳过）及 9 组组件行为回归通过 |
 | ✅ 已实现 | 七条主线的首版能力见 [`docs/backlog.md`](docs/backlog.md) 的进度，扩展需求保留在后续规划表 |
 | 🧪 TestFlight 核验 | 2026-11-05，1.0.1（37）上传成功，Apple 处理为 VALID，并已关联内部测试组；不代表 App Store 审核通过 |
 | ⏳ 后续待完成 | 首次引导、可不透露的性别与年龄、个人目标、吸烟模块开关、统一 AI 个性化与独立健身入口，建议排入 1.1.0 |
@@ -510,6 +525,7 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | [`specs/2026-11-04-personal-health.md`](docs/superpowers/specs/2026-11-04-personal-health.md) | 个人档案、体重、Apple 健康 |
 | [`specs/2026-11-04-yellow-ui.md`](docs/superpowers/specs/2026-11-04-yellow-ui.md) | 黄色奶蛙视觉与自定义 TabBar |
 | [`specs/2026-11-05-personalization-fitness-cycle.md`](docs/superpowers/specs/2026-11-05-personalization-fitness-cycle.md) | 后续待完成：首次引导、个人目标、动态模块、AI 个性化、健身与经期跟踪 |
+| [`specs/2026-11-05-widget-redesign.md`](docs/superpowers/specs/2026-11-05-widget-redesign.md) | 奶蛙小号 / 中号桌面组件与直接记餐入口 |
 | [`plans/2026-11-05-personalization-fitness-cycle.md`](docs/superpowers/plans/2026-11-05-personalization-fitness-cycle.md) | 上述方案的分阶段任务、依赖、验收与发版门槛，全部待完成 |
 
 对应实施计划在 `docs/superpowers/plans/`，任务勾选状态代表真实进度。
