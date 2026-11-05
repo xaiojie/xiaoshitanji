@@ -88,7 +88,7 @@ struct TodayView: View {
                 .padding(.horizontal, 24).padding(.vertical, 8)
                 .background(Theme.background.opacity(0.95))
             }
-            .sheet(item: $sheet, onDismiss: consumePendingNavigation, content: sheetContent)
+            .sheet(item: $sheet, onDismiss: finishSheetNavigation, content: sheetContent)
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     refreshSelectedDay()
@@ -195,14 +195,22 @@ struct TodayView: View {
         consumeWidgetRoute()
     }
 
+    private func finishSheetNavigation() {
+        widgetNavigation.mealPresentationEnded()
+        consumePendingNavigation()
+    }
+
     /// 组件“记一餐”直接打开编辑器，不经过餐次选择页，也不覆盖已有草稿。
     private func consumeWidgetRoute() {
-        guard let route = widgetNavigation.takeRoute(canPresent: sheet == nil && diary.loadError == nil) else { return }
+        guard let request = widgetNavigation.takeRequest(canPresent: sheet == nil && diary.loadError == nil) else { return }
         cancelReview()
-        let now = Date.now
-        selectedDate = now
-        lastActiveDate = now
-        if route == .newMeal { sheet = .record(MealRecord.draft(on: now, now: now)) }
+        lastActiveDate = .now
+        if let draft = request.mealDraft() {
+            selectedDate = draft.date
+            sheet = .record(draft)
+        } else {
+            selectedDate = .now
+        }
     }
 
     private func openMeal(_ kind: MealKind) {
