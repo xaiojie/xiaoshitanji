@@ -68,6 +68,31 @@ public struct WellnessActivity: Codable, Equatable, Sendable {
         workoutCalories = WellnessMetric(days.map(\.workoutCalories))
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case steps, activeCalories, exerciseMinutes, distanceMeters
+        case sleepHours, averageHeartRate, restingHeartRate, heartRateVariability, vo2Max
+        case headphoneAudioMinutes, workoutSessions, workoutMinutes, workoutCalories
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        steps = try values.decode(WellnessMetric.self, forKey: .steps)
+        activeCalories = try values.decode(WellnessMetric.self, forKey: .activeCalories)
+        exerciseMinutes = try values.decode(WellnessMetric.self, forKey: .exerciseMinutes)
+        distanceMeters = try values.decode(WellnessMetric.self, forKey: .distanceMeters)
+        // 旧报告的新增健康指标保持未知，观察天数为零。
+        let unknown = WellnessMetric([])
+        sleepHours = try values.decodeIfPresent(WellnessMetric.self, forKey: .sleepHours) ?? unknown
+        averageHeartRate = try values.decodeIfPresent(WellnessMetric.self, forKey: .averageHeartRate) ?? unknown
+        restingHeartRate = try values.decodeIfPresent(WellnessMetric.self, forKey: .restingHeartRate) ?? unknown
+        heartRateVariability = try values.decodeIfPresent(WellnessMetric.self, forKey: .heartRateVariability) ?? unknown
+        vo2Max = try values.decodeIfPresent(WellnessMetric.self, forKey: .vo2Max) ?? unknown
+        headphoneAudioMinutes = try values.decodeIfPresent(WellnessMetric.self, forKey: .headphoneAudioMinutes) ?? unknown
+        workoutSessions = try values.decodeIfPresent(WellnessMetric.self, forKey: .workoutSessions) ?? unknown
+        workoutMinutes = try values.decodeIfPresent(WellnessMetric.self, forKey: .workoutMinutes) ?? unknown
+        workoutCalories = try values.decodeIfPresent(WellnessMetric.self, forKey: .workoutCalories) ?? unknown
+    }
+
     public var hasData: Bool {
         [steps, activeCalories, exerciseMinutes, distanceMeters, sleepHours, averageHeartRate,
          restingHeartRate, heartRateVariability, vo2Max, headphoneAudioMinutes,
