@@ -150,11 +150,11 @@ struct ProfileView: View {
 
     private var tools: some View {
         VStack(alignment: .leading, spacing: 13) {
-            sectionHeading("蛙的工具箱", subtitle: "记录、观察和数据管理，都在这里")
+            sectionHeading("奶蛙的工具箱", subtitle: "记录、观察和数据管理，都在这里")
             LazyVGrid(columns: columns, spacing: 12) {
                 toolButton("训练记录", detail: "力量与有氧", artwork: "HealthWorkout", destination: .workouts, identifier: "workoutsEntry")
                 toolButton("蛙的观察", detail: "找模式 · 自由追问", artwork: "ProfileObservation", destination: .observation, identifier: "observationInsight")
-                toolButton("青蛙的坚持", detail: "连续记录与里程碑", artwork: "ProfileAchievement", destination: .keepGoing, identifier: "keepGoingEntry")
+                toolButton("奶蛙的坚持", detail: "连续记录与里程碑", artwork: "ProfileAchievement", destination: .keepGoing, identifier: "keepGoingEntry")
                 NavigationLink {
                     EnergyGoalView(settings: diary.document.energy).toolbar(.visible, for: .navigationBar)
                 } label: {

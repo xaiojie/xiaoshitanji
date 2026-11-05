@@ -14,7 +14,7 @@ struct KeepGoingView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    FrogCallout(text: "青蛙的坚持", detail: "记录攒下来的东西，都在这儿。")
+                    FrogCallout(text: "奶蛙的坚持", detail: "记录攒下来的东西，都在这儿。")
                     streakCard
                     summaryRow
                     smokingCard
