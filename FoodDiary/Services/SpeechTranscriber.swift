@@ -56,8 +56,11 @@ final class SpeechTranscriber {
             return
         }
         input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
-            request.append(buffer)
+        // 音频回调在实时线程上，不能继承 MainActor 隔离；`request` 只是把数据转交给
+        // 识别器，跨线程追加是它支持的用法。
+        nonisolated(unsafe) let audioRequest = request
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { @Sendable buffer, _ in
+            audioRequest.append(buffer)
         }
         engine.prepare()
         do {
@@ -70,7 +73,7 @@ final class SpeechTranscriber {
         isRecording = true
         transcript = ""
 
-        task = recognizer.recognitionTask(with: request) { [weak self] result, error in
+        task = recognizer.recognitionTask(with: request) { @Sendable [weak self] result, error in
             let text = result?.bestTranscription.formattedString
             let finished = error != nil || (result?.isFinal ?? false)
             Task { @MainActor in
