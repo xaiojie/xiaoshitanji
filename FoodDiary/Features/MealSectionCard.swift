@@ -10,14 +10,6 @@ struct MealSectionCard: View {
     @State private var expanded = false
 
     private var calories: Double { records.reduce(0) { $0 + $1.nutrition.calories } }
-    private var thumbnail: String {
-        switch kind {
-        case .breakfast: "FoodBreakfast"
-        case .lunch: "FoodLunch"
-        case .snack: "FoodSnack"
-        case .dinner: ""
-        }
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -74,11 +66,8 @@ struct MealSectionCard: View {
         if let record = records.first, let data = diary.photoData(for: record), let image = UIImage(data: data) {
             Image(uiImage: image).resizable().scaledToFill().frame(width: 54, height: 50)
                 .clipShape(.rect(cornerRadius: 12)).accessibilityHidden(true)
-        } else if !thumbnail.isEmpty {
-            Image(thumbnail).resizable().scaledToFit().frame(width: 54, height: 56).accessibilityHidden(true)
         } else {
-            Image(systemName: "takeoutbag.and.cup.and.straw.fill").font(.system(size: 30))
-                .foregroundStyle(Theme.gold).frame(width: 54, height: 56).accessibilityHidden(true)
+            MealIcon(kind: kind, size: 54)
         }
     }
 }

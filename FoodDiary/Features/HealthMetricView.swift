@@ -51,6 +51,16 @@ enum ActivityMetric: String, CaseIterable, Identifiable {
         case .audio: .yellow
         }
     }
+    var artworkName: String {
+        switch self {
+        case .steps, .distance: "HealthShoe"
+        case .calories: "HealthEnergy"
+        case .minutes, .workouts: "HealthWorkout"
+        case .sleep: "HealthSleep"
+        case .restingHeartRate, .heartRate, .hrv, .vo2Max: "HealthHeart"
+        case .audio: "HealthAudio"
+        }
+    }
     var unit: String {
         switch self {
         case .steps: "步"
@@ -122,12 +132,15 @@ struct ActivityChartCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
-                Label(metric.title, systemImage: metric.symbol).font(.headline).foregroundStyle(Theme.ink)
+                HStack(spacing: 9) {
+                    ObjectIcon(metric.artworkName, size: 36)
+                    Text(metric.title).font(.headline).foregroundStyle(Theme.ink)
+                }
                 Spacer()
                 Text("近 7 天 · \(metric.unit)").font(.caption).foregroundStyle(.secondary)
             }
             if recorded.isEmpty {
-                HealthEmptyView(symbol: metric.symbol, title: "暂无\(metric.title)数据", detail: "连接 Apple 健康并允许读取后，有记录的日期会显示在这里。")
+                HealthEmptyView(symbol: metric.symbol, title: "暂无\(metric.title)数据", detail: "连接 Apple 健康并允许读取后，有记录的日期会显示在这里。", artwork: metric.artworkName)
             } else {
                 Chart(days) { day in
                     if let value = metric.value(in: day) {
@@ -260,18 +273,19 @@ struct HealthWorkoutListCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Label("最近的体能训练", systemImage: "dumbbell.fill").font(.headline).foregroundStyle(Theme.ink)
+                HStack(spacing: 9) {
+                    ObjectIcon("HealthWorkout", size: 36)
+                    Text("最近的体能训练").font(.headline).foregroundStyle(Theme.ink)
+                }
                 Spacer()
                 Text("来自 Apple 健康").font(.caption).foregroundStyle(.secondary)
             }
             if workouts.isEmpty {
-                HealthEmptyView(symbol: "dumbbell", title: "暂无训练记录", detail: "在 Apple 健康里记录一次训练后，这里会显示时长、消耗和心率。")
+                HealthEmptyView(symbol: "dumbbell", title: "暂无训练记录", detail: "在 Apple 健康里记录一次训练后，这里会显示时长、消耗和心率。", artwork: "HealthWorkout")
             } else {
                 ForEach(workouts.prefix(8)) { workout in
                     HStack(spacing: 12) {
-                        Image(systemName: workout.kind.symbol)
-                            .foregroundStyle(workout.kind == .strength ? Theme.olive : .orange)
-                            .frame(width: 26)
+                        ObjectIcon(workout.kind == .strength ? "HealthWorkout" : "HealthShoe", size: 36)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(workout.title).font(.subheadline.weight(.medium))
                             Text(workout.date.formatted(.dateTime.month().day().hour().minute()))
@@ -292,10 +306,12 @@ struct HealthEmptyView: View {
     let symbol: String
     let title: String
     let detail: String
+    var artwork: String? = nil
 
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: symbol).font(.system(size: 30)).foregroundStyle(Theme.sage)
+            if let artwork { ObjectIcon(artwork, size: 56) }
+            else { Image(systemName: symbol).font(.system(size: 30)).foregroundStyle(Theme.sage) }
             Text(title).font(.subheadline.weight(.medium))
             Text(detail).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
         }.frame(maxWidth: .infinity).padding(.vertical, 20)

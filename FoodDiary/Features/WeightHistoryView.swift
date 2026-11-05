@@ -72,15 +72,12 @@ struct WeightHistoryView: View {
                     Text("\(records.count) 条").font(.caption).foregroundStyle(.secondary)
                 }.padding(.horizontal, 4)
                 if records.isEmpty {
-                    HealthEmptyView(symbol: "scalemass", title: "从一次测量开始", detail: "手动记录，或在通用设置中连接 Apple 健康读取体重。")
+                    HealthEmptyView(symbol: "scalemass", title: "从一次测量开始", detail: "手动记录，或在通用设置中连接 Apple 健康读取体重。", artwork: "HealthScale")
                         .contentCard()
                 }
                 ForEach(records) { record in
                     HStack(spacing: 14) {
-                        Image(systemName: record.source == .manual ? "scalemass.fill" : "heart.fill")
-                            .foregroundStyle(record.source == .manual ? Theme.olive : .pink)
-                            .frame(width: 38, height: 38)
-                            .background(Theme.accent.opacity(0.07), in: .circle)
+                        ObjectIcon(record.source == .manual ? "HealthScale" : "HealthHeart", size: 40)
                         VStack(alignment: .leading, spacing: 6) {
                             Text("\(Theme.number(record.kilograms, decimals: 2)) 公斤").font(.headline)
                             Text(record.date.formatted(.dateTime.year().month().day().hour().minute()))

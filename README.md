@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.1%20(32)-yellow" alt="version" />
+  <img src="https://img.shields.io/badge/version-1.0.1%20(33)-yellow" alt="version" />
   <img src="https://img.shields.io/badge/tests-208%20passed-brightgreen" alt="tests" />
   <img src="https://img.shields.io/badge/platform-iPhone-lightgrey?logo=apple&logoColor=white" alt="platform" />
   <img src="https://img.shields.io/badge/language-%E4%B8%AD%E6%96%87-orange" alt="language" />
@@ -105,6 +105,9 @@
 - 日均值只按**有记录的日子**计算，没有记录的那天是空缺而不是 0。
 
 ### 我的与 Apple 健康
+
+- 首页按个人资料、汇总分析、四项今日概况、健康分类和常用工具组织。身体测量、活动与训练、心脏与体能、睡眠与听力分别进入二级页，指标详情与七日变化可继续展开。
+- 默认餐次及个人页功能采用暖白黄色系透明拟物 PNG，晚餐补齐同系列碗装餐食。早餐、午餐和加餐使用现有素材，用户餐食照片优先展示。
 
 - 顶部资料卡：头像、昵称、身高、当前体重、目标体重，自动算 BMI（身高需在 50–250 cm 之间才计算）。
 - 体重历史：手动记录 + Apple 健康测量合并展示，取时间最新的一条，同一时间优先手动记录。
@@ -378,6 +381,8 @@ swift test
 # 209 tests in 27 suites，208 passed，1 skipped
 Tests/AppRegression/run-sync-model.sh
 # 恢复合并与冲突重试、旧账号基线迁移，两项 PASS
+python3 Tests/AppRegression/check-profile-artwork.py
+# 11 项健康指标分类、15 个图片资源及入口标识核验
 cd server && api/.venv/bin/python -m pytest -q
 # 42 passed
 ```
@@ -423,7 +428,7 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | Swift | 6.0（`SWIFT_VERSION`），包清单 tools 6.2 |
 | 签名 | 自动签名（仓库内为作者团队，使用前请替换） |
 | Capabilities | HealthKit、App Group（`FoodDiary/FoodDiary.entitlements`） |
-| 版本 | 1.0.1，构建号 32，App 与小组件一致 |
+| 版本 | 1.0.1，构建号 33，App 与小组件一致 |
 
 真机测试、TestFlight 上传与正式发布均使用当前分支最新源码构建。执行前核对提交、工作区改动及主程序和小组件版本，安装后回读设备上的版本号。上传与发布按用户当次指令执行。
 
@@ -433,7 +438,7 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 
 ## 项目状态与路线图
 
-**当前源码版本 1.0.1（32）**，本轮修复 schema 5 服务端兼容、独立照片同步、完整备份恢复、训练与计划合并、首次拉取与冲突重试，并整理编译警告与截图工具。构建 32 补齐旧汇总报告新增健康指标的解码兼容，缺失指标保留未知。
+**当前源码版本 1.0.1（33）**，本轮修复 schema 5 服务端兼容、独立照片同步、完整备份恢复、训练与计划合并、首次拉取与冲突重试，并整理编译警告与截图工具。构建 32 补齐旧汇总报告新增健康指标的解码兼容，缺失指标保留未知。构建 33 完成个人主页分类与拟物图标，新增晚餐默认图片。
 
 | 状态 | 事项 |
 | --- | --- |
@@ -444,9 +449,10 @@ Swift 测试跑在 macOS 上，演示数据生成工具默认跳过。下表列�
 | ✅ 已实现 | 健康全景：睡眠、心率 / 静息心率 / HRV、有氧适能、耳机音量与 Apple 健康体能训练接入趋势与 AI 分析，缺失数据明确标为缺口 |
 | ✅ 已实现 | 云端同步与自包含备份恢复，208 项 Swift 测试通过、1 项演示工具跳过，42 项服务端测试通过 |
 | ✅ 线上验证 | 2026-11-05 已部署兼容修复，公共 HTTPS 照片往返、账号隔离、并发冲突、去重与历史恢复通过，临时账号已清理 |
-| ✅ 真机记录核验 | 1.0.1（32）已安装。iPhone Use 实查昨天 5 餐、两包香烟及历史记录恢复显示，今日新增早餐正常保存。原记录与 5 张照片已逐项核对，完整相机、键盘与两设备交互验收继续由用户测试 |
+| ⏳ 当前界面验收 | 1.0.1（33）已按实体 iPhone 目标构建。用户已断开手机，当前版本安装、分类导航和实际字体显示等待连接测试 |
+| ✅ 历史真机记录核验 | 1.0.1（32）已安装。iPhone Use 实查昨天 5 餐、两包香烟及历史记录恢复显示，今日新增早餐正常保存。原记录与 5 张照片已逐项核对，完整相机、键盘与两设备交互验收继续由用户测试 |
 | ✅ 已实现 | 七条主线的首版能力见 [`docs/backlog.md`](docs/backlog.md) 的进度，扩展需求保留在后续规划表 |
-| 🧪 TestFlight 核验 | 2026-11-05 查询 App Store Connect，1.0（29）与 0.16.0（27）均处理为 VALID，内部状态 READY_FOR_BETA_TESTING，外部状态 READY_FOR_BETA_SUBMISSION。本轮 1.0.1（32）尚未上传，测试组实际分发状态待确认 |
+| 🧪 TestFlight 核验 | 2026-11-05 查询 App Store Connect，1.0（29）与 0.16.0（27）均处理为 VALID，内部状态 READY_FOR_BETA_TESTING，外部状态 READY_FOR_BETA_SUBMISSION。本轮 1.0.1（33）尚未上传，测试组实际分发状态待确认 |
 
 > 设计验收记录见 [`design-qa.md`](design-qa.md)，后续开发清单见 [`docs/backlog.md`](docs/backlog.md)。
 

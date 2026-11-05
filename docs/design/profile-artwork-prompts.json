@@ -1,0 +1,98 @@
+[
+  {
+    "asset": "FoodDinner",
+    "file": "FoodDiary/Assets.xcassets/FoodDinner.imageset/FoodDinner.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "Photorealistic warm ivory dinner bowl with salmon, rice, bok choy and pumpkin. Match FoodBreakfast, FoodLunch and FoodSnack cutout lighting, material and framing. Transparent alpha, no text.",
+    "export": "256x256 PNG, alpha preserved"
+  },
+  {
+    "asset": "HealthScale",
+    "file": "FoodDiary/Assets.xcassets/HealthScale.imageset/HealthScale.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "Use case: stylized-concept. Create ONE standalone photorealistic miniature product icon for an iPhone health app, on genuine transparent alpha. Subject: a premium warm-white rounded-square digital bathroom scale, a small smoked-glass empty display at its top edge and a tiny honey-yellow accent; beveled ceramic-like glass body, realistic subtle material texture. No numerals or writing on the display. Slightly elevated three-quarter front view, centered, fully visible, filling 78 percent of square canvas, generous clear padding, soft warm upper-left studio lighting and gentle object-attached shading. Match the realistic object-cutout quality, warm ivory material and soft light of the supplied meal illustration STYLE reference, but the only depicted object is the bathroom scale. Designed to read clearly at 44px, with a simple recognizable silhouette. No people, hands, plate, food, frame, circular badge, square tile, backdrop, floor, typography or extra decorations.",
+    "export": "256x256 PNG, alpha preserved"
+  },
+  {
+    "asset": "HealthShoe",
+    "file": "FoodDiary/Assets.xcassets/HealthShoe.imageset/HealthShoe.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "Create ONE photorealistic miniature athletic sneaker product icon for a warm yellow/ivory iPhone health app. A single premium warm-white mesh running shoe with a honey-yellow heel accent and a muted olive outsole, realistic laces and rounded cushioned sole. Side-on three-quarter view, toe pointing left, fully visible and centered with 15% clear padding on all sides. The warm soft upper-left studio lighting and polished isolated-object cutout quality should match the supplied style reference. This is an actual realistic small object with tactile material and depth, not a flat glyph. No logo, no letters, no writing, no humans, no floor, no badge or icon tile. Genuine transparent alpha background, square composition, legible at 44px.",
+    "export": "256x256 PNG, alpha preserved"
+  },
+  {
+    "asset": "HealthHeart",
+    "file": "FoodDiary/Assets.xcassets/HealthHeart.imageset/HealthHeart.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "ONE premium photorealistic miniature heart-shaped object icon for an iPhone health app, true transparent background. A smooth plump warm coral-red heart, realistic soft silicone material with restrained natural specular highlights and rounded volume. Slight three-quarter view tilted subtly right, fully visible and centered, taking up 72 percent of the square canvas with generous transparent margin. Warm soft studio light from upper left, isolated product-cutout quality matching the warm realistic meal reference. Simple clear silhouette at 44px. The only subject is one three-dimensional heart object. No flat glyph, no outline drawing, no ECG strokes, no faces, no plate, no food, no base, no tile or badge, no text or logos, no floor.",
+    "export": "256x256 PNG, alpha preserved"
+  },
+  {
+    "asset": "HealthSleep",
+    "file": "FoodDiary/Assets.xcassets/HealthSleep.imageset/HealthSleep.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "ONE realistic miniature sleep object icon for a warm ivory and yellow iPhone health app. A plump ivory cotton bed pillow with clearly tactile fabric and soft stitched edge, plus one small pale golden crescent-moon ornament nestled at its upper-right edge, composing a single compact sleep icon. Slightly elevated three-quarter product view, studio lighting from upper left, natural material highlights and subtle attached shading. Centered fully visible object group with 15 percent transparent padding, readable at 44px. Photorealistic product-cutout rendering matching the supplied meal illustration's warm ivory materials and soft light. Actual dimensional objects, not drawn glyphs. True transparent alpha backdrop. No bed, no star field, no room, no tile or circle badge, no food, no words, no faces, no floor.",
+    "export": "256x256 PNG, alpha preserved"
+  },
+  {
+    "asset": "HealthAudio",
+    "file": "FoodDiary/Assets.xcassets/HealthAudio.imageset/HealthAudio.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "ONE photorealistic miniature premium over-ear headphones product icon for a warm ivory/yellow iPhone health app, isolated on genuinely transparent alpha. Warm ivory earcups and cushioned headband, honey-yellow hinge accents, small muted olive inner cushions, realistic supple upholstery and metal hinges. Front three-quarter angle with both earcups visible, recognizable arch silhouette, centered, fully visible with 15% transparent margin. Warm soft upper-left studio light, high quality tactile object cutout like the supplied style reference, reads at 44px. One compact actual three-dimensional headphone object only. No brand logo, writing, person, cables, floor, room, tile, badge, food or plate.",
+    "export": "256x256 PNG, alpha preserved"
+  },
+  {
+    "asset": "HealthWorkout",
+    "file": "FoodDiary/Assets.xcassets/HealthWorkout.imageset/HealthWorkout.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "ONE photorealistic miniature fitness dumbbell icon, true transparent alpha background. A single compact dumbbell at a pleasing diagonal, two rounded honey-yellow neoprene hex ends and a short brushed warm-silver grip, tactile lightly textured rubber, realistic soft highlights. Fully visible and centered with 15 percent transparent margin. Slightly elevated three-quarter view, soft warm upper-left studio lighting, the same polished realistic product-cutout quality as the supplied warm meal reference. Clear dimensional object silhouette at 44px. No brand, text, numbers, floor, gym scene, hand, human, food, badge, platform or square icon tile.",
+    "export": "256x256 PNG, alpha preserved"
+  },
+  {
+    "asset": "HealthEnergy",
+    "file": "FoodDiary/Assets.xcassets/HealthEnergy.imageset/HealthEnergy.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "ONE photorealistic small flame-shaped glass ornament icon for an iPhone calorie/energy feature. A plump dimensional amber-yellow flame sculpture with a smaller orange inner core and smooth rounded points, translucent resin-like glass with soft believable highlights and fine material depth. It is a tactile 3D object, no flat glyph or drawing. True transparent alpha background, no floor or stand. Centered fully visible within square canvas with 15 percent clear padding, slightly elevated three-quarter studio product view, soft warm upper-left light, matching the realistic warm ivory/yellow product-cutout quality of the reference. The silhouette must be instantly clear at 44px. No text, faces, symbols, tile, circle badge, food or other objects.",
+    "export": "256x256 PNG, alpha preserved"
+  },
+  {
+    "asset": "ProfileObservation",
+    "file": "FoodDiary/Assets.xcassets/ProfileObservation.imageset/ProfileObservation.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "ONE photorealistic miniature magnifying glass product icon for an iPhone insight/observation feature. A round clear optical lens in a warm brushed-gold rim, a short tactile ivory handle pointing diagonally down-right, subtle physically plausible glass highlights and visible depth. One compact actual dimensional magnifying glass only. Centered and fully visible, with 15 percent transparent padding; soft upper-left warm studio light, realistic material and polished product-cutout quality matching the supplied style reference. Genuine transparent alpha background. Bold clear silhouette at 44px. No writing, symbols, faces, base, floor, plate, food, square icon tile, badge, or extra objects.",
+    "export": "256x256 PNG, alpha preserved"
+  },
+  {
+    "asset": "ProfileAchievement",
+    "file": "FoodDiary/Assets.xcassets/ProfileAchievement.imageset/ProfileAchievement.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "ONE photorealistic miniature gold trophy product icon for a friendly warm yellow/ivory iPhone habit-tracking app. A compact rounded brushed golden cup with two small curved handles, a small raised five-point star on its front and a short warm-ivory ceramic base. Real metal highlights, tactile premium material, soft warm light from upper left, slightly elevated three-quarter studio view. Match the realistic miniature cutout quality of the supplied food icon style reference. Entire trophy and base fully visible, centered with 15 percent transparent padding, recognizable at 44px. Genuine alpha transparency. No letters, numbers, engraving, logos, ribbons, people, floor, background, badge, icon tile or food.",
+    "export": "256x256 PNG, alpha preserved"
+  },
+  {
+    "asset": "ProfileCloud",
+    "file": "FoodDiary/Assets.xcassets/ProfileCloud.imageset/ProfileCloud.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "ONE photorealistic miniature cloud-shaped object icon for a warm yellow and ivory iPhone cloud-sync feature. A soft rounded warm-white cloud sculpted like matte porcelain, realistic depth and gentle material highlights, with one small honey-yellow upward arrow ornament in front near the lower-right cloud edge. Treat the arrow as a tiny real dimensional object, not an outline or printed glyph. A single clean compact combined icon with a clear silhouette at 44px. Slight three-quarter studio view, centered and fully visible with 15 percent clear padding, warm upper-left soft studio light, the same premium realistic object-cutout finish as the supplied style reference. Genuinely transparent alpha background. No sky, blue background, floor, stand, square tile, badge, letters, text, branding, food or plate.",
+    "export": "256x256 PNG, alpha preserved"
+  },
+  {
+    "asset": "ProfileSettings",
+    "file": "FoodDiary/Assets.xcassets/ProfileSettings.imageset/ProfileSettings.png",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "prompt": "ONE photorealistic miniature mechanical gear product icon for general settings in a warm ivory/yellow iPhone app. A single thick rounded eight-tooth warm ivory ceramic gear with a brushed gold circular inner ring and a visible dark center opening, tactile realistic polished material and gentle beveled edges. Slight elevated three-quarter angle revealing its thickness, centered and fully visible with 15 percent transparent margin. Soft warm upper-left studio light, refined realistic product-cutout quality matching the supplied meal illustration STYLE reference. Instantly recognizable gear silhouette at 40px. Genuinely transparent alpha around and through the center opening. No writing, numerals, logos, tools, floor, stand, badge, square tile, plate, food or other objects.",
+    "export": "256x256 PNG, alpha preserved"
+  }
+]
