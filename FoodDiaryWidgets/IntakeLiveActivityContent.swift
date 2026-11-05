@@ -61,17 +61,15 @@ struct IntakeLiveActivityContent: View {
     /// 实时活动只放三餐：加餐写在 App 和桌面小组件里。
     private var liveActivityKinds: [WidgetMealKind] { WidgetMealKind.liveActivityKinds }
 
-    /// 岛上的固定高度正好等于四行内容加行距，避免最后一行被裁掉。
+    /// 展开后的岛只有约 110pt 可用，放三行就满；按钮挪到相机右侧的 trailing 区。
     private var islandBody: some View {
-        VStack(spacing: 3) {
-            energyRow.frame(height: 38)
-            energyProgress.frame(height: 7)
+        VStack(spacing: 4) {
+            energyRow.frame(height: 32)
+            energyProgress.frame(height: 6)
             IntakeActivityMeals(meals: current ? state.meals : nil, surface: .island,
                                 animate: animation != nil, kinds: liveActivityKinds)
-                .frame(height: 26)
-            islandFooter.frame(height: 24)
+                .frame(height: 24)
         }
-        .frame(height: 104)
     }
 
     private var lockScreenBody: some View {
@@ -86,32 +84,6 @@ struct IntakeLiveActivityContent: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(height: 160)
-    }
-
-    private var islandFooter: some View {
-        HStack(spacing: 6) {
-            Text(nutrientsText)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(surface.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityLabel(nutrientsAccessibility)
-            Link(destination: DiaryWidgetRoute.newMeal.url) {
-                HStack(spacing: 3) {
-                    Image(systemName: "plus").font(.system(size: 9, weight: .bold))
-                    Text("记一餐").font(.system(size: 10, weight: .bold))
-                }
-                .padding(.horizontal, 10)
-                .frame(height: 24)
-                .foregroundStyle(IntakeWidgetPalette.ink)
-                .background(IntakeActivitySurface.accent, in: .capsule)
-            }
-            .buttonStyle(.plain)
-            .fixedSize()
-            .accessibilityLabel("记一餐，直接打开餐食录入")
-            .accessibilityIdentifier("liveActivityNewMeal")
-        }
     }
 
     private var lockScreenHeading: some View {
@@ -135,7 +107,7 @@ struct IntakeLiveActivityContent: View {
         HStack(alignment: .center, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(current ? IntakeActivityFormat.number(state.calories) : "—")
-                    .font(.system(size: surface == .island ? 31 : 30, weight: .heavy, design: .rounded))
+                    .font(.system(size: surface == .island ? 26 : 30, weight: .heavy, design: .rounded))
                     .monospacedDigit()
                     .contentTransition(animation == nil ? .identity : .numericText())
                     .animation(animation, value: state.calories)

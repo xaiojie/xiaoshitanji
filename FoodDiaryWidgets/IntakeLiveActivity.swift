@@ -12,7 +12,7 @@ struct IntakeLiveActivityWidget: Widget {
         } dynamicIsland: { context in
             let current = !context.isStale && context.state.isCurrent(on: .now)
             return DynamicIsland {
-                // 相机两侧只放奶蛙和餐数；主要数据在 bottom，不覆盖硬件区域。
+                // 相机两侧只放奶蛙和「记一餐」；主要数据在 bottom，不覆盖硬件区域。
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 5) {
                         IntakeActivityFrog(state: context.state, isCurrent: current, size: 26)
@@ -22,12 +22,28 @@ struct IntakeLiveActivityWidget: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text(current ? "已记 \(context.state.mealCount) 餐" : "打开 App 更新")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .frame(height: 26)
+                    if current {
+                        Link(destination: DiaryWidgetRoute.newMeal.url) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "plus").font(.system(size: 9, weight: .bold))
+                                Text("记一餐").font(.system(size: 10, weight: .bold))
+                            }
+                            .padding(.horizontal, 9)
+                            .frame(height: 24)
+                            .foregroundStyle(IntakeWidgetPalette.ink)
+                            .background(IntakeActivitySurface.accent, in: .capsule)
+                        }
+                        .buttonStyle(.plain)
+                        .fixedSize()
+                        .accessibilityLabel("记一餐，直接打开餐食录入")
+                        .accessibilityIdentifier("liveActivityNewMeal")
+                    } else {
+                        Text("打开 App 更新")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     IntakeLiveActivityContent(state: context.state, isStale: context.isStale, surface: .island)
