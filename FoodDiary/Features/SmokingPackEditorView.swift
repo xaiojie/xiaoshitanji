@@ -104,14 +104,21 @@ struct SmokingPackEditorView: View {
                 Button("移除照片", systemImage: "xmark.circle") { self.photoJPEG = nil; photoItem = nil }
                     .font(.caption).foregroundStyle(Theme.mutedInk)
             } else {
-                VStack(spacing: 15) {
-                    Image(systemName: "camera.viewfinder").font(.system(size: 50, weight: .light)).foregroundStyle(Theme.accent)
-                    Text("拍好，AI 自动识别").font(.title3.bold()).foregroundStyle(Theme.surface)
-                    Text("先拍正面，再补侧面标注和价签")
-                        .font(.caption).foregroundStyle(.white.opacity(0.75))
+                Button(action: openCamera) {
+                    VStack(spacing: 15) {
+                        Image(systemName: "camera.viewfinder").font(.system(size: 50, weight: .light)).foregroundStyle(Theme.accent)
+                        Text("拍好，AI 自动识别").font(.title3.bold()).foregroundStyle(Theme.surface)
+                        Text("轻点直接打开相机，先拍正面，再补侧面标注和价签")
+                            .font(.caption).foregroundStyle(.white.opacity(0.75))
+                            .multilineTextAlignment(.center).padding(.horizontal, 20)
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 210)
+                    .background(Theme.darkGradient, in: .rect(cornerRadius: 26))
                 }
-                .frame(maxWidth: .infinity).frame(height: 210)
-                .background(Theme.darkGradient, in: .rect(cornerRadius: 26))
+                .buttonStyle(.plain)
+                .accessibilityLabel("扫描烟盒")
+                .accessibilityHint("打开相机")
+                .accessibilityIdentifier("scanPackCard")
             }
             Button(action: openCamera) {
                 Label(photoJPEG == nil ? "扫描烟盒" : "继续扫描烟盒", systemImage: "camera.viewfinder")

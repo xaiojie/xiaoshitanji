@@ -55,15 +55,22 @@ struct MealInputView: View {
                 Button("移除照片", systemImage: "xmark.circle", action: onRemovePhoto)
                     .font(.caption).foregroundStyle(Theme.mutedInk)
             } else {
-                VStack(spacing: 15) {
-                    Image(systemName: "viewfinder").font(.system(size: 54, weight: .light)).foregroundStyle(Theme.accent)
-                    Text(mode == .label ? "对准营养成分表" : "拍下碗里的这一餐")
-                        .font(.title3.bold()).foregroundStyle(Theme.surface)
-                    Text(mode == .label ? "拍清单位、每份营养值和净含量" : "AI 根据食物、碗型和装满程度估算")
-                        .font(.caption).foregroundStyle(.white.opacity(0.75))
+                Button(action: onCamera) {
+                    VStack(spacing: 15) {
+                        Image(systemName: "viewfinder").font(.system(size: 54, weight: .light)).foregroundStyle(Theme.accent)
+                        Text(mode == .label ? "对准营养成分表" : "拍下碗里的这一餐")
+                            .font(.title3.bold()).foregroundStyle(Theme.surface)
+                        Text(mode == .label ? "拍清单位、每份营养值和净含量" : "轻点直接打开相机，AI 根据食物、碗型和装满程度估算")
+                            .font(.caption).foregroundStyle(.white.opacity(0.75))
+                            .multilineTextAlignment(.center).padding(.horizontal, 20)
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 220)
+                    .background(Theme.darkGradient, in: .rect(cornerRadius: 26))
                 }
-                .frame(maxWidth: .infinity).frame(height: 220)
-                .background(Theme.darkGradient, in: .rect(cornerRadius: 26))
+                .buttonStyle(.plain)
+                .accessibilityLabel(mode == .label ? "拍照识别营养成分表" : "拍照记录这一餐")
+                .accessibilityHint("打开相机")
+                .accessibilityIdentifier("takePhotoCard")
             }
 
             HStack(spacing: 12) {
