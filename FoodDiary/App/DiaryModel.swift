@@ -219,22 +219,6 @@ final class DiaryModel {
         try commit(next)
     }
 
-    func restoreBackup(_ document: DiaryDocument) throws {
-        var next = document
-        next.schemaVersion = DiaryDocument.currentSchemaVersion
-        _ = try next.externalizePhotos(in: photosDirectory)
-        try next.validate()
-        if loadError != nil {
-            let recovery = BackupService.directory.appending(path: "Recovery-\(UUID())")
-            try store.restore(next, preservingExistingIn: recovery)
-            self.document = next
-            loadError = nil
-            publishWidgetSnapshot()
-        } else {
-            try commit(next)
-        }
-    }
-
     func saveWeight(_ weight: WeightRecord) throws {
         guard loadError == nil else { throw DiaryError.unreadableDiary }
         var next = document
