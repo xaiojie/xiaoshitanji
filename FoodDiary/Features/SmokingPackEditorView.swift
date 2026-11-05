@@ -177,7 +177,7 @@ struct SmokingPackEditorView: View {
                         .font(.caption).foregroundStyle(Theme.mutedInk)
                         .accessibilityIdentifier("cigaretteTextHints")
                 }
-                Text("完整一包20根，可从手中真实余量开始。也可以直接写“这包二十，还剩17根”。")
+                Text("完整一包20根。写“还剩17根”按余量开包；写“这包二十，我抽了两根”会补记这两根，余量与花费一起算上。")
                     .font(.caption).foregroundStyle(.secondary)
             } else {
                 Text("重新识别会更新本包记录的标注累计与费用。实际余量可在戒烟主页校准。")
@@ -191,8 +191,11 @@ struct SmokingPackEditorView: View {
         if let price = textHints.price {
             parts.append("价格 \(HealthMeasurementInput.format(price)) 元")
         }
-        if let count = textHints.openingCount(), original == nil {
+        if textHints.remaining != nil, let count = textHints.openingCount(), original == nil {
             parts.append("开包余量 \(count) 根")
+        }
+        if let smoked = textHints.smoked {
+            parts.append("并记下自己抽了 \(smoked) 根")
         }
         return "从描述里读到：" + parts.joined(separator: "，")
     }
@@ -205,8 +208,9 @@ struct SmokingPackEditorView: View {
             fields.priceText = HealthMeasurementInput.format(price)
             if let currency = hints.currency { fields.currency = currency }
         }
-        if original == nil, let count = hints.openingCount() {
-            openingCount = count
+        if original == nil {
+            // “抽了两根”按满包开、余下两根补记成事件；“还剩 17 根”才真的按 17 开包。
+            openingCount = CigaretteOpeningPlan.make(from: hints).openingCount
         }
     }
 
@@ -269,10 +273,23 @@ struct SmokingPackEditorView: View {
     private func save() {
         do {
             let product = try fields.makeProduct()
+            let plan = CigaretteOpeningPlan.make(from: textHints)
+            // 一句话里说“我抽了两根”时，这两根必须落成事件，否则今日根数、
+            // 剩余和外抽花费都不会算上自己抽掉的部分。
+            let smoked = original == nil ? plan.smokedEvents : min(textHints.smoked ?? 0, CigarettePack.capacity)
+            if let original, smoked > 0 {
+                let available = diary.document.smoking.remaining(in: original.id)
+                guard smoked <= available else {
+                    errorMessage = "这一包只剩 \(available) 根，先校准余量再补记。"
+                    return
+                }
+            }
             let pack = CigarettePack(id: original?.id ?? UUID(), product: product,
-                openedAt: original?.openedAt ?? .now, openingCount: original?.openingCount ?? openingCount, photoJPEG: photoJPEG)
+                openedAt: original?.openedAt ?? .now,
+                openingCount: original?.openingCount ?? plan.openingCount, photoJPEG: photoJPEG)
             if original == nil { try diary.openSmokingPack(pack) }
             else { try diary.updateSmokingPack(pack) }
+            if smoked > 0 { try diary.recordSmoking(.smoked, count: smoked, packID: pack.id) }
             dismiss()
         } catch { errorMessage = error.localizedDescription }
     }

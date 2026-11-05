@@ -30,6 +30,31 @@ public struct CigaretteTextHints: Equatable, Sendable {
     }
 }
 
+/// 新开一包时怎么落库：开包余量，以及要补记成事件的自抽烟数。
+///
+/// 说“还剩 17 根”时按余量开包，不生成记录；说“我抽了两根”时按满包开，
+/// 再把这两根记成事件——否则余量、今日根数和折算花费三处对不上，
+/// 自己买、自己抽掉的钱就不会进任何统计。
+public struct CigaretteOpeningPlan: Equatable, Sendable {
+    public var openingCount: Int
+    public var smokedEvents: Int
+
+    public init(openingCount: Int, smokedEvents: Int) {
+        self.openingCount = openingCount
+        self.smokedEvents = smokedEvents
+    }
+
+    public static func make(from hints: CigaretteTextHints, capacity: Int = CigarettePack.capacity) -> CigaretteOpeningPlan {
+        if let remaining = hints.remaining {
+            return CigaretteOpeningPlan(openingCount: min(max(remaining, 0), capacity), smokedEvents: 0)
+        }
+        if let smoked = hints.smoked {
+            return CigaretteOpeningPlan(openingCount: capacity, smokedEvents: min(max(smoked, 0), capacity))
+        }
+        return CigaretteOpeningPlan(openingCount: capacity, smokedEvents: 0)
+    }
+}
+
 /// 本地解析“这包烟二十，我抽了两根”“还剩 17 根”这类一句话。
 /// 数值属于事实，先由本地确定性地读出来；AI 只在需要理解图片时参与。
 public enum CigaretteTextParser {

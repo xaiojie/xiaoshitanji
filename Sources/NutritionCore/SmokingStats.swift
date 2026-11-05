@@ -38,8 +38,9 @@ public enum SmokingStats {
             case .smoked:
                 totals.smoked += event.count
                 if totals.lastSmokedDate == nil || event.date > totals.lastSmokedDate! { totals.lastSmokedDate = event.date }
-                if let pack = packs[event.packID], let price = pack.product.pricePerPack, pack.openingCount > 0 {
-                    let unit = price / Double(pack.openingCount)
+                if let pack = packs[event.packID], let price = pack.product.pricePerPack {
+                    // 价格始终是「一整包」的价，按每包 20 支折算，与本机日汇总和 README 的口径一致。
+                    let unit = price / Double(CigarettePack.capacity)
                     totals.costs[pack.product.currency, default: 0] += unit * Double(event.count)
                 }
             case .shared:

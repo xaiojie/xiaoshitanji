@@ -180,6 +180,15 @@ public struct SmokingDiary: Codable, Equatable, Sendable {
 
     public mutating func record(_ kind: SmokingEventKind, count: Int, date: Date = .now) throws {
         guard let pack = activePack else { throw DiaryError.invalidInput("先添加当前这一包香烟，再开始记录。") }
+        try record(kind, count: count, packID: pack.id, date: date)
+    }
+
+    /// 把记录落到指定烟包上。补记「我抽了两根」时当前烟包可能已经换成新的一包，
+    /// 所以不能依赖 `activePackID`。
+    public mutating func record(_ kind: SmokingEventKind, count: Int, packID: UUID, date: Date = .now) throws {
+        guard let pack = packs.first(where: { $0.id == packID }) else {
+            throw DiaryError.invalidInput("找不到这包香烟，请重新选择。")
+        }
         let range = kind == .stockCheck ? 0...20 : 1...20
         guard range.contains(count), date.timeIntervalSinceReferenceDate.isFinite, date >= pack.openedAt else {
             throw DiaryError.invalidInput("请填写有效的根数和记录时间。")

@@ -45,4 +45,38 @@ struct SmokingStatsTests {
         #expect(!empty.hasData)
         #expect(empty.costText() == "未填价格")
     }
+
+    @Test("开包时只剩几根，花费仍按每包 20 支折算")
+    func priceCountsPerWholePack() throws {
+        var document = DiaryDocument()
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let pack = CigarettePack(product: CigaretteProduct(name: "半包", pricePerPack: 20, currency: .cny),
+                                 openedAt: start, openingCount: 5)
+        try document.smoking.openPack(pack)
+        try document.smoking.record(.smoked, count: 2, date: start.addingTimeInterval(60))
+
+        // 一包 20 元、20 支：抽掉 2 根就是 2 元，与「还剩几根」无关。
+        #expect(abs((SmokingStats.totals(for: document).costs[.cny] ?? 0) - 2.0) < 0.001)
+        #expect(abs((document.smoking.summary(on: start.addingTimeInterval(60)).costs[.cny] ?? 0) - 2.0) < 0.001)
+    }
+
+    @Test("补记的烟可以落到指定的旧烟包上")
+    func recordsIntoTheNamedPack() throws {
+        var document = DiaryDocument()
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let old = CigarettePack(product: CigaretteProduct(name: "上一包", pricePerPack: 20, currency: .cny),
+                                openedAt: start, openingCount: 20)
+        let new = CigarettePack(product: CigaretteProduct(name: "新一包", pricePerPack: 30, currency: .cny),
+                                openedAt: start.addingTimeInterval(3_600))
+        try document.smoking.openPack(old)
+        try document.smoking.openPack(new)
+        try document.smoking.record(.smoked, count: 2, packID: old.id, date: start.addingTimeInterval(60))
+
+        #expect(document.smoking.remaining(in: old.id) == 18)
+        #expect(document.smoking.remaining(in: new.id) == 20)
+        #expect(abs((SmokingStats.totals(for: document).costs[.cny] ?? 0) - 2.0) < 0.001)
+        #expect(throws: DiaryError.self) {
+            try document.smoking.record(.smoked, count: 1, packID: UUID())
+        }
+    }
 }

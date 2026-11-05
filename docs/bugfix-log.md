@@ -171,6 +171,27 @@
   `DiaryModel.restoreBackup` 一并删除（唯一调用方是已移除的导入向导）。
   **保留** 每天自动备份与恢复点（`DiaryBackup` + `BackupService`），那是本机防损坏的兜底，不属于文件传输。
 
+## 2026-11-05 · 抽烟费用
+
+### 18. 说「我抽了两根」只减了库存，这两根的花费一直没算
+
+- **症状**：在识别烟盒的输入框里写「这包烟二十，我抽了两根」，包建好了、余量显示 18，
+  但今日「自己抽的折算费用」是「—」，历史里也找不到这两根。用户反馈「这包烟是自己买的，花的是自己的钱」。
+- **根因**：`CigaretteTextHints.openingCount()` 把「抽了两根」换算成开包余量 18，
+  `SmokingPackEditorView.save()` 只写 `openingCount`，从不生成 `SmokingEvent`。
+  日汇总与累计都按事件流算，没有事件自然没有根数、尼古丁和花费。
+- **修复**：
+  - 新增 `CigaretteOpeningPlan.make(from:)`：说余量按余量开包；说抽了几根则按满包开，
+    并把这几根作为待补记事件返回；
+  - `SmokingPackEditorView` 保存时把待补记根数写成一条 `smoked` 事件，编辑旧包时补记到该包；
+  - `SmokingDiary.record(_:count:packID:date:)` 让补记落到指定烟包（当前烟包可能已经换了），
+    `DiaryModel.recordSmoking(_:count:packID:)` 与之对接；
+  - 花费口径统一为「每包价 ÷ 20 × 根数」：`SmokingStats.totals` 原先按 `openingCount` 折算，
+    半包开包时会多算，现在与日汇总、README 一致，也去掉了 `openingCount > 0` 的静默跳过。
+- **验证**：`swift test` **222 项**。新增 `CigaretteTextParserTests::openingPlanRecordsSmokedInsteadOfShrinkingThePack`、
+  `SmokingStatsTests::priceCountsPerWholePack`（开包余 5 根仍按 20 支折算）、
+  `SmokingStatsTests::recordsIntoTheNamedPack`（补记落到旧包、余量各自扣、未知烟包报错）。
+
 ## 更早版本（据提交记录整理，供追溯）
 
 这些修复发生在本轮之前，细节未逐条复述，回归时按标题排查：

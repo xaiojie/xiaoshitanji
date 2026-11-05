@@ -12,6 +12,28 @@ struct CigaretteTextParserTests {
         #expect(!hints.evidence.isEmpty)
     }
 
+    @Test func openingPlanRecordsSmokedInsteadOfShrinkingThePack() {
+        // “我抽了两根”要补记成事件：按满包开，余量靠事件扣，花费才算得到自己头上。
+        let smoked = CigaretteOpeningPlan.make(from: CigaretteTextParser.parse("这包烟二十，我抽了两根"))
+        #expect(smoked.openingCount == 20)
+        #expect(smoked.smokedEvents == 2)
+
+        // “还剩 17 根”是直接报余量，不应该凭空生成记录。
+        let remaining = CigaretteOpeningPlan.make(from: CigaretteTextParser.parse("还剩17"))
+        #expect(remaining.openingCount == 17)
+        #expect(remaining.smokedEvents == 0)
+
+        // 只有价格时不改余量、不记事件。
+        let priceOnly = CigaretteOpeningPlan.make(from: CigaretteTextParser.parse("这包28块"))
+        #expect(priceOnly.openingCount == 20)
+        #expect(priceOnly.smokedEvents == 0)
+
+        // 超过一包的根数截到 20，避免生成非法事件。
+        let tooMany = CigaretteOpeningPlan.make(from: CigaretteTextParser.parse("抽了25根"))
+        #expect(tooMany.openingCount == 20)
+        #expect(tooMany.smokedEvents == 20)
+    }
+
     @Test func readsRemainingCount() {
         let hints = CigaretteTextParser.parse("还剩17")
         #expect(hints.remaining == 17)

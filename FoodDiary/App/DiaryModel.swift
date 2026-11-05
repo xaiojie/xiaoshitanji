@@ -265,6 +265,10 @@ final class DiaryModel {
         try updateSmoking { try $0.record(kind, count: count) }
     }
 
+    func recordSmoking(_ kind: SmokingEventKind, count: Int, packID: UUID) throws {
+        try updateSmoking { try $0.record(kind, count: count, packID: packID) }
+    }
+
     func removeSmokingEvent(_ id: UUID) throws {
         try updateSmoking { try $0.removeEvent(id: id) }
     }
