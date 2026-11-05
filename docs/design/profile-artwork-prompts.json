@@ -4,8 +4,9 @@
     "file": "FoodDiary/Assets.xcassets/FoodDinner.imageset/FoodDinner.png",
     "tool": "built-in image_gen",
     "transparent_background": true,
-    "prompt": "Photorealistic warm ivory dinner bowl with salmon, rice, bok choy and pumpkin. Match FoodBreakfast, FoodLunch and FoodSnack cutout lighting, material and framing. Transparent alpha, no text.",
-    "export": "256x256 PNG, alpha preserved"
+    "prompt": "Use case: stylized-concept. Generate a completely new standalone DINNER thumbnail for a warm yellow/cream iPhone meal diary. Subject: an appetizing miniature rustic two-handled clay casserole filled with Chinese-style beef and tomato stew, chunky orange carrots and golden potato pieces, a few green scallion garnish pieces. The thick short casserole is honey-brown glazed stoneware, visibly has TWO small rounded handles projecting from the left and right, and its matching circular lid leans behind the pot toward the upper right. These distinctive pot-and-lid shapes are essential. Show rich stew inside, not rice. Use a slightly elevated three-quarter product photograph angle so both the stew and the front and two handles are clearly readable. Full pot, both handles and lid must fit fully within the square canvas with around 15 percent transparent padding. Crisp simple silhouette recognizable at only 54 pixels. Photorealistic food textures, tactile glazed ceramic, soft warm upper-left studio lighting, subtle object-attached shading. The provided existing LUNCH picture is a reference ONLY for photorealistic cutout quality, warm soft lighting and premium miniature realism. The dinner subject and silhouette must be a rustic casserole with a lid, not the reference's round white rice bowl. True transparent alpha background. One compact pot-and-lid dinner illustration only, no table, no floor, no tray, no badge, no rounded-square tile, no text, no letters, no utensils, no extra bowl, no human hands.",
+    "export": "256x256 PNG, alpha preserved",
+    "subject": "Two-handled clay casserole with lid, beef and tomato stew"
   },
   {
     "asset": "HealthScale",
