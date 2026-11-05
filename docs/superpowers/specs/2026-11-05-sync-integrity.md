@@ -1,6 +1,6 @@
 # 同步与备份完整性修复
 
-用户要求解决本次状态核查列出的全部问题。当前基线 feature/backlog-v1 e260c8f，工程1.0(30)。已有未提交的-tab启动辅助与SeedFixtureTests由本轮整理为显式开发工具。
+用户要求解决本次状态核查列出的全部问题。当前基线 feature/backlog-v1 29d4d09，工程1.0(30)。已有未提交的-tab启动辅助与SeedFixtureTests由本轮整理为显式开发工具。
 
 ## 实施决策
 
