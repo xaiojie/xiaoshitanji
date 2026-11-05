@@ -47,8 +47,16 @@ final class SpeechTranscriber {
         self.request = request
 
         let input = engine.inputNode
+        let format = input.outputFormat(forBus: 0)
+        // 采样率为 0 时 installTap 会抛 Objective-C 异常，直接崩掉，必须先挡一下。
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            errorMessage = "麦克风暂时不可用，先手动输入吧。"
+            cleanUp()
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+            return
+        }
         input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { buffer, _ in
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
             request.append(buffer)
         }
         engine.prepare()
@@ -89,8 +97,10 @@ final class SpeechTranscriber {
         isRecording = false
     }
 
-    private static func requestPermission() async -> Bool {
-        let speech = await withCheckedContinuation { continuation in
+    /// 系统会在任意队列上回调，不能让它继承 MainActor 隔离，否则 Swift 6 的
+    /// 执行器检查会直接 SIGTRAP（crash 日志里是 dispatch_assert_queue_fail）。
+    private nonisolated static func requestPermission() async -> Bool {
+        let speech = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
             SFSpeechRecognizer.requestAuthorization { status in
                 continuation.resume(returning: status == .authorized)
             }

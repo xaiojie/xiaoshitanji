@@ -25,6 +25,7 @@ struct SmokingPackEditorView: View {
     @State private var analysisID: UUID?
     @State private var photoTask: Task<Void, Never>?
     @State private var analysisTask: Task<Void, Never>?
+    @State private var textHints = CigaretteTextHints()
 
     init(pack: CigarettePack? = nil) {
         original = pack
@@ -89,6 +90,7 @@ struct SmokingPackEditorView: View {
                     return data
                 }
             }
+            .onChange(of: description) { _, _ in applyTextHints() }
             .interactiveDismissDisabled(busy)
             .onDisappear { cancelAnalysis(); loadingID = nil; photoTask?.cancel() }
         }
@@ -123,7 +125,7 @@ struct SmokingPackEditorView: View {
             }.font(.subheadline).buttonStyle(.glass)
             VStack(alignment: .leading, spacing: 13) {
                 Label("补充一句，AI 帮你改", systemImage: "text.bubble").font(.headline)
-                TextField("例如：这包买了30元，或清空错误的尼古丁值", text: $description, axis: .vertical)
+                TextField("例如：这包二十，我抽了两根，还剩17根", text: $description, axis: .vertical)
                     .lineLimit(2...4).font(.subheadline).accessibilityIdentifier("cigaretteDescription")
                 if photoJPEG != nil || !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Button("更新识别结果", systemImage: "sparkles", action: analyze)
@@ -131,7 +133,7 @@ struct SmokingPackEditorView: View {
                         .accessibilityIdentifier("updateSmokingPackRecognition")
                 }
             }.contentCard()
-            Text("扫描或导入图片后，AI 会自动读取。也可以说“这包买了30元”“价格改成25元”或“清空错误的尼古丁值”，再更新结果。识别免费使用，文字和照片会经小食痰记服务器转交 DeepSeek 处理。")
+            Text("价格和根数由本机直接读出：写“这包二十”“还剩17根”“抽了两根”就会自动填好。照片里的品牌、尼古丁和价签再交给 AI 读取。")
                 .font(.caption2).foregroundStyle(.secondary)
         }
     }
@@ -163,13 +165,42 @@ struct SmokingPackEditorView: View {
                 Stepper(value: $openingCount, in: 0...20) {
                     LabeledContent("现在这包还剩", value: "\(openingCount) 根")
                 }.font(.subheadline)
-                Text("完整一包20根，可从手中真实余量开始。")
+                if !textHints.evidence.isEmpty {
+                    Label(hintSummary, systemImage: "text.magnifyingglass")
+                        .font(.caption).foregroundStyle(Theme.mutedInk)
+                        .accessibilityIdentifier("cigaretteTextHints")
+                }
+                Text("完整一包20根，可从手中真实余量开始。也可以直接写“这包二十，还剩17根”。")
                     .font(.caption).foregroundStyle(.secondary)
             } else {
                 Text("重新识别会更新本包记录的标注累计与费用。实际余量可在戒烟主页校准。")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }.contentCard()
+    }
+
+    private var hintSummary: String {
+        var parts: [String] = []
+        if let price = textHints.price {
+            parts.append("价格 \(HealthMeasurementInput.format(price)) 元")
+        }
+        if let count = textHints.openingCount(), original == nil {
+            parts.append("开包余量 \(count) 根")
+        }
+        return "从描述里读到：" + parts.joined(separator: "，")
+    }
+
+    /// 一句话里明确给出的价格和根数先由本地确定性读出，不依赖网络和 AI。
+    private func applyTextHints() {
+        let hints = CigaretteTextParser.parse(description)
+        textHints = hints
+        if let price = hints.price {
+            fields.priceText = HealthMeasurementInput.format(price)
+            if let currency = hints.currency { fields.currency = currency }
+        }
+        if original == nil, let count = hints.openingCount() {
+            openingCount = count
+        }
     }
 
     private func loadPhoto(_ load: @escaping @Sendable () async throws -> Data) {
