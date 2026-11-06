@@ -54,6 +54,7 @@ struct FoodDiaryApp: App {
             .onChange(of: scenePhase) { _, phase in
                 if phase != .active { running.checkpoint() }
                 if phase == .active {
+                    running.refreshMotionAuthorization()
                     Task {
                         await refreshAppData()
                     }

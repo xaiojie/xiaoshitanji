@@ -84,6 +84,7 @@ enum AboutDocument: String, CaseIterable, Identifiable {
             ]
         case .permissions:
             [
+                AboutSection(title: "运动与健身", content: "GPS 跑步时使用 Core Motion 识别静止、步行和跑步状态，辅助过滤静止时的定位漂移。暂停或结束跑步时停止接收状态。原始活动历史保留在系统中，本应用使用当前状态进行本机计算，可在 iOS 设置 → 隐私与安全性 → 运动与健身中管理权限。"),
                 AboutSection(title: "定位与精确位置", content: "首次进入跑步准备时请求使用期间定位。开始 GPS 跑步后通过后台定位在锁屏或切换应用时记录距离与路线，暂停或结束时停止。定位精度不足时可申请本次精确位置。自由跑支持主动选择仅计时，目标跑依赖有效 GPS 距离。可在 iOS 设置 → 小食痰记 → 位置中管理。"),
                 AboutSection(title: "相机", content: "用途为拍摄餐食、营养成分表和烟盒。扫描时由系统请求相机权限。可在 iOS 设置中管理；也可使用系统照片选择器导入图片。"),
                 AboutSection(title: "照片选择", content: "使用 iOS 系统照片选择器读取你选中的图片，用于记录、识别或设置头像。所选图片的后续使用取决于相应功能和 AI、同步授权。"),

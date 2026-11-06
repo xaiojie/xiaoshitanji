@@ -1,16 +1,39 @@
 import Foundation
 
+public enum RunMovement: String, Codable, Sendable {
+    case stationary, moving, unknown
+}
+
 public struct RunLocation: Codable, Equatable, Sendable {
     public var latitude: Double
     public var longitude: Double
     public var timestamp: Date
     public var horizontalAccuracy: Double
+    public var speed: Double?
+    public var speedAccuracy: Double?
+    public var movement: RunMovement?
 
-    public init(latitude: Double, longitude: Double, timestamp: Date, horizontalAccuracy: Double) {
+    public init(latitude: Double, longitude: Double, timestamp: Date, horizontalAccuracy: Double,
+                speed: Double? = nil, speedAccuracy: Double? = nil, movement: RunMovement? = nil) {
         self.latitude = latitude
         self.longitude = longitude
         self.timestamp = timestamp
         self.horizontalAccuracy = horizontalAccuracy
+        self.speed = speed
+        self.speedAccuracy = speedAccuracy
+        self.movement = movement
+    }
+
+    public var hasStationarySpeed: Bool {
+        guard let speed, let speedAccuracy, speed.isFinite, speedAccuracy.isFinite,
+              (0...1.5).contains(speedAccuracy) else { return false }
+        return (0..<0.5).contains(speed)
+    }
+
+    public var hasMovingSpeed: Bool {
+        guard let speed, let speedAccuracy, speed.isFinite, speedAccuracy.isFinite,
+              (0...1).contains(speedAccuracy) else { return false }
+        return speed >= 0.7 && speed - speedAccuracy >= 0.3
     }
 
     public var isValid: Bool {
@@ -64,6 +87,9 @@ public struct RunSession: Codable, Equatable, Sendable, Identifiable {
     public private(set) var lastCheckpoint: Date
     public private(set) var endedAt: Date?
     private var segment = 0
+    /// 没有速度或运动识别时，用短窗口验证持续位移，避免累加定位噪声。
+    private var movementCandidates: [RunLocation]?
+    private var movementUnconfirmed: Bool?
 
     public init(id: UUID = UUID(), startedAt: Date = .now, targetMeters: Double? = nil, usesGPS: Bool = true) {
         self.id = id
@@ -92,7 +118,7 @@ public struct RunSession: Codable, Equatable, Sendable, Identifiable {
     }
 
     public func currentPace(at date: Date) -> Double? {
-        guard state == .running, let last = points.last,
+        guard state == .running, movementUnconfirmed != true, let last = points.last, last.segment == segment,
               date.timeIntervalSince(last.location.timestamp) <= 20 else { return nil }
         let recent = points.suffix(30).filter {
             $0.segment == last.segment && last.activeSeconds - $0.activeSeconds <= 30
@@ -137,6 +163,8 @@ public struct RunSession: Codable, Equatable, Sendable, Identifiable {
 
     public mutating func breakTrack() {
         if points.last?.segment == segment { segment += 1 }
+        movementCandidates = nil
+        movementUnconfirmed = true
     }
 
     /// 仅在本次首次达到目标时返回 true。
@@ -147,6 +175,61 @@ public struct RunSession: Codable, Equatable, Sendable, Identifiable {
               location.timestamp.timeIntervalSince(date) <= 5,
               date.timeIntervalSince(location.timestamp) <= 15 else { return false }
         guard location.isValid else { breakTrack(); return false }
+        if location.movement == .stationary || location.hasStationarySpeed {
+            breakTrack()
+            checkpoint(at: location.timestamp)
+            return false
+        }
+        if location.movement == .moving || location.hasMovingSpeed {
+            movementCandidates = nil
+            movementUnconfirmed = false
+            return appendMovingLocation(location)
+        }
+        return confirmUnclassifiedMovement(location)
+    }
+
+    private mutating func confirmUnclassifiedMovement(_ location: RunLocation) -> Bool {
+        movementUnconfirmed = true
+        var candidates = movementCandidates ?? []
+        if candidates.isEmpty, let last = points.last, last.segment == segment,
+           location.timestamp.timeIntervalSince(last.location.timestamp) <= 20 {
+            candidates.append(last.location)
+        }
+        if let last = candidates.last {
+            let seconds = location.timestamp.timeIntervalSince(last.timestamp)
+            guard seconds > 0 else { return false }
+            if seconds > 20 || last.distance(to: location) / seconds > 12 {
+                breakTrack()
+                candidates = []
+            }
+        }
+        candidates.append(location)
+        let uncertainty = max(15, (candidates.first?.horizontalAccuracy ?? location.horizontalAccuracy)
+                               + location.horizontalAccuracy)
+        // 窗口足够跨越当前精度包络，低精度慢走也能积累到有效证据。
+        let windowSeconds = max(30, min(120, uncertainty / 0.7 * 1.25))
+        candidates = Array(candidates.filter {
+            location.timestamp.timeIntervalSince($0.timestamp) <= windowSeconds
+        }.suffix(256))
+        movementCandidates = candidates
+        guard candidates.count >= 3, let first = candidates.first else { return false }
+        let seconds = location.timestamp.timeIntervalSince(first.timestamp)
+        let displacement = first.distance(to: location)
+        let requiredDisplacement = max(15, first.horizontalAccuracy + location.horizontalAccuracy)
+        let path = zip(candidates, candidates.dropFirst()).reduce(0) { $0 + $1.0.distance(to: $1.1) }
+        guard seconds >= 3, displacement >= requiredDisplacement, displacement / seconds >= 0.7,
+              path > 0, displacement / path >= 0.75 else { return false }
+        var reachedGoal = false
+        for candidate in candidates {
+            reachedGoal = appendMovingLocation(candidate) || reachedGoal
+        }
+        // 已确认的运动不能替后续静止抖动提供证据，下一批从新的锚点验证。
+        movementCandidates = [location]
+        movementUnconfirmed = false
+        return reachedGoal
+    }
+
+    private mutating func appendMovingLocation(_ location: RunLocation) -> Bool {
         if let last = points.last {
             guard location.timestamp > last.location.timestamp else { return false }
             if last.segment == segment {

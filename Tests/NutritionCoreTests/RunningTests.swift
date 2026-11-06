@@ -8,7 +8,8 @@ struct RunningTests {
 
     private func point(_ meters: Double, _ seconds: Double, accuracy: Double = 5) -> RunLocation {
         RunLocation(latitude: 0, longitude: meters / 111_194.9266,
-                    timestamp: start.addingTimeInterval(seconds), horizontalAccuracy: accuracy)
+                    timestamp: start.addingTimeInterval(seconds), horizontalAccuracy: accuracy,
+                    speed: 4, speedAccuracy: 0.2)
     }
 
     @Test func pauseExcludesTimeAndDoesNotBridgeMovement() {

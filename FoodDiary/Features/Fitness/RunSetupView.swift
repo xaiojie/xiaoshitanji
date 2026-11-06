@@ -87,6 +87,8 @@ struct RunSetupView: View {
                         Toggle("使用 GPS 记录距离与路线", isOn: $usesGPS).tint(Theme.olive)
                         if !usesGPS { Text("本次保存运动时长和可用心率。").font(.caption).foregroundStyle(Theme.mutedInk) }
                     }
+                    Text("运动与健身权限用于辅助识别静止状态、过滤定位漂移，可在系统设置管理。")
+                        .font(.caption).foregroundStyle(Theme.mutedInk)
                 }.contentCard()
                 HStack(alignment: .top, spacing: 12) {
                     ObjectIcon("HealthHeart", size: 36)

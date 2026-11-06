@@ -1,4 +1,5 @@
 import CoreLocation
+import CoreMotion
 import Foundation
 import NutritionCore
 import Observation
@@ -13,6 +14,7 @@ final class RunTrackingModel: NSObject, CLLocationManagerDelegate {
     private(set) var location: RunLocation?
     private(set) var authorization: CLAuthorizationStatus = .notDetermined
     private(set) var preciseLocation = false
+    private(set) var movement = RunMovement.unknown
     private(set) var recovered = false
     private(set) var archiveError: String?
     private(set) var archiveWarning: String?
@@ -22,6 +24,8 @@ final class RunTrackingModel: NSObject, CLLocationManagerDelegate {
     var goalNotice = false
     var heartRates: [RunHeartRatePoint] = []
     @ObservationIgnored private let manager = CLLocationManager()
+    @ObservationIgnored private let motionManager = CMMotionActivityManager()
+    @ObservationIgnored private var motionAuthorization = CMMotionActivityManager.authorizationStatus()
     @ObservationIgnored private let archive: RunArchive
     @ObservationIgnored private var backgroundActivity: CLBackgroundActivitySession?
     @ObservationIgnored private var timer: Timer?
@@ -114,7 +118,14 @@ final class RunTrackingModel: NSObject, CLLocationManagerDelegate {
         if authorization == .denied || authorization == .restricted { return "请在系统设置允许定位，也可选择仅计时。" }
         if !locationAllowed { return "开始前需要允许定位。" }
         if !preciseLocation { return "GPS 跑步需要精确位置，可点下方开启。" }
-        return gpsReady ? "GPS 已就绪" : "正在寻找准确位置，建议到室外稍等。"
+        if !gpsReady { return "正在寻找准确位置，建议到室外稍等。" }
+        if movement == .stationary || location?.hasStationarySpeed == true {
+            return isTracking ? "检测到静止，里程暂不累加。" : "GPS 已就绪，当前处于静止状态。"
+        }
+        if isTracking && movement == .unknown && location?.hasMovingSpeed != true {
+            return "已定位，正在确认有效移动。"
+        }
+        return "GPS 已就绪"
     }
 
     func prepare() {
@@ -231,6 +242,7 @@ final class RunTrackingModel: NSObject, CLLocationManagerDelegate {
             manager.showsBackgroundLocationIndicator = true
             backgroundActivity = CLBackgroundActivitySession()
             manager.startUpdatingLocation()
+            startMotionUpdates()
         }
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -245,9 +257,57 @@ final class RunTrackingModel: NSObject, CLLocationManagerDelegate {
         timer?.invalidate()
         timer = nil
         manager.stopUpdatingLocation()
+        motionManager.stopActivityUpdates()
+        movement = .unknown
         backgroundActivity?.invalidate()
         backgroundActivity = nil
         manager.allowsBackgroundLocationUpdates = false
+    }
+
+    private func startMotionUpdates() {
+        guard CMMotionActivityManager.isActivityAvailable() else { return }
+        let status = CMMotionActivityManager.authorizationStatus()
+        motionAuthorization = status
+        guard status != .denied && status != .restricted else { return }
+        motionManager.startActivityUpdates(to: .main) { [weak self] activity in
+            let movement: RunMovement
+            if activity == nil || activity?.confidence == .low {
+                movement = .unknown
+            } else if activity?.walking == true || activity?.running == true {
+                movement = .moving
+            } else if activity?.stationary == true {
+                movement = .stationary
+            } else {
+                movement = .unknown
+            }
+            Task { @MainActor [weak self] in
+                guard let self, self.isTracking else { return }
+                self.refreshMotionAuthorization()
+                guard CMMotionActivityManager.authorizationStatus() == .authorized else {
+                    self.movement = .unknown
+                    self.session?.breakTrack()
+                    return
+                }
+                self.movement = movement
+                if movement == .stationary {
+                    self.session?.breakTrack()
+                    self.persist()
+                }
+            }
+        }
+    }
+
+    func refreshMotionAuthorization() {
+        let status = CMMotionActivityManager.authorizationStatus()
+        guard status != motionAuthorization else { return }
+        motionAuthorization = status
+        motionManager.stopActivityUpdates()
+        movement = .unknown
+        if isTracking {
+            session?.breakTrack()
+            persist()
+            if status == .authorized && session?.usesGPS == true { startMotionUpdates() }
+        }
     }
 
     private func persist() {
@@ -280,11 +340,15 @@ final class RunTrackingModel: NSObject, CLLocationManagerDelegate {
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let values = locations.map {
             RunLocation(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude,
-                        timestamp: $0.timestamp, horizontalAccuracy: $0.horizontalAccuracy)
+                        timestamp: $0.timestamp, horizontalAccuracy: $0.horizontalAccuracy,
+                        speed: $0.speed >= 0 ? $0.speed : nil,
+                        speedAccuracy: $0.speedAccuracy >= 0 ? $0.speedAccuracy : nil)
         }
         Task { @MainActor [weak self] in
             guard let self else { return }
-            for value in values {
+            self.refreshMotionAuthorization()
+            for var value in values {
+                value.movement = CMMotionActivityManager.authorizationStatus() == .authorized ? self.movement : .unknown
                 if value.isValid {
                     self.location = value
                     self.locationWarning = nil
