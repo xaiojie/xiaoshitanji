@@ -2,6 +2,8 @@
 
 使用 Cool Admin 8，前端为 Vue 3、Element Plus、Vite，后端为 Midway、TypeORM、MySQL。上游来源与许可见 [UPSTREAM.md](UPSTREAM.md)。
 
+线上入口为 https://xiaoshitanji.papaclaoud.top/admin/，部署结构与回滚步骤见 [部署说明](deploy/README.md)。
+
 ## 本地访问
 
 - 管理后台 http://127.0.0.1:9000

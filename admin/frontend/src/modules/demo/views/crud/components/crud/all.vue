@@ -41,7 +41,7 @@
 						<cl-flex1 />
 
 						<!-- 导入 -->
-						<cl-import-btn template="/用户导入模版.xlsx" />
+						<cl-import-btn :template="importTemplateUrl" />
 
 						<!-- 导出 -->
 						<cl-export-btn :columns="Table?.columns" />
@@ -575,4 +575,5 @@ const visible = ref(false);
 function open() {
 	visible.value = true;
 }
+const importTemplateUrl = `${import.meta.env.BASE_URL}用户导入模版.xlsx`;
 </script>

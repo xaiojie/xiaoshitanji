@@ -45,7 +45,7 @@ import * as upload from '@midwayjs/upload';
     // task,
     {
       component: info,
-      enabledEnvironment: ['local', 'prod'],
+      enabledEnvironment: ['local'],
     },
   ],
   importConfigs: [

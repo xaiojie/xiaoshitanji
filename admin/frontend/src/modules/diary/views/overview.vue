@@ -3,7 +3,7 @@
 		<section class="business-overview" v-loading="loading">
 			<header>
 				<div class="brand">
-					<img src="/logo.png" alt="小食痰记" />
+					<img :src="logoUrl" alt="小食痰记" />
 					<div>
 						<h1>小食痰记 · 业务总览</h1>
 						<p>饮食、生活、运动与 AI 服务的管理视图</p>
@@ -263,6 +263,7 @@ onMounted(async () => {
 		error.value = (cause as Error).message || '加载用户选项失败';
 	}
 });
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
 </script>
 
 <style scoped>

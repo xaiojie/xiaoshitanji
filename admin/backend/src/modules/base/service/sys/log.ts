@@ -8,6 +8,7 @@ import * as moment from 'moment';
 import { Utils } from '../../../../comm/utils';
 import { BaseSysConfService } from './conf';
 import { Context } from '@midwayjs/koa';
+import { redactLogParams } from '../../../../comm/log';
 
 /**
  * 描述
@@ -38,7 +39,7 @@ export class BaseSysLogService extends BaseService {
     sysLog.userId = userId;
     sysLog.ip = typeof ip === 'string' ? ip : ip.join(',');
     sysLog.action = url.split('?')[0];
-    sysLog.params = params;
+    sysLog.params = redactLogParams(params);
     await this.baseSysLogEntity.insert(sysLog);
   }
 

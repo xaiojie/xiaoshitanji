@@ -7,6 +7,13 @@ import { TenantSubscriber } from '../modules/base/db/tenant';
  * 本地开发 npm run prod 读取的配置文件
  */
 export default {
+  koa: {
+    port: Number(process.env.ADMIN_PORT || 8002),
+    hostname: process.env.ADMIN_BIND_HOST || '127.0.0.1',
+  },
+  upload: {
+    fileSize: '10mb',
+  },
   typeorm: {
     dataSource: {
       default: {

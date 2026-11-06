@@ -1,17 +1,7 @@
-import { proxy } from './proxy';
-
 export default {
 	// 根地址
-	host: proxy['/prod/'].target,
+	host: `${location.origin}/admin-api`,
 
-	// 请求地址
-	get baseUrl() {
-		const mode = import.meta.env.MODE;
-
-		if (mode == 'static') {
-			return location.origin;
-		} else {
-			return '/api';
-		}
-	}
+	// 同域管理接口入口。
+	baseUrl: '/admin-api'
 };

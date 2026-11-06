@@ -3,7 +3,7 @@
 		<div class="box">
 			<div class="logo">
 				<div class="icon">
-					<img src="/logo.png" alt="Logo" />
+					<img :src="logoUrl" alt="Logo" />
 				</div>
 
 				<span>{{ app.info.name }}</span>
@@ -145,6 +145,7 @@ async function toLogin() {
 
 	saving.value = false;
 }
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
 </script>
 
 <style lang="scss" scoped>

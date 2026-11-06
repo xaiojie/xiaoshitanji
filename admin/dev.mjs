@@ -104,7 +104,8 @@ try {
         const result = spawnSync('pnpm', args, { cwd: join(adminDir, directory), env, stdio: 'inherit' });
         if (result.status !== 0) throw new Error(`${directory} ${args.join(' ')} 检查失败`);
       }
-      const tests = spawnSync(process.execPath, ['--test', join(adminDir, 'backend/test/path.test.cjs'), join(adminDir, 'backend/test/diary.test.cjs'), join(adminDir, 'backend/test/diary-summary.test.cjs'), join(adminDir, 'test/request-scope.test.mjs'), join(adminDir, 'test/bootstrap.test.mjs')], { env, stdio: 'inherit' });
+      const testFiles = ['backend/test/path.test.cjs', 'backend/test/diary.test.cjs', 'backend/test/diary-summary.test.cjs', 'backend/test/log-redaction.test.cjs', 'test/request-scope.test.mjs', 'test/bootstrap.test.mjs', 'test/release.test.mjs'];
+      const tests = spawnSync(process.execPath, ['--test', ...testFiles.map(file => join(adminDir, file))], { env, stdio: 'inherit' });
       if (tests.status !== 0) throw new Error('后台启动与环境密钥回归检查失败');
     } else {
       for (const port of [13316, 8002, 9000]) {

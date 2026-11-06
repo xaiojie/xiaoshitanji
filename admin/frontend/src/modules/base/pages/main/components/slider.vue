@@ -6,7 +6,7 @@
 		}"
 	>
 		<div class="app-slider__logo">
-			<img src="/logo.png" />
+			<img :src="logoUrl" />
 			<span v-if="!app.isFold || browser.isMini">{{ app.info.name }}</span>
 		</div>
 
@@ -45,6 +45,7 @@ const { browser } = useBrowser();
 const { app } = useBase();
 
 const keyWord = ref('');
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
 </script>
 
 <style lang="scss">

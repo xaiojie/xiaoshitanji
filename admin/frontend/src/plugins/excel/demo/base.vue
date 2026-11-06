@@ -7,7 +7,7 @@
 			<cl-flex1 />
 
 			<!-- 导入 -->
-			<cl-import-btn template="/用户导入模版.xlsx" :on-submit="onImpSubmit" />
+			<cl-import-btn :template="importTemplateUrl" :on-submit="onImpSubmit" />
 
 			<!-- 导出 -->
 			<cl-export-btn :columns="Table?.columns" />
@@ -75,4 +75,5 @@ function onImpSubmit(data: { list: any[]; file: File }, { done, close }: any) {
 	close();
 	ElMessage.success(`已提交${data.list.length}条数据`);
 }
+const importTemplateUrl = `${import.meta.env.BASE_URL}用户导入模版.xlsx`;
 </script>

@@ -1,0 +1,46 @@
+name: xiaoshitanji-admin-runtime
+services:
+  api:
+    image: xiaoshitanji-admin-api:${ADMIN_RELEASE:?required}
+    container_name: xiaoshitanji-admin-api
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+    env_file:
+      - api.env
+    environment:
+      NODE_ENV: production
+      MIDWAY_SERVER_ENV: prod
+      NODE_OPTIONS: --max-old-space-size=320
+      TZ: Asia/Shanghai
+      ADMIN_PORT: 8002
+      ADMIN_BIND_HOST: 0.0.0.0
+      ADMIN_PUBLIC_URL: https://xiaoshitanji.papaclaoud.top/admin-api
+      DB_HOST: xiaoshitanji-admin-mysql
+      DB_PORT: 3306
+      DB_USERNAME: xst_admin
+      DB_DATABASE: xiaoshitanji_admin_dev
+    ports:
+      - "127.0.0.1:8002:8002"
+    volumes:
+      - runtime-data:/home/node/.cool-admin
+    networks:
+      - admin-db
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8002/admin/base/comm/program').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+networks:
+  admin-db:
+    external: true
+    name: xiaoshitanji-admin_default
+volumes:
+  runtime-data:

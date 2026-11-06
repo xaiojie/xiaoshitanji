@@ -43,7 +43,7 @@ export default ({ mode }: ConfigEnv): UserConfig => {
 				include: [toPath('./src/{modules,plugins}/**/locales/**')]
 			})
 		],
-		base: '/',
+		base: isDev ? '/' : '/admin/',
 		server: {
 			host: '127.0.0.1',
 			port: 9000,
