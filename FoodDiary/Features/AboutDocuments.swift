@@ -3,7 +3,7 @@ import Foundation
 enum AppInformation {
     static let author = "爬爬 · Jay He"
     static let contactEmail = "2296900700@qq.com"
-    static let updatedDate = "2026 年 11 月 5 日"
+    static let updatedDate = "2026 年 11 月 6 日"
     static let privacyURL = URL(string: "https://xiaoshitanji.papaclaoud.top/privacy")!
     static let supportURL = URL(string: "https://xiaoshitanji.papaclaoud.top/support")!
     static let emailURL = URL(string: "mailto:2296900700@qq.com")!
@@ -72,6 +72,7 @@ enum AboutDocument: String, CaseIterable, Identifiable {
             ]
         case .privacy:
             [
+                AboutSection(title: "跑步位置与地图", content: "户外跑步按你的操作取得精确位置，用于计算距离、配速和绘制轨迹。跑步期间可在锁屏或切换应用时持续定位，暂停或结束后停止采集。轨迹文件、目标和详细心率样本保存在记录设备，运动摘要可随日记同步。跑后 AI 使用你选择的统计，地图由 Apple MapKit 提供，地图请求按 Apple 服务规则处理。可删除对应跑步来移除本机轨迹，或在系统设置管理定位权限。"),
                 AboutSection(title: "本机保存", content: "饮食、营养数值、照片、个人资料、体重、训练、烟包和吸烟记录，以及你保存的分析结果，默认由应用保存在设备上。本机自动备份和你导出的文件需一并妥善保管。云端同步由你主动使用。"),
                 AboutSection(title: "AI 分析的授权与发送", content: "首次使用 AI 时会说明接收方、内容和用途，并等待你明确同意。根据所用功能，本次所需的食物描述、问题、所选餐食／营养表／烟盒照片、营养数据或经确认的健康聚合数值，会通过 HTTPS 发送至 xiaoshitanji.papaclaoud.top，再转交 DeepSeek API 处理。可在“通用设置 → AI 与隐私”撤回授权。"),
                 AboutSection(title: "健康数据", content: "连接 Apple 健康后，只读访问你允许的步数、活动、训练、身体测量、睡眠、心率等项目，用于本机展示和聚合。汇总分析发送前仍会逐次确认数据范围。AI 请求使用所选汇总数值，原始健康样本保留在设备。保存的报告和汇总快照可随主动云同步上传。"),
@@ -83,16 +84,18 @@ enum AboutDocument: String, CaseIterable, Identifiable {
             ]
         case .permissions:
             [
+                AboutSection(title: "定位与精确位置", content: "首次进入跑步准备时请求使用期间定位。开始 GPS 跑步后通过后台定位在锁屏或切换应用时记录距离与路线，暂停或结束时停止。定位精度不足时可申请本次精确位置。自由跑支持主动选择仅计时，目标跑依赖有效 GPS 距离。可在 iOS 设置 → 小食痰记 → 位置中管理。"),
                 AboutSection(title: "相机", content: "用途为拍摄餐食、营养成分表和烟盒。扫描时由系统请求相机权限。可在 iOS 设置中管理；也可使用系统照片选择器导入图片。"),
                 AboutSection(title: "照片选择", content: "使用 iOS 系统照片选择器读取你选中的图片，用于记录、识别或设置头像。所选图片的后续使用取决于相应功能和 AI、同步授权。"),
                 AboutSection(title: "麦克风与语音识别", content: "用于把你说的一餐转成可编辑文字，首次使用语音输入时由系统请求麦克风和语音识别权限。支持设备端识别时优先本机处理，其他情况下使用 Apple 语音识别服务。可在 iOS 设置中管理，文字输入也可直接使用。"),
                 AboutSection(title: "Apple 健康", content: "只读访问你允许的步数、活动能量、锻炼时间、距离、身高、体重、睡眠、心率、静息心率、心率变异性、有氧适能、耳机音量和体能训练。各项可在健康 App 的个人资料 → App → 小食痰记中管理。应用仅能读取系统允许返回的数据。"),
-                AboutSection(title: "通知", content: "用于本地饮食和称重提醒，安排提醒时由系统请求权限。提醒内容和时间可在通用设置调整，通知权限可在 iOS 设置中管理。"),
+                AboutSection(title: "通知", content: "用于本地饮食、称重与目标跑达成提醒，安排提醒或首次开始目标跑时由系统请求权限。饮食与称重提醒可在通用设置调整，通知权限可在 iOS 设置中管理。目标跑前台使用页面提示，后台在通知获准时发出本地提醒。"),
                 AboutSection(title: "实时活动与小组件", content: "按你的操作在锁定屏幕、灵动岛或桌面展示记录概况。小组件与主程序通过同一设备的 App Group 文件共享摘要。实时活动可在应用对应的系统设置中管理，小组件可在系统桌面编辑。"),
                 AboutSection(title: "网络与 AI 数据授权", content: "AI 请求、主动云同步及打开在线支持页需要网络。AI 数据授权可在通用设置撤回，云同步通过同步账号单独管理。联网权限如由系统提供开关，可在应用的 iOS 设置中调整。")
             ]
         case .personalInformation:
             [
+                AboutSection(title: "跑步路线与心率统计", content: "内容为开始和结束时间、目标、有效时长、GPS 坐标及精度、分段、距离、配速和本次有效运动期间的心率样本与来源。路线文件和详细样本保存在本机，运动时长、距离、估算消耗及保存的平均、最高心率等统计进入日记摘要，并可主动云同步。单次跑步 AI 在你选择范围后使用统计。删除本机跑步时一并删除对应路线文件。"),
                 AboutSection(title: "个人资料与身体测量", content: "内容为昵称、头像、身高、体重、目标体重及相关测量日期，用于个人展示、BMI 和体重趋势。本机保存，主动云同步时可一并上传。可在“我的”编辑资料和管理体重记录。"),
                 AboutSection(title: "饮食与照片", content: "内容为餐次、时间、食物描述、份量、营养标签、估算数值、修正和所选照片，用于记餐及趋势。本机保存，AI 所需部分经授权发送给后端和 DeepSeek；主动云同步可包含完整记录和照片。可在餐食详情编辑、删除或导出。"),
                 AboutSection(title: "吸烟与烟包", content: "内容为香烟名称、包装标注、价格、烟包余量、照片、抽烟与分烟数量及日期，用于个人习惯和费用统计。本机保存，识别所需内容经授权用于 AI，主动云同步可包含这些记录。可在戒烟模块管理烟包与历史。"),
@@ -104,6 +107,7 @@ enum AboutDocument: String, CaseIterable, Identifiable {
             ]
         case .thirdParties:
             [
+                AboutSection(title: "Apple 地图与定位", content: "Core Location 获取经你允许的精确位置，MapKit 显示地图和跑步轨迹。地图加载会向 Apple 请求地图服务，处理规则适用 Apple 隐私政策。精确轨迹文件由本机保存，地图功能与 AI 分析分别处理。"),
                 AboutSection(title: "本机依赖概况", content: "当前安装包使用本项目 NutritionCore 模块及 Apple 系统框架，未嵌入第三方广告、统计、社交登录或 DeepSeek 客户端 SDK。下面列出实际参与相关功能的外部服务和系统能力。"),
                 AboutSection(title: "DeepSeek AI 服务", content: "接收方为 DeepSeek（深度求索），通过小食痰记后端调用其 API。用于餐食与营养表识别、烟盒识别、自然语言修正、回顾、追问和汇总建议。按所选功能处理必要文字、压缩图片、营养数据或经确认的健康聚合数值。发起条件为你主动使用 AI 并明确授权，处理规则见下方 DeepSeek 隐私政策。"),
                 AboutSection(title: "Apple 系统服务", content: "HealthKit 用于只读健康数据，PhotosUI 和相机用于你选择或拍摄的图片，Speech 与 AVFoundation 用于语音输入，UserNotifications 用于本地提醒，WidgetKit、ActivityKit 与 App Intents 用于系统小组件、实时活动和快捷操作，Security 用于钥匙串会话保存。语音在设备支持时本机识别，其他情况下可由 Apple 服务处理。系统数据处理规则见 Apple 隐私政策。"),

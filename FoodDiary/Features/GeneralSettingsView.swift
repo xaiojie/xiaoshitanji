@@ -218,6 +218,9 @@ struct GeneralSettingsView: View {
         BrandSection("本机数据", symbol: "externaldrive.fill") {
             LabeledContent("饮食记录", value: "\(diary.document.records.count) 餐")
             LabeledContent("照片", value: "记录目录内的 Photos 文件夹")
+            LabeledContent("跑步路线", value: "仅保存在记录设备")
+            Text("运动摘要可随日记同步，GPS 路线和详细心率文件保留在这台手机。删除跑步记录可移除对应路线。")
+                .font(.caption).foregroundStyle(Theme.mutedInk)
             Toggle(isOn: $autoBackup) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("每天自动备份")

@@ -4,6 +4,7 @@ import SwiftUI
 struct FoodDiaryApp: App {
     @State private var diary = DiaryModel()
     @State private var health = HealthDataModel()
+    @State private var running = RunTrackingModel()
     @State private var selectedTab = AppTab.diet
     @State private var widgetNavigation = WidgetNavigation()
     @Environment(\.scenePhase) private var scenePhase
@@ -15,6 +16,7 @@ struct FoodDiaryApp: App {
             TabView(selection: $selectedTab) {
                 Tab("饮食", systemImage: "fork.knife", value: AppTab.diet) { TodayView() }
                 Tab("趋势", systemImage: "chart.bar.xaxis", value: AppTab.trends) { TrendsView() }
+                Tab("健身", systemImage: "figure.run", value: AppTab.fitness) { FitnessView() }
                 Tab("戒烟", systemImage: "lungs", value: AppTab.smoking) { SmokingView() }
                 Tab("我的", systemImage: "person.crop.circle", value: AppTab.profile) { ProfileView() }
             }
@@ -24,6 +26,7 @@ struct FoodDiaryApp: App {
             .preferredColorScheme(.light)
             .environment(diary)
             .environment(health)
+            .environment(running)
             .environment(widgetNavigation)
             .environment(\.locale, Locale(identifier: "zh_CN"))
             .onAppear {
@@ -49,6 +52,7 @@ struct FoodDiaryApp: App {
                 Task { await refreshAppData() }
             }
             .onChange(of: scenePhase) { _, phase in
+                if phase != .active { running.checkpoint() }
                 if phase == .active {
                     Task {
                         await refreshAppData()
@@ -70,12 +74,13 @@ struct FoodDiaryApp: App {
 }
 
 private enum AppTab: String, CaseIterable, Identifiable {
-    case diet, trends, smoking, profile
+    case diet, trends, fitness, smoking, profile
     var id: Self { self }
     var title: String {
         switch self {
         case .diet: "饮食"
         case .trends: "趋势"
+        case .fitness: "健身"
         case .smoking: "戒烟"
         case .profile: "我的"
         }
@@ -84,6 +89,7 @@ private enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .diet: "fork.knife"
         case .trends: "chart.bar.xaxis"
+        case .fitness: "figure.run"
         case .smoking: "lungs"
         case .profile: "person.crop.circle"
         }

@@ -19,7 +19,8 @@ public enum WellnessPeriod: String, Codable, CaseIterable, Sendable, Identifiabl
         case .month: return calendar.date(byAdding: .day, value: -29, to: today) ?? today
         case .all:
             let dates = document.records.map(\.date) + document.smoking.events.map(\.date)
-                + document.weights.map(\.date) + [document.profile.heightUpdatedAt, earliestHealthDate].compactMap { $0 }
+                + document.weights.map(\.date) + document.workouts.map(\.date)
+                + [document.profile.heightUpdatedAt, earliestHealthDate].compactMap { $0 }
             return calendar.startOfDay(for: dates.min().map { min($0, endDate) } ?? endDate)
         }
     }
@@ -199,9 +200,47 @@ public struct WellnessCoverage: Equatable, Sendable {
     public let smokingDays: Int
     public let weightDays: Int
     public let activityDays: Int
+    public var trainingDays: Int = 0
 
     /// 本机记录意义上的覆盖天数，不含只来自 Apple 健康的活动。
-    public var recordedDays: Int { max(dietDays, max(smokingDays, weightDays)) }
+    public var recordedDays: Int { max(trainingDays, max(dietDays, max(smokingDays, weightDays))) }
+}
+
+public struct WellnessTraining: Codable, Equatable, Sendable {
+    public let sessions: Int
+    public let recordedDays: Int
+    public let minutes: Int
+    public let runningSessions: Int
+    public let runningDistanceMeters: Double?
+    public let estimatedCalories: Double?
+    public let heartRateRecordedSessions: Int
+    public let averageSessionHeartRate: Double?
+
+    init(workouts: [WorkoutRecord], includeHeartRate: Bool, calendar: Calendar) {
+        sessions = workouts.count
+        recordedDays = Set(workouts.map { calendar.startOfDay(for: $0.date) }).count
+        minutes = workouts.reduce(0) { $0 + max(1, Int(ceil($1.effectiveDurationSeconds / 60))) }
+        let runs = workouts.filter { $0.cardio?.activity == .run }
+        runningSessions = runs.count
+        let distances = runs.compactMap(\.effectiveDistanceMeters)
+        runningDistanceMeters = distances.isEmpty ? nil : distances.reduce(0, +)
+        let calories = workouts.compactMap(\.effectiveCalories)
+        estimatedCalories = calories.isEmpty ? nil : calories.reduce(0, +)
+        let heart = includeHeartRate ? workouts.compactMap(\.effectiveHeartRate) : []
+        heartRateRecordedSessions = heart.count
+        averageSessionHeartRate = heart.isEmpty ? nil : heart.reduce(0, +) / Double(heart.count)
+    }
+
+    func validate(dayCount: Int) throws {
+        guard sessions >= 0, recordedDays >= 0, recordedDays <= min(dayCount, sessions), minutes >= 0,
+              runningSessions >= 0, runningSessions <= sessions,
+              runningDistanceMeters.map({ $0.isFinite && $0 >= 0 }) ?? true,
+              estimatedCalories.map({ $0.isFinite && $0 >= 0 }) ?? true,
+              heartRateRecordedSessions >= 0, heartRateRecordedSessions <= sessions,
+              averageSessionHeartRate.map({ $0.isFinite && (20...300).contains($0) }) ?? true else {
+            throw DiaryError.invalidInput("本机训练汇总无效，请重新读取记录。")
+        }
+    }
 }
 
 public struct WellnessSummary: Codable, Equatable, Sendable {
@@ -218,15 +257,18 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
     public let smoking: WellnessSmoking
     public let body: WellnessBody
     public let activity: WellnessActivity
+    public var training: WellnessTraining? = nil
     public let timelineUnit: String
     public let timeline: [WellnessTrend]
 
-    public var hasData: Bool { diet.recordCount > 0 || smoking.eventDays > 0 || body.hasData || activity.hasData }
+    public var hasData: Bool {
+        diet.recordCount > 0 || smoking.eventDays > 0 || body.hasData || activity.hasData || (training?.sessions ?? 0) > 0
+    }
 
     public var coverage: WellnessCoverage {
         WellnessCoverage(windowDays: dayCount, dietDays: diet.recordedDays, smokingDays: smoking.eventDays,
                          weightDays: timeline.reduce(0) { $0 + ($1.weightKG == nil ? 0 : 1) },
-                         activityDays: activity.steps.observedDays)
+                         activityDays: activity.steps.observedDays, trainingDays: training?.recordedDays ?? 0)
     }
 
     public static func make(document: DiaryDocument, period: WellnessPeriod, endDate: Date,
@@ -248,6 +290,7 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
         let localEnd = calendar.date(byAdding: .day, value: 1, to: today) ?? endDate
         // Meal presets may be later than the clock on the current local day.
         let records = document.records.filter { $0.date >= start && $0.date < localEnd }
+        let workouts = document.workouts.filter { $0.date >= start && $0.date <= endDate }
         let activityByDay = Dictionary(grouping: includesHealth ? activityDays : [], by: { calendar.startOfDay(for: $0.date) })
         let days = activityByDay.keys.sorted().compactMap { day -> HealthActivityDay? in
             guard day >= start, day <= today else { return nil }
@@ -268,7 +311,7 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
         let weightGroups = Dictionary(grouping: weights.filter { $0.date >= start && $0.date <= endDate },
                                        by: { bucket($0.date) })
         let dates = Set(mealGroups.keys).union(eventGroups.keys).union(activityGroups.keys)
-            .union(weightGroups.keys).sorted()
+            .union(weightGroups.keys).union(workouts.map { bucket($0.date) }).sorted()
         let timeline = dates.map { date in
             let meals = mealGroups[date] ?? []
             let events = eventGroups[date] ?? []
@@ -287,7 +330,9 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
             suggestedTarget: suggestedTarget,
             diet: WellnessDiet(records: records, calendar: calendar),
             smoking: WellnessSmoking(journal: document.smoking, start: start, until: localEnd, calendar: calendar),
-            body: body, activity: WellnessActivity(days: days), timelineUnit: period == .all ? "month" : "day", timeline: timeline)
+            body: body, activity: WellnessActivity(days: days),
+            training: WellnessTraining(workouts: workouts, includeHeartRate: includesHealth, calendar: calendar),
+            timelineUnit: period == .all ? "month" : "day", timeline: timeline)
         try result.validate()
         return result
     }
@@ -304,6 +349,7 @@ public struct WellnessSummary: Codable, Equatable, Sendable {
     }
 
     public func validate() throws {
+        try training?.validate(dayCount: dayCount)
         guard startDate.timeIntervalSinceReferenceDate.isFinite, endDate.timeIntervalSinceReferenceDate.isFinite,
               startDate <= endDate, dayCount > 0, diet.recordCount >= 0, diet.recordedDays >= 0,
               (diet.recordCount == 0 ? diet.total == nil && diet.recordedDays == 0 : diet.total != nil && diet.recordedDays > 0),

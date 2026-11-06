@@ -115,7 +115,7 @@ final class DiaryModel {
 
     /// 当天训练记录里填的消耗热量；没填就算 0，不猜。
     func burnedCalories(on date: Date) -> Double {
-        document.workouts(on: date).reduce(0) { $0 + ($1.caloriesBurned ?? 0) }
+        document.workouts(on: date).reduce(0) { $0 + ($1.effectiveCalories ?? 0) }
     }
 
     func saveWorkout(_ workout: WorkoutRecord) throws {

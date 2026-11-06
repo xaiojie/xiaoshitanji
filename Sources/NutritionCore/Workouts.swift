@@ -117,11 +117,12 @@ public struct WorkoutRecord: Identifiable, Codable, Equatable, Sendable {
     public var notes: String
     public var exercises: [StrengthExercise]
     public var cardio: CardioDetail?
+    public var runMetrics: RunWorkoutMetrics?
 
     public init(id: UUID = UUID(), date: Date = .now, kind: WorkoutKind = .strength,
                 title: String = "", durationMinutes: Int = 45, perceivedEffort: Int? = nil,
                 caloriesBurned: Double? = nil, notes: String = "",
-                exercises: [StrengthExercise] = [], cardio: CardioDetail? = nil) {
+                exercises: [StrengthExercise] = [], cardio: CardioDetail? = nil, runMetrics: RunWorkoutMetrics? = nil) {
         self.id = id
         self.date = date
         self.kind = kind
@@ -132,6 +133,7 @@ public struct WorkoutRecord: Identifiable, Codable, Equatable, Sendable {
         self.notes = notes
         self.exercises = exercises
         self.cardio = cardio
+        self.runMetrics = runMetrics
     }
 
     public var displayTitle: String {
@@ -143,8 +145,13 @@ public struct WorkoutRecord: Identifiable, Codable, Equatable, Sendable {
 
     public var volume: Double { exercises.reduce(0) { $0 + $1.volume } }
     public var totalSets: Int { exercises.reduce(0) { $0 + $1.sets.count } }
+    public var effectiveDurationSeconds: Double { runMetrics?.durationSeconds ?? Double(durationMinutes * 60) }
+    public var effectiveDistanceMeters: Double? { runMetrics?.distanceMeters ?? cardio?.distanceMeters }
+    public var effectiveHeartRate: Double? { runMetrics?.averageHeartRate ?? cardio?.averageHeartRate.map(Double.init) }
+    public var effectiveCalories: Double? { runMetrics?.estimatedActiveCalories ?? caloriesBurned }
 
     public func validate() throws {
+        try runMetrics?.validate()
         guard date.timeIntervalSinceReferenceDate.isFinite else { throw DiaryError.invalidInput("训练时间不合法。") }
         guard (1...600).contains(durationMinutes) else {
             throw DiaryError.invalidInput("训练时长需要在 1–600 分钟之间。")
@@ -186,10 +193,10 @@ public enum WorkoutSummary {
         var stats = WorkoutStats()
         for workout in document.workouts where since == nil || workout.date >= since! {
             stats.sessions += 1
-            stats.minutes += workout.durationMinutes
+            stats.minutes += max(1, Int(ceil(workout.effectiveDurationSeconds / 60)))
             stats.strengthVolume += workout.volume
-            stats.cardioMeters += workout.cardio?.distanceMeters ?? 0
-            stats.passedCalories += workout.caloriesBurned ?? 0
+            stats.cardioMeters += workout.effectiveDistanceMeters ?? 0
+            stats.passedCalories += workout.effectiveCalories ?? 0
             if stats.lastDate == nil || workout.date > stats.lastDate! { stats.lastDate = workout.date }
         }
         return stats

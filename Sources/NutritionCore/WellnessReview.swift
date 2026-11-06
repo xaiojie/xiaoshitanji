@@ -168,6 +168,9 @@ public extension DeepSeekClient {
         activity.activeCalories单位千卡，仅含活动能量，不含基础代谢或全天总消耗。steps为步，exerciseMinutes为分钟，distanceMeters为米。
         activity.sleepHours为按醒来日统计的睡着小时数，restingHeartRate与averageHeartRate为次/分，heartRateVariability为SDNN毫秒，vo2Max为毫升/公斤/分钟，headphoneAudioMinutes为戴耳机听音频的分钟数。
         activity.workoutSessions/workoutMinutes/workoutCalories来自 Apple 健康体能训练，是本机记录之外的另一来源；两者不要相加或重复计数，仅在各自出现时分别引用。
+        training 是本机已保存训练汇总，包含 GPS 跑步。引用其中的跑步次数、距离、时长和已知消耗。
+        training.averageSessionHeartRate 是各训练已保存平均心率的均值，结合 heartRateRecordedSessions 说明覆盖，不能当作连续测量。
+        training 与 Apple 健康训练可能对应同一场运动，分别说明来源，禁止相加。心率缺失时保持未知，不猜测心率分区。
         不得用摄入减活动能量声称全天热量盈余/缺口，不得推算基础代谢、减重速度，也不得把睡眠、心率、HRV、最大摄氧量、耳机音量解读为疾病或医学结论；这些只是习惯线索。
         smoking.smoked只包含自己抽的，shared为分给别人，校准不计摄入。没有事件的日期代表未记录，不等于戒烟成功或没有吸烟。
         knownNicotineMG为烟盒标注烟气释放量累计，unknownNicotineCount为缺少标注根数，不是人体实际尼古丁吸收量。费用按costs的currency分别理解，禁止跨币种相加。

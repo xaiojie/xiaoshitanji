@@ -34,7 +34,9 @@ struct TrendsView: View {
             return TrendDay(date: date, nutrition: diary.document.total(on: date),
                             count: diary.document.records(on: date).count,
                             score: diary.document.review(on: date)?.score,
-                            workoutMinutes: diary.document.workouts(on: date).reduce(0) { $0 + $1.durationMinutes },
+                            workoutMinutes: diary.document.workouts(on: date).reduce(0) {
+                                $0 + max(1, Int(ceil($1.effectiveDurationSeconds / 60)))
+                            },
                             smokeCount: diary.document.smoking.events
                                 .filter { $0.kind == .smoked && calendar.isDate($0.date, inSameDayAs: date) }
                                 .reduce(0) { $0 + $1.count },

@@ -23,6 +23,17 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>扫描食物、营养成分表或烟盒，并按你的操作发送给 AI 识别。</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>在你开始户外跑步时记录距离、配速和地图轨迹，跑步期间锁屏或切换应用也能继续记录。</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>RunTracking</key>
+		<string>精确位置用于计算本次跑步距离并绘制路线。</string>
+	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>小食痰记通过健康框架展示你授权的健康信息，当前仅请求读取权限，不会向 Apple 健康写入或修改记录。</string>
 	<key>NSHealthShareUsageDescription</key>

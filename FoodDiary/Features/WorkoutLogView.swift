@@ -3,8 +3,10 @@ import NutritionCore
 
 struct WorkoutLogView: View {
     @Environment(DiaryModel.self) private var diary
+    @Environment(RunTrackingModel.self) private var running
     @Environment(\.dismiss) private var dismiss
     @State private var editing: WorkoutRecord?
+    @State private var editingRun: RunRecord?
     @State private var adding = false
     @State private var errorMessage: String?
 
@@ -51,7 +53,10 @@ struct WorkoutLogView: View {
                     ForEach(grouped, id: \.0) { day, workouts in
                         Section(day.formatted(date: .abbreviated, time: .omitted)) {
                             ForEach(workouts) { workout in
-                                Button { editing = workout } label: { row(workout) }
+                                Button {
+                                    if let run = running.records.first(where: { $0.id == workout.id }) { editingRun = run }
+                                    else { editing = workout }
+                                } label: { row(workout) }
                                     .buttonStyle(.plain)
                                     .swipeActions {
                                         Button("删除", role: .destructive) { delete(workout) }
@@ -76,7 +81,14 @@ struct WorkoutLogView: View {
                 WorkoutEditorView(workout: nil, onSave: { save($0) }, onSavePlan: { savePlan($0) })
             }
             .sheet(item: $editing) { workout in
-                WorkoutEditorView(workout: workout, onSave: { save($0) }, onSavePlan: { savePlan($0) })
+                if workout.runMetrics != nil {
+                    NavigationStack { WorkoutSummaryDetail(entry: WorkoutTimeline.make(local: [workout], health: [])[0]) }
+                } else {
+                    WorkoutEditorView(workout: workout, onSave: { save($0) }, onSavePlan: { savePlan($0) })
+                }
+            }
+            .sheet(item: $editingRun) { run in
+                NavigationStack { RunDetailView(record: run) }
             }
             .alert("没有保存", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
                 Button("好", role: .cancel) { errorMessage = nil }
@@ -142,12 +154,12 @@ struct WorkoutLogView: View {
     }
 
     private func detail(_ workout: WorkoutRecord) -> String {
-        var parts = ["\(workout.durationMinutes) 分钟"]
+        var parts = ["\(max(1, Int(ceil(workout.effectiveDurationSeconds / 60)))) 分钟"]
         if workout.kind == .strength {
             parts.append("\(workout.exercises.count) 个动作 · \(workout.totalSets) 组")
-        } else if let cardio = workout.cardio {
-            if let distance = cardio.distanceMeters { parts.append(String(format: "%.1f km", distance / 1000)) }
-            if let hr = cardio.averageHeartRate { parts.append("\(hr) bpm") }
+        } else if workout.cardio != nil {
+            if let distance = workout.effectiveDistanceMeters { parts.append(String(format: "%.1f km", distance / 1000)) }
+            if let hr = workout.effectiveHeartRate { parts.append("\(Int(hr.rounded())) bpm") }
         }
         if let effort = workout.perceivedEffort { parts.append("体感 \(effort)") }
         return parts.joined(separator: " · ")
@@ -164,6 +176,10 @@ struct WorkoutLogView: View {
     }
 
     private func delete(_ workout: WorkoutRecord) {
-        try? diary.deleteWorkout(workout)
+        do {
+            try running.beginRemoval(id: workout.id)
+            try diary.deleteWorkout(workout)
+            try running.remove(id: workout.id)
+        } catch { errorMessage = error.localizedDescription }
     }
 }

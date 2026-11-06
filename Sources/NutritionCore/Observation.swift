@@ -73,6 +73,7 @@ public struct ObservationFacts: Codable, Equatable, Sendable {
     public let healthWorkoutSessions: Int?
     public let healthWorkoutMinutes: Double?
     public let healthWorkoutCalories: Double?
+    public var training: WellnessTraining? = nil
 
     public let gaps: [String]
 
@@ -109,7 +110,9 @@ public struct ObservationFacts: Codable, Equatable, Sendable {
             gaps.append("没有心率数据")
         }
         if summary.activity.vo2Max.observedDays == 0 { gaps.append("没有有氧适能（最大摄氧量）数据") }
-        if summary.activity.workoutSessions.observedDays == 0 { gaps.append("区间内没有体能训练记录") }
+        if summary.activity.workoutSessions.observedDays == 0 && (summary.training?.sessions ?? 0) == 0 {
+            gaps.append("区间内没有体能训练记录")
+        }
         if summary.smoking.eventDays == 0 { gaps.append("区间内没有吸烟记录") }
         if summary.smoking.unpricedCount > 0 { gaps.append("\(summary.smoking.unpricedCount) 根香烟缺少价格") }
 
@@ -143,6 +146,7 @@ public struct ObservationFacts: Codable, Equatable, Sendable {
             healthWorkoutSessions: summary.activity.workoutSessions.total.map { Int($0.rounded()) },
             healthWorkoutMinutes: summary.activity.workoutMinutes.total,
             healthWorkoutCalories: summary.activity.workoutCalories.total,
+            training: summary.training,
             gaps: gaps)
 
         let formatter = DateFormatter()
@@ -155,6 +159,9 @@ public struct ObservationFacts: Codable, Equatable, Sendable {
         if let sleep = facts.averageSleepHours { parts.append("、日均睡眠 \(String(format: "%.1f", sleep)) 小时") }
         if let minutes = facts.healthWorkoutMinutes, let sessions = facts.healthWorkoutSessions {
             parts.append("、\(sessions) 次体能训练共 \(Int(minutes.rounded())) 分钟")
+        }
+        if let training = summary.training, training.sessions > 0 {
+            parts.append("、本机 \(training.sessions) 次训练共 \(training.minutes) 分钟")
         }
         if summary.smoking.eventDays > 0 { parts.append("、\(summary.smoking.smoked) 根烟") }
         let evidence = parts.joined()

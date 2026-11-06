@@ -47,6 +47,18 @@ struct WellnessSnapshotCards: View {
                 row("范围内体重变化", value: snapshot.body.weightChangeKG.map { "\($0 > 0 ? "+" : "")\(Theme.number($0, decimals: 2)) 公斤" } ?? "测量次数不足")
             }
             BrandSection("运动与活动", symbol: WellnessArea.activity.symbol) {
+                if let training = snapshot.training, training.sessions > 0 {
+                    row("本机训练", value: "\(training.sessions) 次 · \(training.minutes) 分钟")
+                    row("其中跑步", value: "\(training.runningSessions) 次")
+                    row("已记录跑步里程", value: number(training.runningDistanceMeters.map { $0 / 1000 }, unit: "公里"))
+                    if let heartRate = training.averageSessionHeartRate {
+                        row("训练平均心率的均值", value: number(heartRate, unit: "次/分"))
+                        Text("来自 \(training.heartRateRecordedSessions) 次训练的已保存均值。")
+                            .font(.caption).foregroundStyle(Theme.mutedInk)
+                    }
+                    Text("本机记录与下方 Apple 健康可能包含同一场训练，按来源分别展示。")
+                        .font(.caption).foregroundStyle(Theme.mutedInk)
+                }
                 metric("步数", metric: snapshot.activity.steps, unit: "步")
                 metric("活动能量", metric: snapshot.activity.activeCalories, unit: "千卡")
                 metric("锻炼时长", metric: snapshot.activity.exerciseMinutes, unit: "分钟")

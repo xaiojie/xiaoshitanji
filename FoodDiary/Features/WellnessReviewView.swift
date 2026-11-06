@@ -79,7 +79,7 @@ struct WellnessReviewView: View {
                 Button("发送并生成") { generate(summary) }
                 Button("继续查看", role: .cancel) { pendingSummary = nil }
             } message: { summary in
-                Text("将\(summary.period.title)的饮食、吸烟和身体测量汇总\(summary.includesHealth ? "，以及可读取的 Apple 健康活动数值" : "数值")经小食痰记服务器转交 DeepSeek 处理。AI 分析免费使用。生成后保存这次报告和汇总数值。")
+                Text("将\(summary.period.title)的饮食、吸烟、身体测量及本机训练汇总\(summary.includesHealth ? "，以及已选择的 Apple 健康与训练心率统计" : "数值")经小食痰记服务器转交 DeepSeek 处理。AI 分析免费使用。生成后保存这次报告和汇总数值。")
             }
             .onAppear {
                 if !initialized { includesHealth = health.accessRequested; initialized = true }
