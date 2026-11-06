@@ -5,6 +5,10 @@ DerivedData/
 *.xcuserstate
 xcuserdata/
 .env
+!/admin/frontend/.env
+.env.local
+.env.*.local
+.superpowers/
 *.xcarchive
 
 # Local App Store exports and receipts; published screenshots live in docs/screenshots/.

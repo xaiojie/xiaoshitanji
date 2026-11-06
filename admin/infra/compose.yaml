@@ -1,0 +1,31 @@
+name: xiaoshitanji-admin
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: xiaoshitanji-admin-mysql
+    restart: unless-stopped
+    mem_limit: 768m
+    ports:
+      - "127.0.0.1:13317:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?required}
+      MYSQL_DATABASE: xiaoshitanji_admin_dev
+      MYSQL_USER: xst_admin
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?required}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=128M
+      - --max-connections=30
+      - --performance-schema=OFF
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", 'MYSQL_PWD="$${MYSQL_ROOT_PASSWORD}" mysqladmin ping -h 127.0.0.1 --silent']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+volumes:
+  mysql-data:
