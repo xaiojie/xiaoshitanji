@@ -84,7 +84,7 @@ try {
     for (const [name, url] of [['前端', 'http://127.0.0.1:9000'], ['后端', 'http://127.0.0.1:8002/admin/base/open/captcha']]) {
       console.log(`${name} ${await ready(url).catch(() => false) ? '可访问' : '不可访问'}`);
     }
-  } else if (action === 'start' || action === 'check') {
+  } else if (action === 'start' || action === 'check' || action === 'seed') {
     if (action === 'start' && processes.some(isAlive)) {
       throw new Error('后台已有进程，请先执行 status 或 stop，避免重复启动');
     }
@@ -94,12 +94,17 @@ try {
     for (const key of ['ADMIN_SSH_HOST', 'DB_PASSWORD', 'ADMIN_COOKIE_KEYS', 'ADMIN_JWT_SECRET', 'ADMIN_APP_JWT_SECRET', 'ADMIN_INITIAL_PASSWORD']) {
       if (!env[key]) throw new Error(`请补齐 admin/.env.local 的 ${key}`);
     }
-    if (action === 'check') {
+    if (action === 'seed') {
+      const compile = spawnSync('pnpm', ['exec', 'tsc'], { cwd: join(adminDir, 'backend'), env, stdio: 'inherit' });
+      if (compile.status !== 0) throw new Error('后端编译失败');
+      const seed = spawnSync(process.execPath, ['scripts/seed-diary.cjs'], { cwd: join(adminDir, 'backend'), env, stdio: 'inherit' });
+      if (seed.status !== 0) throw new Error('填充示例失败，请先确认本地后台和数据库隧道运行正常');
+    } else if (action === 'check') {
       for (const [directory, args] of [['backend', ['exec', 'tsc']], ['frontend', ['type-check']], ['frontend', ['build']]]) {
         const result = spawnSync('pnpm', args, { cwd: join(adminDir, directory), env, stdio: 'inherit' });
         if (result.status !== 0) throw new Error(`${directory} ${args.join(' ')} 检查失败`);
       }
-      const tests = spawnSync(process.execPath, ['--test', join(adminDir, 'backend/test/path.test.cjs'), join(adminDir, 'test/bootstrap.test.mjs')], { env, stdio: 'inherit' });
+      const tests = spawnSync(process.execPath, ['--test', join(adminDir, 'backend/test/path.test.cjs'), join(adminDir, 'backend/test/diary.test.cjs'), join(adminDir, 'backend/test/diary-summary.test.cjs'), join(adminDir, 'test/request-scope.test.mjs'), join(adminDir, 'test/bootstrap.test.mjs')], { env, stdio: 'inherit' });
       if (tests.status !== 0) throw new Error('后台启动与环境密钥回归检查失败');
     } else {
       for (const port of [13316, 8002, 9000]) {
@@ -122,7 +127,7 @@ try {
       console.log('首次登录信息保存在 work/admin/local-access.md');
     }
   } else {
-    throw new Error('用法 node admin/dev.mjs start|stop|status|check');
+    throw new Error('用法 node admin/dev.mjs start|stop|status|check|seed');
   }
 } catch (error) {
   // 仅清理本次启动的进程，已有服务或占用端口不受影响。

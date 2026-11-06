@@ -1,0 +1,246 @@
+[
+  {
+    "name": "小食痰记",
+    "router": "/diary",
+    "perms": null,
+    "type": 0,
+    "icon": "icon-home",
+    "orderNum": 0,
+    "viewPath": null,
+    "keepAlive": true,
+    "isShow": true,
+    "childMenus": [
+      {
+        "name": "业务总览",
+        "router": "/diary/overview",
+        "perms": null,
+        "type": 1,
+        "icon": null,
+        "orderNum": 0,
+        "viewPath": "modules/diary/views/overview.vue",
+        "keepAlive": true,
+        "isShow": true,
+        "childMenus": [
+          {
+            "name": "查看",
+            "router": null,
+            "perms": "diary:overview:summary,diary:overview:trend,diary:user:options",
+            "type": 2,
+            "orderNum": 0,
+            "isShow": true,
+            "childMenus": []
+          }
+        ]
+      },
+      {
+        "name": "App 用户",
+        "router": "/diary/user",
+        "perms": null,
+        "type": 1,
+        "icon": null,
+        "orderNum": 1,
+        "viewPath": "modules/diary/views/user.vue",
+        "keepAlive": true,
+        "isShow": true,
+        "childMenus": [
+          {
+            "name": "查看",
+            "router": null,
+            "perms": "diary:user:page,diary:user:info,diary:user:summary,diary:user:list,diary:user:options,diary:overview:summary",
+            "type": 2,
+            "orderNum": 0,
+            "isShow": true,
+            "childMenus": []
+          },
+          {
+            "name": "新增",
+            "router": null,
+            "perms": "diary:user:add",
+            "type": 2,
+            "orderNum": 1,
+            "isShow": true,
+            "childMenus": []
+          },
+          {
+            "name": "编辑",
+            "router": null,
+            "perms": "diary:user:info,diary:user:update",
+            "type": 2,
+            "orderNum": 2,
+            "isShow": true,
+            "childMenus": []
+          }
+        ]
+      },
+      {
+        "name": "饮食记录",
+        "router": "/diary/meal",
+        "perms": null,
+        "type": 1,
+        "icon": null,
+        "orderNum": 2,
+        "viewPath": "modules/diary/views/meal.vue",
+        "keepAlive": true,
+        "isShow": true,
+        "childMenus": [
+          {
+            "name": "查看",
+            "router": null,
+            "perms": "diary:meal:page,diary:meal:info,diary:meal:summary,diary:user:options",
+            "type": 2,
+            "orderNum": 0,
+            "isShow": true,
+            "childMenus": []
+          },
+          {
+            "name": "新增",
+            "router": null,
+            "perms": "diary:meal:add",
+            "type": 2,
+            "orderNum": 1,
+            "isShow": true,
+            "childMenus": []
+          },
+          {
+            "name": "编辑",
+            "router": null,
+            "perms": "diary:meal:info,diary:meal:update",
+            "type": 2,
+            "orderNum": 2,
+            "isShow": true,
+            "childMenus": []
+          },
+          {
+            "name": "删除",
+            "router": null,
+            "perms": "diary:meal:delete",
+            "type": 2,
+            "orderNum": 3,
+            "isShow": true,
+            "childMenus": []
+          }
+        ]
+      },
+      {
+        "name": "抽烟记录",
+        "router": "/diary/smoking",
+        "perms": null,
+        "type": 1,
+        "icon": null,
+        "orderNum": 3,
+        "viewPath": "modules/diary/views/smoking.vue",
+        "keepAlive": true,
+        "isShow": true,
+        "childMenus": [
+          {
+            "name": "查看",
+            "router": null,
+            "perms": "diary:smoking:page,diary:smoking:info,diary:smoking:summary,diary:user:options",
+            "type": 2,
+            "orderNum": 0,
+            "isShow": true,
+            "childMenus": []
+          },
+          {
+            "name": "新增",
+            "router": null,
+            "perms": "diary:smoking:add",
+            "type": 2,
+            "orderNum": 1,
+            "isShow": true,
+            "childMenus": []
+          },
+          {
+            "name": "编辑",
+            "router": null,
+            "perms": "diary:smoking:info,diary:smoking:update",
+            "type": 2,
+            "orderNum": 2,
+            "isShow": true,
+            "childMenus": []
+          },
+          {
+            "name": "删除",
+            "router": null,
+            "perms": "diary:smoking:delete",
+            "type": 2,
+            "orderNum": 3,
+            "isShow": true,
+            "childMenus": []
+          }
+        ]
+      },
+      {
+        "name": "运动记录",
+        "router": "/diary/workout",
+        "perms": null,
+        "type": 1,
+        "icon": null,
+        "orderNum": 4,
+        "viewPath": "modules/diary/views/workout.vue",
+        "keepAlive": true,
+        "isShow": true,
+        "childMenus": [
+          {
+            "name": "查看",
+            "router": null,
+            "perms": "diary:workout:page,diary:workout:info,diary:workout:summary,diary:user:options",
+            "type": 2,
+            "orderNum": 0,
+            "isShow": true,
+            "childMenus": []
+          },
+          {
+            "name": "新增",
+            "router": null,
+            "perms": "diary:workout:add",
+            "type": 2,
+            "orderNum": 1,
+            "isShow": true,
+            "childMenus": []
+          },
+          {
+            "name": "编辑",
+            "router": null,
+            "perms": "diary:workout:info,diary:workout:update",
+            "type": 2,
+            "orderNum": 2,
+            "isShow": true,
+            "childMenus": []
+          },
+          {
+            "name": "删除",
+            "router": null,
+            "perms": "diary:workout:delete",
+            "type": 2,
+            "orderNum": 3,
+            "isShow": true,
+            "childMenus": []
+          }
+        ]
+      },
+      {
+        "name": "AI 用量",
+        "router": "/diary/usage",
+        "perms": null,
+        "type": 1,
+        "icon": null,
+        "orderNum": 5,
+        "viewPath": "modules/diary/views/usage.vue",
+        "keepAlive": true,
+        "isShow": true,
+        "childMenus": [
+          {
+            "name": "查看",
+            "router": null,
+            "perms": "diary:usage:page,diary:usage:info,diary:usage:summary,diary:user:options",
+            "type": 2,
+            "orderNum": 0,
+            "isShow": true,
+            "childMenus": []
+          }
+        ]
+      }
+    ]
+  }
+]
